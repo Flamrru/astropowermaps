@@ -1,26 +1,157 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Cosmic color palette */
+  --color-cosmic-bg: #0a0a1a;
+  --color-cosmic-navy: #0d1033;
+  --color-cosmic-purple: #1a1a3e;
+
+  /* Gold accents */
+  --color-gold-dark: #B8860B;
+  --color-gold: #D4A574;
+  --color-gold-light: #F4D03F;
+
+  /* Text colors */
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: rgba(255, 255, 255, 0.75);
+  --color-text-muted: rgba(255, 255, 255, 0.5);
+
+  /* Glass effect */
+  --color-glass-bg: rgba(255, 255, 255, 0.08);
+  --color-glass-border: rgba(255, 255, 255, 0.12);
+  --color-glass-border-selected: rgba(212, 165, 116, 0.6);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--color-cosmic-bg);
+  --color-foreground: var(--color-text-primary);
+  --font-sans: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Gold gradient for buttons */
+.gold-gradient {
+  background: linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-gold) 50%, var(--color-gold-light) 100%);
 }
 
+/* Gold glow effect */
+.gold-glow {
+  box-shadow:
+    0 0 20px rgba(212, 165, 116, 0.4),
+    0 0 40px rgba(212, 165, 116, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Glass card effect */
+.glass-card {
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-glass-border);
+}
+
+/* Selected option glow */
+.option-selected {
+  border-color: var(--color-glass-border-selected);
+  box-shadow:
+    0 0 15px rgba(212, 165, 116, 0.3),
+    inset 0 0 20px rgba(212, 165, 116, 0.1);
+}
+
+/* Cosmic background with gradient overlay */
+.cosmic-bg {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(10, 10, 26, 0.9) 0%,
+      rgba(13, 16, 51, 0.85) 30%,
+      rgba(26, 26, 62, 0.8) 60%,
+      rgba(10, 10, 26, 0.95) 100%
+    ),
+    radial-gradient(ellipse at 20% 20%, rgba(88, 86, 214, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 70%),
+    var(--color-cosmic-bg);
+  background-attachment: fixed;
+}
+
+/* Star field animation */
+.stars {
+  background-image:
+    radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(2px 2px at 40px 70px, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(2px 2px at 130px 80px, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 160px 120px, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(2px 2px at 200px 50px, rgba(212, 165, 116, 0.6), transparent),
+    radial-gradient(1px 1px at 250px 150px, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(2px 2px at 300px 100px, rgba(255, 255, 255, 0.5), transparent);
+  background-size: 350px 200px;
+  animation: twinkle 8s ease-in-out infinite alternate;
+}
+
+@keyframes twinkle {
+  0% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* Progress bar animation */
+.progress-bar {
+  background: linear-gradient(90deg, var(--color-gold-dark), var(--color-gold-light));
+  box-shadow: 0 0 10px rgba(212, 165, 116, 0.5);
+}
+
+/* Loading shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(212, 165, 116, 0.3) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Safe area for iOS */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-cosmic-bg);
+  color: var(--color-text-primary);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Remove tap highlight on mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Input styling */
+input[type="email"] {
+  background: var(--color-glass-bg);
+  border: 1px solid var(--color-glass-border);
+  color: var(--color-text-primary);
+}
+
+input[type="email"]::placeholder {
+  color: var(--color-text-muted);
+}
+
+input[type="email"]:focus {
+  outline: none;
+  border-color: var(--color-glass-border-selected);
+  box-shadow: 0 0 10px rgba(212, 165, 116, 0.2);
 }
