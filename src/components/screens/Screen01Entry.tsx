@@ -14,51 +14,52 @@ export default function Screen01Entry() {
   };
 
   return (
-    <div className="flex-1 flex flex-col px-6 py-8">
-      {/* Main content - centered */}
-      <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
-        {/* Headline */}
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-4xl md:text-5xl font-bold text-white leading-tight mb-6"
-        >
-          {COPY.screen1.headline}
-        </motion.h1>
+    <div className="flex-1 flex flex-col">
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col justify-end px-6 pb-6">
+        <div className="max-w-md mx-auto w-full">
+          {/* Headline - Large serif display font like mockup */}
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            className="heading-display text-[42px] md:text-[52px] text-white mb-5"
+          >
+            {COPY.screen1.headline}
+          </motion.h1>
 
-        {/* Subhead */}
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-          className="text-lg text-white/75 leading-relaxed mb-8"
-        >
-          {COPY.screen1.subhead}
-        </motion.p>
+          {/* Subhead */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
+            className="text-body text-[17px] text-white/70 leading-relaxed mb-8"
+          >
+            {COPY.screen1.subhead}
+          </motion.p>
 
-        {/* Credibility bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="mb-8"
-        >
-          <CredibilityBar publications={COPY.screen1.credibilityBar} />
-        </motion.div>
+          {/* Credibility bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
+            className="mb-8"
+          >
+            <CredibilityBar publications={COPY.screen1.credibilityBar} />
+          </motion.div>
+
+          {/* CTA Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.45, ease: "easeOut" }}
+          >
+            <GoldButton onClick={handleStart}>
+              {COPY.screen1.button}
+            </GoldButton>
+          </motion.div>
+        </div>
       </div>
-
-      {/* CTA - pinned to bottom */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.45 }}
-        className="max-w-md mx-auto w-full pb-4"
-      >
-        <GoldButton onClick={handleStart}>
-          {COPY.screen1.button}
-        </GoldButton>
-      </motion.div>
     </div>
   );
 }

@@ -19,21 +19,21 @@ export default function OptionCard({
     <motion.button
       type="button"
       onClick={onClick}
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.1 }}
+      transition={{ duration: 0.3, delay: index * 0.08 }}
       whileTap={{ scale: 0.98 }}
       className={`
-        w-full py-4 px-5 rounded-2xl text-left
-        transition-all duration-300
-        min-h-[56px] flex items-center
+        w-full py-4 px-5 rounded-xl text-left
+        transition-all duration-250
+        min-h-[54px] flex items-center
         ${selected
-          ? "glass-card option-selected"
-          : "glass-card hover:border-white/20"
+          ? "glass-card-selected border border-[rgba(201,162,39,0.5)]"
+          : "glass-card"
         }
       `}
     >
-      <span className={`text-base ${selected ? "text-white" : "text-white/90"}`}>
+      <span className={`text-[15px] leading-snug ${selected ? "text-white" : "text-white/85"}`}>
         {text}
       </span>
     </motion.button>

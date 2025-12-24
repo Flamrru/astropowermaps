@@ -27,16 +27,12 @@ export default function GoldButton({
       type={type}
       onClick={onClick}
       disabled={isDisabled}
-      whileTap={{ scale: isDisabled ? 1 : 0.98 }}
-      whileHover={{ scale: isDisabled ? 1 : 1.02 }}
+      whileTap={{ scale: isDisabled ? 1 : 0.97 }}
+      whileHover={{ scale: isDisabled ? 1 : 1.01 }}
       className={`
+        gold-button
         w-full py-4 px-8 rounded-full
-        text-lg font-semibold
-        transition-all duration-300
-        ${isDisabled
-          ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-          : "gold-gradient gold-glow text-[#1a1a2e] hover:brightness-110"
-        }
+        text-base tracking-wide
         ${className}
       `}
     >
@@ -47,7 +43,7 @@ export default function GoldButton({
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             className="inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full"
           />
-          Loading...
+          <span>Loading...</span>
         </span>
       ) : (
         children

@@ -20,7 +20,7 @@ export default function ProgressHeader({
   const progress = (currentStep / totalSteps) * 100;
 
   return (
-    <header className="sticky top-0 z-50 bg-[#0a0a1a]/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 bg-[#050510]/90 backdrop-blur-lg border-b border-white/5">
       {/* Navigation row */}
       <div className="flex items-center justify-between px-4 py-3">
         {/* Back button */}
@@ -29,31 +29,31 @@ export default function ProgressHeader({
             <motion.button
               type="button"
               onClick={onBack}
-              whileTap={{ scale: 0.95 }}
-              className="p-2 -ml-2 text-white/70 hover:text-white transition-colors"
+              whileTap={{ scale: 0.92 }}
+              className="p-2 -ml-2 text-white/50 hover:text-white/80 transition-colors"
               aria-label="Go back"
             >
-              <ChevronLeft className="w-6 h-6" />
+              <ChevronLeft className="w-5 h-5" />
             </motion.button>
           )}
         </div>
 
         {/* Title */}
-        <h1 className="text-sm font-medium text-white/90 tracking-wide">
+        <span className="text-[13px] font-medium text-white/70 tracking-wide">
           {COPY.nav.title}
-        </h1>
+        </span>
 
         {/* Spacer for alignment */}
         <div className="w-10" />
       </div>
 
       {/* Progress bar */}
-      <div className="h-0.5 bg-white/10">
+      <div className="h-[2px] bg-white/5">
         <motion.div
           className="h-full progress-bar"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
         />
       </div>
     </header>

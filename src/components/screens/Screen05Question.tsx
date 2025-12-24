@@ -32,7 +32,7 @@ export default function Screen05Question() {
         onBack={handleBack}
       />
 
-      <div className="flex-1 flex flex-col px-6 py-8">
+      <div className="flex-1 flex flex-col px-6 pt-6 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col max-w-md mx-auto w-full">
           {/* Question */}
@@ -40,13 +40,13 @@ export default function Screen05Question() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-2xl md:text-3xl font-bold text-white leading-tight mb-8"
+            className="heading-display text-[28px] md:text-[32px] text-white mb-8"
           >
             {COPY.screen5.question}
           </motion.h2>
 
           {/* Options */}
-          <div className="flex flex-col gap-3 mb-8">
+          <div className="flex flex-col gap-3">
             {COPY.screen5.options.map((option, index) => (
               <OptionCard
                 key={option}
@@ -62,9 +62,9 @@ export default function Screen05Question() {
         {/* CTA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-          className="max-w-md mx-auto w-full pb-4"
+          animate={{ opacity: state.answer_q2 ? 1 : 0.5, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="max-w-md mx-auto w-full pt-6"
         >
           <GoldButton
             onClick={handleNext}

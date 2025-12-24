@@ -32,7 +32,7 @@ export default function Screen03Question() {
         onBack={handleBack}
       />
 
-      <div className="flex-1 flex flex-col px-6 py-8">
+      <div className="flex-1 flex flex-col px-6 pt-6 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col max-w-md mx-auto w-full">
           {/* Question */}
@@ -40,23 +40,23 @@ export default function Screen03Question() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-2xl md:text-3xl font-bold text-white leading-tight mb-3"
+            className="heading-display text-[28px] md:text-[32px] text-white mb-3"
           >
             {COPY.screen3.question}
           </motion.h2>
 
           {/* Supporting text */}
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-base text-white/70 mb-8"
+            className="text-body text-[15px] text-white/60 mb-8"
           >
             {COPY.screen3.supportingText}
           </motion.p>
 
           {/* Options */}
-          <div className="flex flex-col gap-3 mb-8">
+          <div className="flex flex-col gap-3">
             {COPY.screen3.options.map((option, index) => (
               <OptionCard
                 key={option}
@@ -69,12 +69,12 @@ export default function Screen03Question() {
           </div>
         </div>
 
-        {/* CTA */}
+        {/* CTA - only show when option selected */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="max-w-md mx-auto w-full pb-4"
+          animate={{ opacity: state.answer_q1 ? 1 : 0.5, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="max-w-md mx-auto w-full pt-6"
         >
           <GoldButton
             onClick={handleNext}

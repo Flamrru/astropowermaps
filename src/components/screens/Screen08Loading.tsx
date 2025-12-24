@@ -40,42 +40,43 @@ export default function Screen08Loading() {
 
   return (
     <div className="flex-1 flex flex-col">
-      {/* No header/back button during loading */}
-
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
         <div className="max-w-md mx-auto w-full text-center">
-          {/* Cosmic spinner animation */}
+          {/* Cosmic orbital animation */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="mb-12"
+            transition={{ duration: 0.5 }}
+            className="mb-14"
           >
-            <div className="relative w-32 h-32 mx-auto">
+            <div className="relative w-28 h-28 mx-auto">
               {/* Outer ring */}
               <motion.div
                 animate={{ rotate: 360 }}
-                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 rounded-full border-2 border-[#D4A574]/30"
+                transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0 rounded-full border border-[#C9A227]/20"
               />
               {/* Middle ring */}
               <motion.div
                 animate={{ rotate: -360 }}
-                transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-4 rounded-full border border-[#D4A574]/50"
+                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-3 rounded-full border border-[#C9A227]/30"
               />
               {/* Inner ring */}
               <motion.div
                 animate={{ rotate: 360 }}
-                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-8 rounded-full border border-[#D4A574]/70"
+                transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-6 rounded-full border border-[#C9A227]/50"
               />
-              {/* Center dot */}
+              {/* Center glow */}
               <motion.div
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                animate={{ scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute inset-0 flex items-center justify-center"
               >
-                <div className="w-4 h-4 rounded-full bg-[#D4A574] gold-glow" />
+                <div className="w-3 h-3 rounded-full bg-[#C9A227]" style={{
+                  boxShadow: '0 0 20px rgba(201, 162, 39, 0.6), 0 0 40px rgba(201, 162, 39, 0.3)'
+                }} />
               </motion.div>
               {/* Orbiting dots */}
               {[0, 1, 2].map((i) => (
@@ -83,17 +84,17 @@ export default function Screen08Loading() {
                   key={i}
                   animate={{ rotate: 360 }}
                   transition={{
-                    duration: 3 + i,
+                    duration: 4 + i * 1.5,
                     repeat: Infinity,
                     ease: "linear",
-                    delay: i * 0.5,
+                    delay: i * 0.3,
                   }}
                   className="absolute inset-0"
                 >
                   <div
-                    className="absolute w-2 h-2 rounded-full bg-white/80"
+                    className="absolute w-1.5 h-1.5 rounded-full bg-white/70"
                     style={{
-                      top: "10%",
+                      top: "8%",
                       left: "50%",
                       transform: "translateX(-50%)",
                     }}
@@ -104,15 +105,15 @@ export default function Screen08Loading() {
           </motion.div>
 
           {/* Rotating text */}
-          <div className="h-8 mb-8">
+          <div className="h-7 mb-10">
             <AnimatePresence mode="wait">
               <motion.p
                 key={textIndex}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="text-lg text-white/80"
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25 }}
+                className="text-body text-[16px] text-white/70"
               >
                 {COPY.screen8.loadingTexts[textIndex]}
               </motion.p>
@@ -120,11 +121,10 @@ export default function Screen08Loading() {
           </div>
 
           {/* Progress bar */}
-          <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+          <div className="w-full max-w-[200px] mx-auto h-[3px] bg-white/10 rounded-full overflow-hidden">
             <motion.div
               className="h-full progress-bar rounded-full"
               style={{ width: `${progress}%` }}
-              transition={{ duration: 0.1 }}
             />
           </div>
         </div>

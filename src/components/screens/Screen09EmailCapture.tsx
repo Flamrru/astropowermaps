@@ -21,13 +21,8 @@ export default function Screen09EmailCapture() {
   };
 
   const handleSubmit = async () => {
-    // Honeypot check
-    if (honeypot) {
-      console.log("Bot detected");
-      return;
-    }
+    if (honeypot) return;
 
-    // Validation
     if (!email.trim()) {
       setError("Please enter your email");
       return;
@@ -61,7 +56,6 @@ export default function Screen09EmailCapture() {
         throw new Error("Failed to submit");
       }
 
-      // Success - update state and move to confirmation
       dispatch({ type: "SET_EMAIL", payload: email.trim() });
       dispatch({ type: "NEXT_STEP" });
     } catch {
@@ -83,7 +77,7 @@ export default function Screen09EmailCapture() {
         onBack={handleBack}
       />
 
-      <div className="flex-1 flex flex-col px-6 py-8">
+      <div className="flex-1 flex flex-col px-6 pt-6 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col max-w-md mx-auto w-full">
           {/* Headline */}
@@ -91,34 +85,34 @@ export default function Screen09EmailCapture() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-3xl md:text-4xl font-bold text-white leading-tight mb-4"
+            className="heading-display text-[32px] md:text-[38px] text-white mb-4"
           >
             {COPY.screen9.headline}
           </motion.h2>
 
           {/* Subhead */}
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-base text-white/75 mb-6"
+            className="text-body text-[15px] text-white/70 mb-5"
           >
             {COPY.screen9.subhead}
           </motion.p>
 
           {/* Benefits */}
           <motion.ul
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="space-y-3 mb-8"
+            className="space-y-3 mb-6"
           >
             {COPY.screen9.benefits.map((benefit, index) => (
               <li key={index} className="flex items-start gap-3">
-                <span className="text-[#D4A574] mt-1 flex-shrink-0">
-                  <Check className="w-4 h-4" />
+                <span className="text-[#C9A227] mt-0.5 flex-shrink-0">
+                  <Check className="w-4 h-4" strokeWidth={2.5} />
                 </span>
-                <span className="text-sm text-white/80">{benefit}</span>
+                <span className="text-[14px] text-white/75 leading-relaxed">{benefit}</span>
               </li>
             ))}
           </motion.ul>
@@ -128,17 +122,17 @@ export default function Screen09EmailCapture() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="text-sm text-[#D4A574] mb-6"
+            className="text-[13px] text-[#C9A227] mb-5"
           >
             {COPY.screen9.socialProof}
           </motion.p>
 
           {/* Email input */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mb-4"
+            transition={{ duration: 0.5, delay: 0.35 }}
+            className="relative"
           >
             <input
               type="email"
@@ -148,10 +142,10 @@ export default function Screen09EmailCapture() {
                 setError("");
               }}
               placeholder={COPY.screen9.inputPlaceholder}
-              className="w-full py-4 px-5 rounded-2xl text-base"
+              className="input-glass w-full py-4 px-5 rounded-xl text-[15px]"
               disabled={loading}
             />
-            {/* Honeypot field - hidden from users */}
+            {/* Honeypot */}
             <input
               type="text"
               value={honeypot}
@@ -164,7 +158,7 @@ export default function Screen09EmailCapture() {
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-red-400 text-sm mt-2 px-1"
+                className="text-red-400 text-[13px] mt-2 px-1"
               >
                 {error}
               </motion.p>
@@ -176,8 +170,8 @@ export default function Screen09EmailCapture() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="max-w-md mx-auto w-full pb-4"
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="max-w-md mx-auto w-full pt-6"
         >
           <GoldButton
             onClick={handleSubmit}

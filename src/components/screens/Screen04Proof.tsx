@@ -25,20 +25,20 @@ export default function Screen04Proof() {
         onBack={handleBack}
       />
 
-      <div className="flex-1 flex flex-col px-6 py-8">
+      <div className="flex-1 flex flex-col px-6 pt-8 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
           {/* Big stat */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6 }}
-            className="mb-4"
+            transition={{ duration: 0.5 }}
+            className="mb-5"
           >
-            <span className="text-6xl md:text-7xl font-bold text-white">
+            <span className="heading-display text-[64px] md:text-[72px] text-white">
               {COPY.screen4.stat}
             </span>
-            <span className="text-2xl md:text-3xl text-white ml-2">
+            <span className="text-body text-[22px] md:text-[26px] text-white/90 ml-2">
               {COPY.screen4.statText}
             </span>
           </motion.div>
@@ -47,10 +47,10 @@ export default function Screen04Proof() {
           {COPY.screen4.paragraphs.map((paragraph, index) => (
             <motion.p
               key={index}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 + index * 0.15 }}
-              className={`text-lg text-white/80 leading-relaxed ${
+              transition={{ duration: 0.45, delay: 0.15 + index * 0.12 }}
+              className={`text-body text-[17px] text-white/75 leading-relaxed ${
                 index < COPY.screen4.paragraphs.length - 1 ? "mb-5" : ""
               }`}
             >
@@ -63,8 +63,8 @@ export default function Screen04Proof() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.7 }}
-          className="max-w-md mx-auto w-full pb-4"
+          transition={{ duration: 0.5, delay: 0.6 }}
+          className="max-w-md mx-auto w-full"
         >
           <GoldButton onClick={handleNext}>
             {COPY.screen4.button}

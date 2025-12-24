@@ -25,7 +25,7 @@ export default function Screen06Insight() {
         onBack={handleBack}
       />
 
-      <div className="flex-1 flex flex-col px-6 py-8">
+      <div className="flex-1 flex flex-col px-6 pt-8 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
           {COPY.screen6.paragraphs.map((paragraph, index) => (
@@ -33,8 +33,8 @@ export default function Screen06Insight() {
               key={index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.2 }}
-              className={`text-xl md:text-2xl text-white leading-relaxed ${
+              transition={{ duration: 0.5, delay: index * 0.15 }}
+              className={`text-body text-[20px] md:text-[22px] text-white/90 leading-relaxed ${
                 index < COPY.screen6.paragraphs.length - 1 ? "mb-6" : ""
               }`}
             >
@@ -47,8 +47,8 @@ export default function Screen06Insight() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.7 }}
-          className="max-w-md mx-auto w-full pb-4"
+          transition={{ duration: 0.5, delay: 0.5 }}
+          className="max-w-md mx-auto w-full"
         >
           <GoldButton onClick={handleNext}>
             {COPY.screen6.button}

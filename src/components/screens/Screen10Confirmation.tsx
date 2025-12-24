@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import GlassCard from "@/components/GlassCard";
 import { COPY } from "@/content/copy";
 import { Check, Share2 } from "lucide-react";
 
@@ -17,7 +16,6 @@ export default function Screen10Confirmation() {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        // Fallback: copy to clipboard
         await navigator.clipboard.writeText(window.location.origin);
         alert("Link copied to clipboard!");
       }
@@ -28,19 +26,23 @@ export default function Screen10Confirmation() {
 
   return (
     <div className="flex-1 flex flex-col">
-      {/* No header on confirmation */}
-
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
         <div className="max-w-md mx-auto w-full text-center">
           {/* Success checkmark */}
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", duration: 0.6 }}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", duration: 0.6, bounce: 0.4 }}
             className="mb-8"
           >
-            <div className="w-20 h-20 mx-auto rounded-full gold-gradient gold-glow flex items-center justify-center">
-              <Check className="w-10 h-10 text-[#1a1a2e]" />
+            <div
+              className="w-20 h-20 mx-auto rounded-full flex items-center justify-center"
+              style={{
+                background: 'linear-gradient(180deg, #E8C547 0%, #C9A227 50%, #8B6914 100%)',
+                boxShadow: '0 0 40px rgba(201, 162, 39, 0.4), 0 0 80px rgba(201, 162, 39, 0.2)'
+              }}
+            >
+              <Check className="w-10 h-10 text-[#1a1400]" strokeWidth={3} />
             </div>
           </motion.div>
 
@@ -49,36 +51,34 @@ export default function Screen10Confirmation() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-3xl md:text-4xl font-bold text-white mb-4"
+            className="heading-display text-[32px] md:text-[38px] text-white mb-4"
           >
             {COPY.screen10.headline}
           </motion.h2>
 
           {/* Text */}
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="text-lg text-white/75 mb-8"
+            className="text-body text-[17px] text-white/70 mb-10 leading-relaxed"
           >
             {COPY.screen10.text}
           </motion.p>
 
-          {/* Share card */}
+          {/* Share button */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
-            <GlassCard className="py-4 px-6">
-              <button
-                onClick={handleShare}
-                className="flex items-center justify-center gap-3 w-full text-white/80 hover:text-white transition-colors"
-              >
-                <Share2 className="w-5 h-5" />
-                <span>{COPY.screen10.shareText}</span>
-              </button>
-            </GlassCard>
+            <button
+              onClick={handleShare}
+              className="glass-card rounded-xl py-4 px-6 flex items-center justify-center gap-3 w-full text-white/70 hover:text-white/90 hover:border-white/20 transition-all"
+            >
+              <Share2 className="w-5 h-5" />
+              <span className="text-[15px]">{COPY.screen10.shareText}</span>
+            </button>
           </motion.div>
         </div>
       </div>
