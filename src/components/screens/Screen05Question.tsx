@@ -20,12 +20,12 @@ const optionIcons: Record<string, LucideIcon> = {
 export default function Screen05Question() {
   const { state, dispatch } = useQuiz();
 
-  const handleSelect = (option: string) => {
-    dispatch({ type: "SET_ANSWER_Q2", payload: option });
+  const handleToggle = (option: string) => {
+    dispatch({ type: "TOGGLE_ANSWER_Q2", payload: option });
   };
 
   const handleNext = () => {
-    if (state.answer_q2) {
+    if (state.answer_q2.length > 0) {
       dispatch({ type: "NEXT_STEP" });
     }
   };
@@ -65,14 +65,14 @@ export default function Screen05Question() {
             Select all that apply
           </motion.p>
 
-          {/* Options with icons */}
+          {/* Options with icons - multi-select */}
           <div className="flex flex-col gap-3">
             {COPY.screen5.options.map((option, index) => (
               <OptionCard
                 key={option}
                 text={option}
-                selected={state.answer_q2 === option}
-                onClick={() => handleSelect(option)}
+                selected={state.answer_q2.includes(option)}
+                onClick={() => handleToggle(option)}
                 index={index}
                 icon={optionIcons[option]}
               />
@@ -83,13 +83,13 @@ export default function Screen05Question() {
         {/* CTA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: state.answer_q2 ? 1 : 0.5, y: 0 }}
+          animate={{ opacity: state.answer_q2.length > 0 ? 1 : 0.5, y: 0 }}
           transition={{ duration: 0.4 }}
           className="max-w-md mx-auto w-full pt-6"
         >
           <GoldButton
             onClick={handleNext}
-            disabled={!state.answer_q2}
+            disabled={state.answer_q2.length === 0}
           >
             {COPY.screen2.button}
           </GoldButton>

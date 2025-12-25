@@ -185,11 +185,19 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.1;
+  /* Text shadow for better readability over nebula */
+  text-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.8),
+    0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
 .text-body {
   font-family: var(--font-inter), system-ui, sans-serif;
   line-height: 1.6;
+  /* Subtle text shadow for readability */
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.7),
+    0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 /* ===== LAYOUT ===== */
@@ -281,9 +289,12 @@ body {
   color: #C9A227;
 }
 
-/* Muted text for secondary information */
+/* Muted text for secondary information - brighter for visibility */
 .text-muted-custom {
-  color: #A1A1AA;
+  color: #B8B8C0;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.6),
+    0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* Gold gradient text for extra emphasis */

@@ -14,7 +14,7 @@ export interface UTMParams {
 export interface QuizState {
   stepIndex: number;
   answer_q1: string | null;
-  answer_q2: string | null;
+  answer_q2: string[]; // Multi-select array
   email: string;
   utm: UTMParams;
   session_id: string;
@@ -25,14 +25,14 @@ export type QuizAction =
   | { type: "NEXT_STEP" }
   | { type: "PREV_STEP" }
   | { type: "SET_ANSWER_Q1"; payload: string }
-  | { type: "SET_ANSWER_Q2"; payload: string }
+  | { type: "TOGGLE_ANSWER_Q2"; payload: string } // Toggle for multi-select
   | { type: "SET_EMAIL"; payload: string }
   | { type: "SET_UTM"; payload: UTMParams };
 
 export const initialQuizState: QuizState = {
   stepIndex: 1,
   answer_q1: null,
-  answer_q2: null,
+  answer_q2: [], // Empty array for multi-select
   email: "",
   utm: {},
   session_id: typeof window !== "undefined" ? uuidv4() : "",
@@ -48,8 +48,15 @@ export function quizReducer(state: QuizState, action: QuizAction): QuizState {
       return { ...state, stepIndex: Math.max(state.stepIndex - 1, 1) };
     case "SET_ANSWER_Q1":
       return { ...state, answer_q1: action.payload };
-    case "SET_ANSWER_Q2":
-      return { ...state, answer_q2: action.payload };
+    case "TOGGLE_ANSWER_Q2":
+      // Toggle: add if not present, remove if present
+      const isSelected = state.answer_q2.includes(action.payload);
+      return {
+        ...state,
+        answer_q2: isSelected
+          ? state.answer_q2.filter((item) => item !== action.payload)
+          : [...state.answer_q2, action.payload],
+      };
     case "SET_EMAIL":
       return { ...state, email: action.payload };
     case "SET_UTM":

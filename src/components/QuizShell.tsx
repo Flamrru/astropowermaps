@@ -38,7 +38,9 @@ export default function QuizShell({ children }: QuizShellProps) {
             className="absolute inset-[-10px] w-[calc(100%+20px)] h-[calc(100%+20px)] object-cover object-center hidden md:block"
           />
           {/* Dark overlay for better text readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#050510]/60 via-transparent to-[#050510]/70" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#050510]/70 via-[#050510]/30 to-[#050510]/75" />
+          {/* Additional center darkening for text areas */}
+          <div className="absolute inset-0 bg-[#050510]/25" />
         </div>
 
         {/* Main content area */}
