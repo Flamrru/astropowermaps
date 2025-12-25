@@ -22,9 +22,24 @@ export default function QuizShell({ children }: QuizShellProps) {
 
   return (
     <QuizContext.Provider value={{ state, dispatch }}>
-      <div className="cosmic-bg min-h-screen min-h-dvh flex flex-col relative overflow-hidden">
-        {/* Stars overlay */}
-        <div className="stars-layer" />
+      <div className="min-h-screen min-h-dvh flex flex-col relative overflow-hidden bg-[#050510]">
+        {/* Animated nebula background - responsive */}
+        <div className="fixed inset-0 z-0">
+          {/* Mobile background (portrait) - hidden on desktop */}
+          <img
+            src="/nebula-mobile.webp"
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover object-center md:hidden"
+          />
+          {/* Desktop background (landscape) - hidden on mobile */}
+          <img
+            src="/nebula-desktop.webp"
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover object-center hidden md:block"
+          />
+          {/* Dark overlay for better text readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#050510]/60 via-transparent to-[#050510]/70" />
+        </div>
 
         {/* Main content area */}
         <main className="flex-1 flex flex-col relative z-10 safe-area-padding">
