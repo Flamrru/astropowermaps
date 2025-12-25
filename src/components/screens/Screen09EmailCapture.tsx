@@ -80,49 +80,65 @@ export default function Screen09EmailCapture() {
       <div className="flex-1 flex flex-col px-6 pt-6 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col max-w-md mx-auto w-full">
-          {/* Headline */}
+          {/* Headline - "You just haven't seen it yet." bold */}
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="heading-display text-[32px] md:text-[38px] text-white mb-4"
           >
-            {COPY.screen9.headline}
+            Your map exists. <span className="font-bold">You just haven&apos;t seen it yet.</span>
           </motion.h2>
 
-          {/* Subhead */}
+          {/* Subhead - "48 hours" in gold */}
           <motion.p
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-body text-[15px] text-white/70 mb-5"
           >
-            {COPY.screen9.subhead}
+            In <span className="text-gold">48 hours</span>, the 2026 Power Map goes live. Enter your birth details, and you&apos;ll get:
           </motion.p>
 
-          {/* Benefits */}
+          {/* Benefits - bold key phrases, gold checkmarks */}
           <motion.ul
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
             className="space-y-3 mb-6"
           >
-            {COPY.screen9.benefits.map((benefit, index) => (
-              <li key={index} className="flex items-start gap-3">
-                <span className="text-[#C9A227] mt-0.5 flex-shrink-0">
-                  <Check className="w-4 h-4" strokeWidth={2.5} />
-                </span>
-                <span className="text-[14px] text-white/75 leading-relaxed">{benefit}</span>
-              </li>
-            ))}
+            <li className="flex items-start gap-3">
+              <span className="text-gold mt-0.5 flex-shrink-0">
+                <Check className="w-4 h-4" strokeWidth={2.5} />
+              </span>
+              <span className="text-[14px] text-white/75 leading-relaxed">
+                Your <span className="font-bold text-white">3 power months</span> — when to launch, take risks, make moves
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-gold mt-0.5 flex-shrink-0">
+                <Check className="w-4 h-4" strokeWidth={2.5} />
+              </span>
+              <span className="text-[14px] text-white/75 leading-relaxed">
+                Your <span className="font-bold text-white">3 power destinations</span> — where to travel for breakthroughs
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <span className="text-gold mt-0.5 flex-shrink-0">
+                <Check className="w-4 h-4" strokeWidth={2.5} />
+              </span>
+              <span className="text-[14px] text-white/75 leading-relaxed">
+                Your <span className="font-bold text-white">rest windows</span> — when to recharge instead of force
+              </span>
+            </li>
           </motion.ul>
 
-          {/* Social proof */}
+          {/* Social proof - gold, smaller */}
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="text-[13px] text-[#C9A227] mb-5"
+            className="text-[13px] text-gold mb-5"
           >
             {COPY.screen9.socialProof}
           </motion.p>

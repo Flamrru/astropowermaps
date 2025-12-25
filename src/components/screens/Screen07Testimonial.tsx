@@ -28,36 +28,51 @@ export default function Screen07Testimonial() {
       <div className="flex-1 flex flex-col px-6 pt-8 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
-          <div className="glass-card rounded-2xl py-8 px-6">
-            {/* Quote mark */}
+          {/* Testimonial card with gold left accent */}
+          <div className="glass-card rounded-2xl py-8 px-6 border-l-4 border-l-[#C9A227]">
+            {/* Quote mark - gold, large */}
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4 }}
-              className="heading-display text-[48px] text-[#C9A227] mb-3 leading-none"
+              className="heading-display text-[56px] text-gold mb-2 leading-none"
             >
               &ldquo;
             </motion.div>
 
-            {/* Quote text */}
+            {/* Quote text - italic with styled words */}
+            {/* "Lisbon" bold, "2 weeks" gold+bold, "5-figure client" bold */}
             <motion.p
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="text-body text-[17px] md:text-[18px] text-white/90 leading-relaxed mb-5 italic"
+              className="text-body text-[17px] md:text-[18px] text-white/90 leading-relaxed mb-6 italic"
             >
-              {COPY.screen7.quote}
+              I booked a trip to <span className="font-bold not-italic">Lisbon</span> during my power month. Within <span className="text-gold font-bold not-italic">2 weeks</span> of being there, I met my now-business partner and closed my first <span className="font-bold not-italic">5-figure client</span>.
             </motion.p>
 
-            {/* Attribution */}
-            <motion.p
+            {/* Attribution with avatar placeholder */}
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.25 }}
-              className="text-body text-[14px] text-white/50"
+              className="flex items-center gap-3"
             >
-              {COPY.screen7.attribution}
-            </motion.p>
+              {/* Avatar placeholder - circular with gradient */}
+              <div
+                className="w-12 h-12 rounded-full flex-shrink-0 border-2 border-white/20"
+                style={{
+                  background: 'linear-gradient(135deg, #3a3a5a 0%, #2a2a4a 100%)',
+                }}
+              >
+                <div className="w-full h-full rounded-full flex items-center justify-center text-white/40 text-lg font-medium">
+                  S
+                </div>
+              </div>
+              <span className="text-body text-[14px] text-muted-custom">
+                {COPY.screen7.attribution}
+              </span>
+            </motion.div>
           </div>
         </div>
 

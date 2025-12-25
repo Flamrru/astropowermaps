@@ -28,14 +28,14 @@ export default function Screen04Proof() {
       <div className="flex-1 flex flex-col px-6 pt-8 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
-          {/* Big stat */}
+          {/* Big stat - 73% in gold, very large */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
             className="mb-5"
           >
-            <span className="heading-display text-[64px] md:text-[72px] text-white">
+            <span className="heading-display text-[64px] md:text-[72px] text-gold font-bold">
               {COPY.screen4.stat}
             </span>
             <span className="text-body text-[22px] md:text-[26px] text-white/90 ml-2">
@@ -43,20 +43,35 @@ export default function Screen04Proof() {
             </span>
           </motion.div>
 
-          {/* Paragraphs */}
-          {COPY.screen4.paragraphs.map((paragraph, index) => (
-            <motion.p
-              key={index}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, delay: 0.15 + index * 0.12 }}
-              className={`text-body text-[17px] text-white/75 leading-relaxed ${
-                index < COPY.screen4.paragraphs.length - 1 ? "mb-5" : ""
-              }`}
-            >
-              {paragraph}
-            </motion.p>
-          ))}
+          {/* Paragraph 1: "That wasn't random." - Bold, section header */}
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.15 }}
+            className="text-body text-[17px] text-white font-bold leading-relaxed mb-5"
+          >
+            That wasn&apos;t random.
+          </motion.p>
+
+          {/* Paragraph 2: "specific locations" and "appear" bold */}
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.27 }}
+            className="text-body text-[17px] text-white/75 leading-relaxed mb-5"
+          >
+            Based on your birth chart, there are <span className="font-bold text-white">specific locations</span> on Earth where your energy amplifies. Where clarity comes easier. Where the right people and opportunities <span className="font-bold text-white">appear</span>.
+          </motion.p>
+
+          {/* Paragraph 3: Muted/italic */}
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, delay: 0.39 }}
+            className="text-body text-[17px] text-muted-custom italic leading-relaxed"
+          >
+            You don&apos;t need to move there. You just need to visit — at the right time.
+          </motion.p>
         </div>
 
         {/* CTA */}

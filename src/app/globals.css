@@ -274,3 +274,22 @@ body {
 .animate-pulse-glow {
   animation: pulse-glow 3s ease-in-out infinite;
 }
+
+/* ===== TEXT STYLING UTILITIES ===== */
+/* Gold highlight for key words */
+.text-gold {
+  color: #C9A227;
+}
+
+/* Muted text for secondary information */
+.text-muted-custom {
+  color: #A1A1AA;
+}
+
+/* Gold gradient text for extra emphasis */
+.text-gold-gradient {
+  background: linear-gradient(180deg, #E8C547 0%, #C9A227 50%, #8B6914 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

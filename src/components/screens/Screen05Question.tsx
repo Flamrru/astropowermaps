@@ -6,6 +6,16 @@ import OptionCard from "@/components/OptionCard";
 import ProgressHeader from "@/components/ProgressHeader";
 import { COPY } from "@/content/copy";
 import { useQuiz } from "@/lib/quiz-state";
+import { Briefcase, Lightbulb, Heart, Compass, Mountain, LucideIcon } from "lucide-react";
+
+// Map options to their icons
+const optionIcons: Record<string, LucideIcon> = {
+  "Career / business growth": Briefcase,
+  "Creativity / new ideas": Lightbulb,
+  "Love / relationships": Heart,
+  "Clarity / finding direction": Compass,
+  "Adventure / feeling alive": Mountain,
+};
 
 export default function Screen05Question() {
   const { state, dispatch } = useQuiz();
@@ -35,17 +45,27 @@ export default function Screen05Question() {
       <div className="flex-1 flex flex-col px-6 pt-6 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col max-w-md mx-auto w-full">
-          {/* Question */}
+          {/* Question - "2026" in gold */}
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="heading-display text-[28px] md:text-[32px] text-white mb-8"
+            className="heading-display text-[28px] md:text-[32px] text-white mb-2"
           >
-            {COPY.screen5.question}
+            What do you want <span className="text-gold">2026</span> to be about?
           </motion.h2>
 
-          {/* Options */}
+          {/* Helper text - muted */}
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="text-body text-[13px] text-muted-custom mb-6"
+          >
+            Select all that apply
+          </motion.p>
+
+          {/* Options with icons */}
           <div className="flex flex-col gap-3">
             {COPY.screen5.options.map((option, index) => (
               <OptionCard
@@ -54,6 +74,7 @@ export default function Screen05Question() {
                 selected={state.answer_q2 === option}
                 onClick={() => handleSelect(option)}
                 index={index}
+                icon={optionIcons[option]}
               />
             ))}
           </div>

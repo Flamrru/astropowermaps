@@ -28,19 +28,35 @@ export default function Screen06Insight() {
       <div className="flex-1 flex flex-col px-6 pt-8 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
-          {COPY.screen6.paragraphs.map((paragraph, index) => (
-            <motion.p
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.15 }}
-              className={`text-body text-[20px] md:text-[22px] text-white/90 leading-relaxed ${
-                index < COPY.screen6.paragraphs.length - 1 ? "mb-6" : ""
-              }`}
-            >
-              {paragraph}
-            </motion.p>
-          ))}
+          {/* Headline: "Timing matters as much as location." - Large, bold */}
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0 }}
+            className="heading-display text-[24px] md:text-[28px] text-white font-bold leading-tight mb-6"
+          >
+            Timing matters as much as location.
+          </motion.h2>
+
+          {/* Body: "3 months" in gold, "momentum builds" bold */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="text-body text-[20px] md:text-[22px] text-white/90 leading-relaxed mb-6"
+          >
+            You have <span className="text-gold">3 months</span> in 2026 where everything you start gains traction. Push during those windows, and <span className="font-bold text-white">momentum builds</span>.
+          </motion.p>
+
+          {/* Last line: muted/italic */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="text-body text-[20px] md:text-[22px] text-muted-custom italic leading-relaxed"
+          >
+            Push outside them? It feels like dragging a boulder uphill.
+          </motion.p>
         </div>
 
         {/* CTA */}

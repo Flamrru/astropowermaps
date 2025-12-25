@@ -35,22 +35,22 @@ export default function Screen03Question() {
       <div className="flex-1 flex flex-col px-6 pt-6 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col max-w-md mx-auto w-full">
-          {/* Question */}
+          {/* Question - "right" in gold + bold */}
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="heading-display text-[28px] md:text-[32px] text-white mb-3"
           >
-            {COPY.screen3.question}
+            Have you ever visited a place that just felt... <span className="text-gold font-bold">right</span>?
           </motion.h2>
 
-          {/* Supporting text */}
+          {/* Supporting text - muted */}
           <motion.p
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-body text-[15px] text-white/60 mb-8"
+            className="text-body text-[15px] text-muted-custom mb-8"
           >
             {COPY.screen3.supportingText}
           </motion.p>

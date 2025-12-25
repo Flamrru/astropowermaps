@@ -19,24 +19,28 @@ export default function Screen01Entry() {
       <div className="flex-1 flex flex-col justify-end px-6 pb-6">
         <div className="max-w-md mx-auto w-full">
           {/* Headline - Large serif display font like mockup */}
+          {/* "3 months", "3 places", "2026" in Gold + Bold */}
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: "easeOut" }}
             className="heading-display text-[42px] md:text-[52px] text-white mb-5"
           >
-            {COPY.screen1.headline}
+            There are <span className="text-gold font-bold">3 months</span> and{" "}
+            <span className="text-gold font-bold">3 places</span> that will define your{" "}
+            <span className="text-gold font-bold">2026</span>.
           </motion.h1>
 
-          {/* Subhead */}
-          <motion.p
+          {/* Subhead - "Most people never see it." in muted */}
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
-            className="text-body text-[17px] text-white/70 leading-relaxed mb-8"
+            className="text-body text-[17px] leading-relaxed mb-8"
           >
-            {COPY.screen1.subhead}
-          </motion.p>
+            <span className="text-white">Based on your birth chart, there&apos;s a map for your year.</span>{" "}
+            <span className="text-muted-custom">Most people never see it.</span>
+          </motion.div>
 
           {/* Credibility bar */}
           <motion.div

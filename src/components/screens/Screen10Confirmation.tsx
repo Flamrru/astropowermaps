@@ -46,22 +46,22 @@ export default function Screen10Confirmation() {
             </div>
           </motion.div>
 
-          {/* Headline */}
+          {/* Headline - with checkmark icon, large, bold */}
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="heading-display text-[32px] md:text-[38px] text-white mb-4"
+            className="heading-display text-[32px] md:text-[38px] text-white mb-4 font-bold"
           >
-            {COPY.screen10.headline}
+            <span className="text-gold">✓</span> You&apos;re on the list.
           </motion.h2>
 
-          {/* Text */}
+          {/* Text - muted */}
           <motion.p
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="text-body text-[17px] text-white/70 mb-10 leading-relaxed"
+            className="text-body text-[17px] text-muted-custom mb-10 leading-relaxed"
           >
             {COPY.screen10.text}
           </motion.p>

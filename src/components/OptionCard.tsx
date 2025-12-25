@@ -1,12 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { LucideIcon } from "lucide-react";
 
 interface OptionCardProps {
   text: string;
   selected: boolean;
   onClick: () => void;
   index: number;
+  icon?: LucideIcon;
 }
 
 export default function OptionCard({
@@ -14,6 +16,7 @@ export default function OptionCard({
   selected,
   onClick,
   index,
+  icon: Icon,
 }: OptionCardProps) {
   return (
     <motion.button
@@ -26,13 +29,19 @@ export default function OptionCard({
       className={`
         w-full py-4 px-5 rounded-xl text-left
         transition-all duration-250
-        min-h-[54px] flex items-center
+        min-h-[54px] flex items-center gap-4
         ${selected
           ? "glass-card-selected border border-[rgba(201,162,39,0.5)]"
           : "glass-card"
         }
       `}
     >
+      {Icon && (
+        <Icon
+          className={`w-5 h-5 flex-shrink-0 ${selected ? "text-gold" : "text-white/60"}`}
+          strokeWidth={1.5}
+        />
+      )}
       <span className={`text-[15px] leading-snug ${selected ? "text-white" : "text-white/85"}`}>
         {text}
       </span>
