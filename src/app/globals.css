@@ -283,6 +283,38 @@ body {
   animation: pulse-glow 3s ease-in-out infinite;
 }
 
+/* ===== CELESTIAL DEVICE ANIMATIONS ===== */
+@keyframes celestial-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes celestial-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes celestial-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 20px rgba(201, 162, 39, 0.4))
+            drop-shadow(0 0 40px rgba(201, 162, 39, 0.2));
+  }
+  50% {
+    filter: drop-shadow(0 0 30px rgba(201, 162, 39, 0.6))
+            drop-shadow(0 0 60px rgba(201, 162, 39, 0.3));
+  }
+}
+
+.celestial-device {
+  animation:
+    celestial-float 6s ease-in-out infinite,
+    celestial-glow 4s ease-in-out infinite;
+}
+
+.celestial-device-rotate {
+  animation: celestial-rotate 120s linear infinite;
+}
+
 /* ===== TEXT STYLING UTILITIES ===== */
 /* Gold highlight for key words */
 .text-gold {
