@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
 interface LeadPayload {
   email: string;
@@ -29,38 +30,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Log the lead (for debugging)
-    console.log("New lead received:", {
+    // Insert lead into Supabase
+    const { error: dbError } = await supabaseAdmin.from("astro_leads").insert({
       email: body.email,
-      quiz: body.quiz,
-      utm: body.utm,
+      quiz_q1: body.quiz.q1,
+      quiz_q2: body.quiz.q2,
+      utm_source: body.utm.utm_source,
+      utm_medium: body.utm.utm_medium,
+      utm_campaign: body.utm.utm_campaign,
+      utm_content: body.utm.utm_content,
+      utm_term: body.utm.utm_term,
       session_id: body.session_id,
-      timestamp: body.timestamp,
     });
 
-    // Forward to webhook if configured
+    if (dbError) {
+      console.error("Supabase insert error:", dbError);
+      return NextResponse.json(
+        { error: "Failed to save lead" },
+        { status: 500 }
+      );
+    }
+
+    // Optional: Forward to webhook if configured (e.g., for Zapier automation)
     const webhookUrl = process.env.LEAD_WEBHOOK_URL;
-
     if (webhookUrl) {
-      try {
-        const webhookResponse = await fetch(webhookUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(body),
-        });
-
-        if (!webhookResponse.ok) {
-          console.error("Webhook failed:", webhookResponse.status);
-          // Don't fail the request if webhook fails - we still captured the lead in logs
-        }
-      } catch (webhookError) {
-        console.error("Webhook error:", webhookError);
-        // Don't fail the request if webhook fails
-      }
-    } else {
-      console.log("No LEAD_WEBHOOK_URL configured - lead captured in logs only");
+      fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }).catch((err) => console.error("Webhook error:", err));
     }
 
     return NextResponse.json({ success: true });
