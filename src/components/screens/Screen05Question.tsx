@@ -74,7 +74,7 @@ export default function Screen05Question() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: state.answer_q2.length > 0 ? 1 : 0.5, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="max-w-md mx-auto w-full pt-6"
+          className="max-w-md mx-auto w-full pt-6 mb-6"
         >
           <GoldButton
             onClick={handleNext}

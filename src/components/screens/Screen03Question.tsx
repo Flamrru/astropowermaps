@@ -27,8 +27,8 @@ export default function Screen03Question() {
       <div className="flex-1 flex flex-col px-6 pb-6">
         <div className="flex-1 flex flex-col max-w-md mx-auto w-full">
 
-          {/* Header section - stays at top */}
-          <div className="pt-2">
+          {/* Header section - pushed down slightly */}
+          <div className="pt-8">
             {/* Question - "right" in gold + bold */}
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
@@ -53,12 +53,12 @@ export default function Screen03Question() {
           {/* Spacer - allows orb background to show through */}
           <div className="flex-1" />
 
-          {/* Options - pushed to bottom */}
+          {/* Options - pushed up slightly from bottom */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex flex-col gap-3"
+            className="flex flex-col gap-3 mb-4"
           >
             {COPY.screen3.options.map((option, index) => (
               <OptionCard

@@ -46,7 +46,7 @@ export default function Screen02Insight() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="max-w-md mx-auto w-full"
+          className="max-w-md mx-auto w-full mb-6"
         >
           <GoldButton onClick={handleNext}>
             {COPY.screen2.button}

@@ -175,7 +175,7 @@ export default function Screen07Testimonial() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.6 }}
-          className="max-w-md mx-auto w-full pt-6"
+          className="max-w-md mx-auto w-full pt-6 mb-6"
         >
           <GoldButton onClick={handleNext}>
             {COPY.screen7.button}

@@ -70,7 +70,7 @@ export default function Screen01Entry() {
           </motion.p>
 
           {/* Spacer - pushes content to edges */}
-          <div className="flex-1 min-h-[60px]" />
+          <div className="flex-1 min-h-[40px]" />
 
           {/* Credibility bar */}
           <motion.div
@@ -115,7 +115,7 @@ export default function Screen01Entry() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.55, ease: "easeOut" }}
-            className="mt-5"
+            className="mt-5 mb-6"
           >
             <motion.button
               onClick={handleStart}
