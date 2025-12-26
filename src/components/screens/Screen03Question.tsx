@@ -1,22 +1,20 @@
 "use client";
 
 import { motion } from "framer-motion";
-import GoldButton from "@/components/GoldButton";
 import OptionCard from "@/components/OptionCard";
 import { COPY } from "@/content/copy";
 import { useQuiz } from "@/lib/quiz-state";
 
 export default function Screen03Question() {
-  const { state, dispatch } = useQuiz();
+  const { dispatch } = useQuiz();
 
+  // Auto-advance on selection (single-select question)
   const handleSelect = (option: string) => {
     dispatch({ type: "SET_ANSWER_Q1", payload: option });
-  };
-
-  const handleNext = () => {
-    if (state.answer_q1) {
+    // Small delay for visual feedback before advancing
+    setTimeout(() => {
       dispatch({ type: "NEXT_STEP" });
-    }
+    }, 200);
   };
 
   return (
@@ -44,34 +42,19 @@ export default function Screen03Question() {
             {COPY.screen3.supportingText}
           </motion.p>
 
-          {/* Options */}
+          {/* Options - auto-advances on tap */}
           <div className="flex flex-col gap-3">
             {COPY.screen3.options.map((option, index) => (
               <OptionCard
                 key={option}
                 text={option}
-                selected={state.answer_q1 === option}
+                selected={false}
                 onClick={() => handleSelect(option)}
                 index={index}
               />
             ))}
           </div>
         </div>
-
-        {/* CTA - only show when option selected */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: state.answer_q1 ? 1 : 0.5, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="max-w-md mx-auto w-full pt-6"
-        >
-          <GoldButton
-            onClick={handleNext}
-            disabled={!state.answer_q1}
-          >
-            {COPY.screen2.button}
-          </GoldButton>
-        </motion.div>
       </div>
     </div>
   );
