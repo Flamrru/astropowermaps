@@ -53,30 +53,36 @@ export default function QuizShell({ children }: QuizShellProps) {
             height: 'calc(100% + 100px)',
           }}
         >
-          {/* Entry background (step 1) - celestial astrolabe */}
+          {/* Entry background (step 1) - rotating orb video */}
           <motion.div
             initial={{ opacity: 1 }}
             animate={{ opacity: useEntryBg ? 1 : 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute inset-0"
           >
-            <img
-              src="/question-bg.webp"
-              alt=""
+            <video
+              src="/question-bg.mp4?v=3"
+              autoPlay
+              loop
+              muted
+              playsInline
               className="absolute inset-0 w-full h-full object-cover object-center"
             />
           </motion.div>
 
-          {/* Globe background (step 2) */}
+          {/* Globe background (step 2) - rotating globe video */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: useGlobeBg ? 1 : 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute inset-0"
           >
-            <img
-              src="/globe-bg.webp"
-              alt=""
+            <video
+              src="/globe-bg.mp4"
+              autoPlay
+              loop
+              muted
+              playsInline
               className="absolute inset-0 w-full h-full object-cover object-center"
             />
           </motion.div>
