@@ -6,6 +6,32 @@ import { QuizContext, quizReducer, initialQuizState } from "@/lib/quiz-state";
 import { parseUTMParams } from "@/lib/utm";
 import ProgressHeader from "@/components/ProgressHeader";
 
+// Funnel events to track
+const FUNNEL_EVENTS: Record<number, string> = {
+  2: "quiz_start",      // User clicked "See Your Map"
+  4: "q1_answered",     // User answered Q1
+  6: "q2_answered",     // User answered Q2
+  9: "email_screen",    // User reached email capture
+  // Lead is tracked separately in Screen09EmailCapture
+};
+
+// Track funnel event to our database
+async function trackFunnelEvent(sessionId: string, eventName: string, stepNumber: number) {
+  try {
+    await fetch("/api/funnel-event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: sessionId,
+        event_name: eventName,
+        step_number: stepNumber,
+      }),
+    });
+  } catch (error) {
+    console.error("Failed to track funnel event:", error);
+  }
+}
+
 // Crossfade video loop component for smooth looping (60fps)
 function CrossfadeOrbVideo({ isActive }: { isActive: boolean }) {
   const videoARef = useRef<HTMLVideoElement>(null);
@@ -124,6 +150,19 @@ export default function QuizShell({ children }: QuizShellProps) {
     }
   }, []);
 
+  // Track funnel events when step changes
+  const prevStepRef = useRef(state.stepIndex);
+  useEffect(() => {
+    // Only track if step actually changed (not on initial mount with step 1)
+    if (prevStepRef.current !== state.stepIndex) {
+      const eventName = FUNNEL_EVENTS[state.stepIndex];
+      if (eventName) {
+        trackFunnelEvent(state.session_id, eventName, state.stepIndex);
+      }
+      prevStepRef.current = state.stepIndex;
+    }
+  }, [state.stepIndex, state.session_id]);
+
   // Background logic: step 1 = entry orb, step 2 = globe, step 3 = question orb, rest = nebula
   const useEntryBg = state.stepIndex === 1;
   const useGlobeBg = state.stepIndex === 2;
@@ -144,25 +183,51 @@ export default function QuizShell({ children }: QuizShellProps) {
 
   return (
     <QuizContext.Provider value={{ state, dispatch }}>
+      {/* Outer wrapper - cosmic gradient background for larger screens */}
       <div
-        className="min-h-screen min-h-dvh flex flex-col relative overflow-hidden bg-[#050510]"
+        className="min-h-screen min-h-dvh flex items-center justify-center"
         style={{
-          opacity: mounted ? 1 : 0,
-          transition: 'opacity 0.15s ease-out',
+          background: `
+            radial-gradient(ellipse 80% 50% at 50% 50%, rgba(201, 162, 39, 0.08) 0%, transparent 50%),
+            radial-gradient(ellipse 60% 80% at 30% 20%, rgba(60, 50, 120, 0.15) 0%, transparent 50%),
+            radial-gradient(ellipse 50% 60% at 70% 80%, rgba(80, 60, 140, 0.12) 0%, transparent 50%),
+            linear-gradient(180deg, #030308 0%, #050510 30%, #0a0a1e 70%, #050510 100%)
+          `,
         }}
       >
-        {/* Background layer with crossfade transitions - edge to edge */}
+        {/* Subtle stars on outer area */}
+        <div className="fixed inset-0 pointer-events-none opacity-40 stars-layer" />
+
+        {/* Glow effect behind app container */}
         <div
-          className="fixed z-0"
+          className="absolute w-full max-w-[850px] h-full max-h-[900px] pointer-events-none"
           style={{
-            top: '-50px',
-            left: '-50px',
-            right: '-50px',
-            bottom: '-50px',
-            width: 'calc(100% + 100px)',
-            height: 'calc(100% + 100px)',
+            background: 'radial-gradient(ellipse 100% 100% at 50% 50%, rgba(201, 162, 39, 0.06) 0%, transparent 60%)',
+            filter: 'blur(40px)',
+          }}
+        />
+
+        {/* Inner app container - max width for phone-like experience */}
+        <div
+          className="w-full max-w-[768px] min-h-screen min-h-dvh flex flex-col relative overflow-hidden bg-[#050510] shadow-2xl"
+          style={{
+            opacity: mounted ? 1 : 0,
+            transition: 'opacity 0.15s ease-out',
+            boxShadow: '0 0 80px rgba(201, 162, 39, 0.1), 0 0 120px rgba(60, 50, 120, 0.08)',
           }}
         >
+          {/* Background layer with crossfade transitions - contained within app */}
+          <div
+            className="absolute z-0"
+            style={{
+              top: '-50px',
+              left: '-50px',
+              right: '-50px',
+              bottom: '-50px',
+              width: 'calc(100% + 100px)',
+              height: 'calc(100% + 100px)',
+            }}
+          >
           {/* Entry background (step 1) - original orb video */}
           <motion.div
             initial={{ opacity: 1 }}
@@ -177,6 +242,7 @@ export default function QuizShell({ children }: QuizShellProps) {
               muted
               playsInline
               className="absolute inset-0 w-full h-full object-cover object-center"
+              style={{ transform: 'scale(1.15)' }}
             />
           </motion.div>
 
@@ -221,6 +287,7 @@ export default function QuizShell({ children }: QuizShellProps) {
               muted
               playsInline
               className="absolute inset-0 w-full h-full object-cover object-center"
+              style={{ transform: 'scale(1.15)' }}
             />
           </motion.div>
 
@@ -228,19 +295,20 @@ export default function QuizShell({ children }: QuizShellProps) {
           <div className="absolute inset-0 bg-gradient-to-b from-[#050510]/55 via-[#050510]/5 to-[#050510]/30" />
         </div>
 
-        {/* Main content area */}
-        <main className="flex-1 flex flex-col relative z-10 safe-area-padding">
-          {/* Persistent progress header - stays visible during transitions */}
-          <ProgressHeader
-            currentStep={state.stepIndex}
-            showBack={showBack}
-            onBack={handleBack}
-          />
+          {/* Main content area */}
+          <main className="flex-1 flex flex-col relative z-10 safe-area-padding">
+            {/* Persistent progress header - stays visible during transitions */}
+            <ProgressHeader
+              currentStep={state.stepIndex}
+              showBack={showBack}
+              onBack={handleBack}
+            />
 
-          <div key={state.stepIndex} className="flex-1 flex flex-col">
-            {children}
-          </div>
-        </main>
+            <div key={state.stepIndex} className="flex-1 flex flex-col">
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
     </QuizContext.Provider>
   );

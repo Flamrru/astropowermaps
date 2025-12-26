@@ -22,6 +22,15 @@ interface Stats {
   today: number;
 }
 
+interface FunnelData {
+  page_view: number;
+  quiz_start: number;
+  q1_answered: number;
+  q2_answered: number;
+  email_screen: number;
+  lead: number;
+}
+
 // Q1 and Q2 answer options for analytics
 const Q1_OPTIONS = ["Yes, definitely", "Maybe once or twice", "Not sure"];
 const Q2_OPTIONS = [
@@ -35,6 +44,14 @@ const Q2_OPTIONS = [
 export default function AdminDashboardPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, today: 0 });
+  const [funnel, setFunnel] = useState<FunnelData>({
+    page_view: 0,
+    quiz_start: 0,
+    q1_answered: 0,
+    q2_answered: 0,
+    email_screen: 0,
+    lead: 0,
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -55,6 +72,14 @@ export default function AdminDashboardPage() {
       const data = await res.json();
       setLeads(data.leads || []);
       setStats(data.stats || { total: 0, today: 0 });
+      setFunnel(data.funnel || {
+        page_view: 0,
+        quiz_start: 0,
+        q1_answered: 0,
+        q2_answered: 0,
+        email_screen: 0,
+        lead: 0,
+      });
       setLastUpdated(new Date());
       setError("");
     } catch (err) {
@@ -300,7 +325,12 @@ export default function AdminDashboardPage() {
           />
         </div>
 
-        {/* Analytics Section */}
+        {/* Funnel Analytics */}
+        <div className="mb-8">
+          <FunnelChart data={funnel} />
+        </div>
+
+        {/* Answer Analytics Section */}
         {leads.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <BarChart
@@ -571,6 +601,94 @@ function BarChart({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// Funnel chart component
+function FunnelChart({ data }: { data: FunnelData }) {
+  const steps = [
+    { key: "quiz_start", label: "Quiz Started", icon: "🚀" },
+    { key: "q1_answered", label: "Q1 Answered", icon: "✓" },
+    { key: "q2_answered", label: "Q2 Answered", icon: "✓" },
+    { key: "email_screen", label: "Email Screen", icon: "📧" },
+    { key: "lead", label: "Lead Captured", icon: "🎯" },
+  ];
+
+  const maxValue = Math.max(...steps.map((s) => data[s.key as keyof FunnelData] || 0), 1);
+
+  return (
+    <div className="glass-card rounded-2xl p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-white">Quiz Funnel</h3>
+          <p className="text-xs text-[var(--text-faint)]">
+            Track where users drop off in your quiz
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {steps.map((step, idx) => {
+          const count = data[step.key as keyof FunnelData] || 0;
+          const prevCount = idx > 0 ? data[steps[idx - 1].key as keyof FunnelData] || 0 : count;
+          const dropOffRate = prevCount > 0 && idx > 0 ? ((prevCount - count) / prevCount) * 100 : 0;
+          const barWidth = maxValue > 0 ? (count / maxValue) * 100 : 0;
+
+          return (
+            <div key={step.key}>
+              <div className="flex justify-between items-center mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{step.icon}</span>
+                  <span className="text-sm text-[var(--text-soft)]">{step.label}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  {idx > 0 && dropOffRate > 0 && (
+                    <span className="text-xs text-red-400/70">
+                      -{dropOffRate.toFixed(0)}%
+                    </span>
+                  )}
+                  <span className="text-sm font-semibold text-white tabular-nums">
+                    {count.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              {/* Funnel bar */}
+              <div className="h-3 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-700 ease-out"
+                  style={{
+                    width: `${barWidth}%`,
+                    background:
+                      idx === steps.length - 1
+                        ? "linear-gradient(90deg, #22c55e, #4ade80)"
+                        : "linear-gradient(90deg, var(--gold-dark), var(--gold-main))",
+                    boxShadow:
+                      idx === steps.length - 1
+                        ? "0 0 8px rgba(34, 197, 94, 0.4)"
+                        : "0 0 8px rgba(201, 162, 39, 0.3)",
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Conversion rate */}
+      {data.quiz_start > 0 && (
+        <div className="mt-6 pt-4 border-t border-white/10">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-[var(--text-muted)]">Overall Conversion</span>
+            <span className="text-lg font-bold text-green-400">
+              {((data.lead / data.quiz_start) * 100).toFixed(1)}%
+            </span>
+          </div>
+          <p className="text-xs text-[var(--text-faint)] mt-1">
+            {data.lead} leads from {data.quiz_start} quiz starts
+          </p>
+        </div>
+      )}
     </div>
   );
 }

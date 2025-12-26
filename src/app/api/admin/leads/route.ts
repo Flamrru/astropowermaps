@@ -40,12 +40,34 @@ export async function GET() {
       return leadDate >= today;
     }) || [];
 
+    // Fetch funnel events for analytics
+    const { data: funnelEvents } = await supabaseAdmin
+      .from("astro_funnel_events")
+      .select("event_name");
+
+    // Count each funnel event type
+    const funnelCounts: Record<string, number> = {
+      page_view: leads?.length || 0, // Approximate from leads (they all visited)
+      quiz_start: 0,
+      q1_answered: 0,
+      q2_answered: 0,
+      email_screen: 0,
+      lead: leads?.length || 0, // Leads are the conversions
+    };
+
+    funnelEvents?.forEach((event) => {
+      if (event.event_name in funnelCounts) {
+        funnelCounts[event.event_name]++;
+      }
+    });
+
     return NextResponse.json({
       leads: leads || [],
       stats: {
         total: leads?.length || 0,
         today: todayLeads.length,
       },
+      funnel: funnelCounts,
     });
   } catch (error) {
     console.error("Error fetching leads:", error);
