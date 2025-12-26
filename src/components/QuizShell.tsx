@@ -13,7 +13,7 @@ function CrossfadeOrbVideo({ isActive }: { isActive: boolean }) {
   const [opacityA, setOpacityA] = useState(1);
   const [opacityB, setOpacityB] = useState(0);
   const activeRef = useRef<'A' | 'B'>('A');
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!isActive) return;
