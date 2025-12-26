@@ -45,6 +45,8 @@ export default function RootLayout({
         <link rel="preload" href="/globe-bg.webp" as="image" type="image/webp" />
         <link rel="preload" href="/nebula-mobile.webp" as="image" type="image/webp" />
         <link rel="preload" href="/nebula-desktop.webp" as="image" type="image/webp" />
+        {/* Preload testimonial face for instant display */}
+        <link rel="preload" href="/testimonial-face.png" as="image" type="image/png" />
       </head>
       <body className={`${inter.variable} ${playfair.variable} antialiased`}>
         {children}
