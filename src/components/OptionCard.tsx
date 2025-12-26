@@ -22,9 +22,9 @@ export default function OptionCard({
     <motion.button
       type="button"
       onClick={onClick}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.08 }}
+      initial={{ y: 8 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.25, delay: index * 0.05 }}
       whileTap={{ scale: 0.98 }}
       className="w-full py-4 px-5 rounded-xl text-left transition-all duration-250 min-h-[54px] flex items-center gap-4"
       style={{
