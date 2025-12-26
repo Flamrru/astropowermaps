@@ -109,6 +109,12 @@ interface QuizShellProps {
 
 export default function QuizShell({ children }: QuizShellProps) {
   const [state, dispatch] = useReducer(quizReducer, initialQuizState);
+  const [mounted, setMounted] = useState(false);
+
+  // Wait for client-side mount to prevent hydration flash
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Capture UTM parameters on mount
   useEffect(() => {
@@ -138,7 +144,13 @@ export default function QuizShell({ children }: QuizShellProps) {
 
   return (
     <QuizContext.Provider value={{ state, dispatch }}>
-      <div className="min-h-screen min-h-dvh flex flex-col relative overflow-hidden bg-[#050510]">
+      <div
+        className="min-h-screen min-h-dvh flex flex-col relative overflow-hidden bg-[#050510]"
+        style={{
+          opacity: mounted ? 1 : 0,
+          transition: 'opacity 0.15s ease-out',
+        }}
+      >
         {/* Background layer with crossfade transitions - edge to edge */}
         <div
           className="fixed z-0"
