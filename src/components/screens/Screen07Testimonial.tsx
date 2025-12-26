@@ -75,6 +75,9 @@ export default function Screen07Testimonial() {
               <img
                 src="/testimonial-face.png"
                 alt="Sarah M."
+                width={128}
+                height={128}
+                loading="eager"
                 className="relative w-32 h-32 md:w-36 md:h-36 rounded-full object-cover"
                 style={{
                   boxShadow: '0 8px 32px rgba(0,0,0,0.4), 0 0 60px rgba(201,162,39,0.15)',
