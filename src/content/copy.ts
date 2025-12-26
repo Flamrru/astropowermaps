@@ -35,10 +35,10 @@ export const COPY = {
 
   // SCREEN 4 — Social Proof Interstitial (no interaction)
   screen4: {
-    stat: "73%",
-    statText: "of people say the same thing.",
+    stat: "87%",
+    statText: "of people feel the difference",
     paragraphs: [
-      "That wasn't random.",
+      "That isn't random.",
       "Based on your birth chart, there are specific locations on Earth where your energy amplifies. Where clarity comes easier. Where the right people and opportunities appear.",
       "You don't need to move there. You just need to visit — at the right time."
     ],

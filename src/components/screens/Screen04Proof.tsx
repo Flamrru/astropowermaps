@@ -126,7 +126,7 @@ export default function Screen04Proof() {
             transition={{ duration: 0.45, delay: 0.35 }}
             className="text-body text-[16px] text-white font-bold leading-relaxed mb-3"
           >
-            That wasn&apos;t random.
+            That isn&apos;t random.
           </motion.p>
 
           {/* Paragraph 2: "specific locations" and "appear" bold */}

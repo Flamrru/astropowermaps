@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import GoldButton from "@/components/GoldButton";
+import { trackMetaEvent } from "@/components/MetaPixel";
 import { COPY } from "@/content/copy";
 import { useQuiz } from "@/lib/quiz-state";
 import { Check, Sparkles, MapPin, Calendar, Moon } from "lucide-react";
@@ -122,6 +123,11 @@ export default function Screen09EmailCapture() {
       if (!response.ok) {
         throw new Error("Failed to submit");
       }
+
+      // Fire Meta Pixel Lead event for conversion tracking
+      trackMetaEvent("Lead", {
+        content_name: "2026 Power Map Waitlist",
+      });
 
       dispatch({ type: "SET_EMAIL", payload: email.trim() });
       dispatch({ type: "NEXT_STEP" });

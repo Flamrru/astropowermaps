@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import MetaPixel from "@/components/MetaPixel";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -49,6 +50,7 @@ export default function RootLayout({
         <link rel="preload" href="/testimonial-face.png" as="image" type="image/png" />
       </head>
       <body className={`${inter.variable} ${playfair.variable} antialiased`}>
+        <MetaPixel />
         {children}
       </body>
     </html>

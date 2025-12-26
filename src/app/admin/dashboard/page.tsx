@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 interface Lead {
@@ -22,36 +22,87 @@ interface Stats {
   today: number;
 }
 
+// Q1 and Q2 answer options for analytics
+const Q1_OPTIONS = ["Yes, definitely", "Maybe once or twice", "Not sure"];
+const Q2_OPTIONS = [
+  "Career / business growth",
+  "Creativity / new ideas",
+  "Love / relationships",
+  "Clarity / finding direction",
+  "Adventure / feeling alive",
+];
+
 export default function AdminDashboardPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, today: 0 });
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const router = useRouter();
 
-  // Fetch leads on mount
-  useEffect(() => {
-    const fetchLeads = async () => {
-      try {
-        const res = await fetch("/api/admin/leads");
-        if (res.status === 401) {
-          router.replace("/admin");
-          return;
-        }
-        if (!res.ok) throw new Error("Failed to fetch leads");
-
-        const data = await res.json();
-        setLeads(data.leads || []);
-        setStats(data.stats || { total: 0, today: 0 });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load data");
-      } finally {
-        setIsLoading(false);
+  // Fetch leads function (reusable for refresh)
+  const fetchLeads = useCallback(async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
+    try {
+      const res = await fetch("/api/admin/leads");
+      if (res.status === 401) {
+        router.replace("/admin");
+        return;
       }
-    };
-    fetchLeads();
+      if (!res.ok) throw new Error("Failed to fetch leads");
+
+      const data = await res.json();
+      setLeads(data.leads || []);
+      setStats(data.stats || { total: 0, today: 0 });
+      setLastUpdated(new Date());
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load data");
+    } finally {
+      setIsLoading(false);
+    }
   }, [router]);
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchLeads();
+  }, [fetchLeads]);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchLeads(false); // Don't show loading spinner on auto-refresh
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [fetchLeads]);
+
+  // Analytics calculations
+  const analytics = useMemo(() => {
+    // Q1 distribution
+    const q1Counts = Q1_OPTIONS.map((opt) => ({
+      label: opt,
+      count: leads.filter((l) => l.quiz_q1 === opt).length,
+    }));
+    const q1Total = leads.filter((l) => l.quiz_q1).length;
+
+    // Q2 distribution (multi-select)
+    const q2Counts = Q2_OPTIONS.map((opt) => {
+      const count = leads.filter((lead) => {
+        if (!lead.quiz_q2) return false;
+        try {
+          const arr = JSON.parse(lead.quiz_q2);
+          return Array.isArray(arr) && arr.includes(opt);
+        } catch {
+          return false;
+        }
+      }).length;
+      return { label: opt, count };
+    });
+    const q2Respondents = leads.filter((l) => l.quiz_q2).length;
+
+    return { q1Counts, q1Total, q2Counts, q2Respondents };
+  }, [leads]);
 
   // Filter leads by search query
   const filteredLeads = useMemo(() => {
@@ -132,6 +183,16 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Format time ago for last updated
+  const formatTimeAgo = (date: Date): string => {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    if (seconds < 60) return "just now";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes === 1) return "1 min ago";
+    if (minutes < 60) return `${minutes} mins ago`;
+    return formatDate(date.toISOString());
+  };
+
   if (isLoading) {
     return (
       <div className="cosmic-bg min-h-screen flex items-center justify-center">
@@ -164,6 +225,11 @@ export default function AdminDashboardPage() {
 
             {/* Actions */}
             <div className="flex items-center gap-3">
+              {lastUpdated && (
+                <span className="text-xs text-[var(--text-faint)] hidden sm:block">
+                  Updated {formatTimeAgo(lastUpdated)}
+                </span>
+              )}
               <button
                 onClick={exportToCSV}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white hover:bg-white/10 transition-colors"
@@ -233,6 +299,24 @@ export default function AdminDashboardPage() {
             }
           />
         </div>
+
+        {/* Analytics Section */}
+        {leads.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <BarChart
+              title="Q1: Have you visited a place that felt right?"
+              data={analytics.q1Counts}
+              total={analytics.q1Total}
+              note={`${analytics.q1Total} responses`}
+            />
+            <BarChart
+              title="Q2: What do you want 2026 to be about?"
+              data={analytics.q2Counts}
+              total={analytics.q2Respondents}
+              note={`${analytics.q2Respondents} respondents (multi-select)`}
+            />
+          </div>
+        )}
 
         {/* Search and table */}
         <div className="glass-card rounded-2xl overflow-hidden">
@@ -331,14 +415,36 @@ export default function AdminDashboardPage() {
                         </div>
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden md:table-cell">
-                        <span className="text-sm text-[var(--text-soft)] truncate block max-w-[150px]">
-                          {lead.quiz_q1 || "-"}
-                        </span>
+                        {lead.quiz_q1 ? (
+                          <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-white/5 text-[var(--text-soft)] border border-white/10">
+                            {lead.quiz_q1}
+                          </span>
+                        ) : (
+                          <span className="text-[var(--text-faint)]">-</span>
+                        )}
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden lg:table-cell">
-                        <span className="text-sm text-[var(--text-soft)] truncate block max-w-[200px]">
-                          {formatQ2(lead.quiz_q2)}
-                        </span>
+                        <div className="flex flex-wrap gap-1.5 max-w-[280px]">
+                          {(() => {
+                            if (!lead.quiz_q2) return <span className="text-[var(--text-faint)]">-</span>;
+                            try {
+                              const arr = JSON.parse(lead.quiz_q2);
+                              if (!Array.isArray(arr) || arr.length === 0) {
+                                return <span className="text-[var(--text-faint)]">-</span>;
+                              }
+                              return arr.map((answer: string, i: number) => (
+                                <span
+                                  key={i}
+                                  className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--gold-main)]/10 text-[var(--gold-bright)] border border-[var(--gold-main)]/20"
+                                >
+                                  {answer.split(" / ")[0]}
+                                </span>
+                              ));
+                            } catch {
+                              return <span className="text-[var(--text-faint)]">-</span>;
+                            }
+                          })()}
+                        </div>
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden sm:table-cell">
                         {lead.utm_source ? (
@@ -404,6 +510,66 @@ function StatCard({
         >
           {icon}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Bar chart component for analytics
+function BarChart({
+  title,
+  data,
+  total,
+  note,
+}: {
+  title: string;
+  data: { label: string; count: number }[];
+  total: number;
+  note?: string;
+}) {
+  const maxCount = Math.max(...data.map((d) => d.count), 1);
+
+  return (
+    <div className="glass-card rounded-2xl p-6">
+      <h3 className="text-base font-semibold text-white mb-1">{title}</h3>
+      {note && (
+        <p className="text-xs text-[var(--text-faint)] mb-5">{note}</p>
+      )}
+
+      <div className="space-y-4">
+        {data.map((item, idx) => {
+          const percentage = total > 0 ? (item.count / total) * 100 : 0;
+          const barWidth = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
+
+          return (
+            <div key={idx}>
+              <div className="flex justify-between items-baseline mb-1.5">
+                <span className="text-sm text-[var(--text-soft)] truncate pr-2">
+                  {item.label}
+                </span>
+                <span className="text-sm font-medium text-[var(--gold-bright)] whitespace-nowrap">
+                  {item.count}
+                  <span className="text-[var(--text-muted)] ml-1">
+                    ({percentage.toFixed(0)}%)
+                  </span>
+                </span>
+              </div>
+              {/* Bar container */}
+              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                {/* Animated bar fill */}
+                <div
+                  className="h-full rounded-full transition-all duration-700 ease-out"
+                  style={{
+                    width: `${barWidth}%`,
+                    background:
+                      "linear-gradient(90deg, var(--gold-dark), var(--gold-main), var(--gold-bright))",
+                    boxShadow: "0 0 8px rgba(201, 162, 39, 0.4)",
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
