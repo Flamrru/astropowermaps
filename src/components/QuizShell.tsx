@@ -78,7 +78,7 @@ export default function QuizShell({ children }: QuizShellProps) {
             className="absolute inset-0"
           >
             <video
-              src="/globe-bg.mp4"
+              src="/globe-bg.mp4?v=8"
               autoPlay
               loop
               muted
@@ -94,17 +94,13 @@ export default function QuizShell({ children }: QuizShellProps) {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute inset-0"
           >
-            {/* Mobile background (portrait) */}
-            <img
-              src="/nebula-mobile.webp"
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover object-center md:hidden"
-            />
-            {/* Desktop background (landscape) */}
-            <img
-              src="/nebula-desktop.webp"
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover object-center hidden md:block"
+            <video
+              src="/nebula-bg.mp4?v=1"
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover object-center"
             />
           </motion.div>
 
