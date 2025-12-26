@@ -20,9 +20,9 @@ export default function Screen07Testimonial() {
 
           {/* Hero face section with decorative elements */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
+            initial={{ scale: 0.95 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
             className="relative flex justify-center mb-5"
           >
             {/* Outer glow ring */}
@@ -51,9 +51,9 @@ export default function Screen07Testimonial() {
             ].map((star, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4, delay: star.delay }}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.3, delay: star.delay }}
                 className="absolute"
                 style={{
                   left: `calc(50% + ${star.x}px)`,
@@ -94,9 +94,9 @@ export default function Screen07Testimonial() {
 
           {/* Quote card - darker glass */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            initial={{ y: 15 }}
+            animate={{ y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
             className="rounded-2xl py-6 px-6 relative overflow-hidden w-full"
             style={{
               background: 'rgba(10, 10, 20, 0.45)',
@@ -116,9 +116,9 @@ export default function Screen07Testimonial() {
 
             {/* Quote mark */}
             <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 }}
+              initial={{ x: -5 }}
+              animate={{ x: 0 }}
+              transition={{ duration: 0.3, delay: 0.15 }}
               className="heading-display text-[40px] text-gold-glow leading-none mb-2"
             >
               &ldquo;
@@ -126,9 +126,8 @@ export default function Screen07Testimonial() {
 
             {/* Quote text - larger */}
             <motion.p
-              initial={{ opacity: 0 }}
+              initial={false}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.35 }}
               className="text-body text-[17px] md:text-[18px] text-white leading-[1.7] mb-4 italic"
             >
               I booked a trip to <span className="font-bold not-italic">Lisbon</span> during my power month. Within <span className="text-gold-glow font-bold not-italic">2 weeks</span> of being there, I met my now-business partner and closed my first <span className="font-bold not-italic">5-figure client</span>.
@@ -136,9 +135,9 @@ export default function Screen07Testimonial() {
 
             {/* Closing quote mark */}
             <motion.div
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: 0.4 }}
+              initial={{ x: 5 }}
+              animate={{ x: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
               className="heading-display text-[40px] text-gold-glow leading-none text-right -mb-2"
             >
               &rdquo;
@@ -147,9 +146,8 @@ export default function Screen07Testimonial() {
 
           {/* Attribution below card */}
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
             className="flex items-center justify-center gap-3 mt-5"
           >
             <div
@@ -172,9 +170,9 @@ export default function Screen07Testimonial() {
 
         {/* CTA - fixed at bottom */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
+          initial={{ y: 10 }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
           className="max-w-md mx-auto w-full pt-6 mb-6"
         >
           <GoldButton onClick={handleNext}>
