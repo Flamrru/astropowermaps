@@ -47,17 +47,12 @@ export default function Screen07Testimonial() {
               transition={{ duration: 0.5, delay: 0.25 }}
               className="flex items-center gap-3"
             >
-              {/* Avatar placeholder - circular with gradient */}
-              <div
-                className="w-12 h-12 rounded-full flex-shrink-0 border-2 border-white/20"
-                style={{
-                  background: 'linear-gradient(135deg, #3a3a5a 0%, #2a2a4a 100%)',
-                }}
-              >
-                <div className="w-full h-full rounded-full flex items-center justify-center text-white/40 text-lg font-medium">
-                  S
-                </div>
-              </div>
+              {/* Avatar with testimonial face */}
+              <img
+                src="/testimonial-face.png"
+                alt="Sarah M."
+                className="w-12 h-12 rounded-full flex-shrink-0 border-2 border-white/20 object-cover"
+              />
               <span className="text-body text-[14px] text-muted-custom">
                 {COPY.screen7.attribution}
               </span>
