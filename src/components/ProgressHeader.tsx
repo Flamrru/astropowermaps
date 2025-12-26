@@ -1,8 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
-import { COPY } from "@/content/copy";
 
 interface ProgressHeaderProps {
   currentStep: number;
@@ -18,12 +18,18 @@ export default function ProgressHeader({
   onBack,
 }: ProgressHeaderProps) {
   const progress = (currentStep / totalSteps) * 100;
+  const [enableTransition, setEnableTransition] = useState(false);
+
+  // Enable transitions only after a brief delay to skip initial render jitter
+  useEffect(() => {
+    const timer = setTimeout(() => setEnableTransition(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
-    <header className="sticky top-0 z-50 bg-[#050510]/90 backdrop-blur-lg border-b border-white/5">
-      {/* Navigation row */}
-      <div className="flex items-center justify-between px-4 py-3">
-        {/* Back button */}
+    <header className="sticky top-0 z-50">
+      {/* Back button row */}
+      <div className="flex items-center px-4 py-3">
         <div className="w-10">
           {showBack && onBack && (
             <motion.button
@@ -37,23 +43,13 @@ export default function ProgressHeader({
             </motion.button>
           )}
         </div>
-
-        {/* Title */}
-        <span className="text-[13px] font-medium text-white/70 tracking-wide">
-          {COPY.nav.title}
-        </span>
-
-        {/* Spacer for alignment */}
-        <div className="w-10" />
       </div>
 
       {/* Progress bar */}
-      <div className="h-[2px] bg-white/5">
-        <motion.div
-          className="h-full progress-bar"
-          initial={{ width: 0 }}
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+      <div className="h-1 bg-white/10 mx-4">
+        <div
+          className={`h-full progress-bar ${enableTransition ? 'transition-[width] duration-300 ease-out' : ''}`}
+          style={{ width: `${progress}%` }}
         />
       </div>
     </header>

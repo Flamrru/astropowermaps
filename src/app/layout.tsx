@@ -39,6 +39,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Preload background images to prevent transition lag */}
+        <link rel="preload" href="/question-bg.webp" as="image" type="image/webp" />
+        <link rel="preload" href="/globe-bg.webp" as="image" type="image/webp" />
+        <link rel="preload" href="/nebula-mobile.webp" as="image" type="image/webp" />
+        <link rel="preload" href="/nebula-desktop.webp" as="image" type="image/webp" />
+      </head>
       <body className={`${inter.variable} ${playfair.variable} antialiased`}>
         {children}
       </body>

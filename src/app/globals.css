@@ -18,10 +18,10 @@
   --text-muted: rgba(255, 255, 255, 0.6);
   --text-faint: rgba(255, 255, 255, 0.4);
 
-  /* Glass - very subtle */
-  --glass-bg: rgba(255, 255, 255, 0.06);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-border-hover: rgba(255, 255, 255, 0.18);
+  /* Glass - more visible */
+  --glass-bg: rgba(255, 255, 255, 0.18);
+  --glass-border: rgba(255, 255, 255, 0.25);
+  --glass-border-hover: rgba(255, 255, 255, 0.35);
   --glass-selected: rgba(201, 162, 39, 0.25);
   --glass-selected-border: rgba(201, 162, 39, 0.5);
 }
@@ -191,6 +191,11 @@
     0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
+/* Display font class for Tailwind */
+.font-display {
+  font-family: var(--font-playfair), Georgia, serif;
+}
+
 .text-body {
   font-family: var(--font-inter), system-ui, sans-serif;
   line-height: 1.6;
@@ -203,6 +208,9 @@
 /* ===== LAYOUT ===== */
 html {
   scroll-behavior: smooth;
+  background: var(--cosmic-black);
+  width: 100%;
+  height: 100%;
 }
 
 body {
@@ -210,6 +218,9 @@ body {
   color: var(--text-white);
   min-height: 100vh;
   min-height: 100dvh;
+  width: 100%;
+  margin: 0;
+  padding: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -321,12 +332,29 @@ body {
   color: #C9A227;
 }
 
-/* Muted text for secondary information - brighter for visibility */
-.text-muted-custom {
-  color: #B8B8C0;
+/* Glowing gold text - for key emphasized words */
+.text-gold-glow {
+  color: #E8C547;
   text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.6),
-    0 2px 6px rgba(0, 0, 0, 0.3);
+    0 0 10px rgba(232, 197, 71, 0.8),
+    0 0 20px rgba(201, 162, 39, 0.6),
+    0 0 30px rgba(201, 162, 39, 0.4),
+    0 0 40px rgba(201, 162, 39, 0.2);
+}
+
+/* Subtle gold glow for headers */
+.text-gold-subtle {
+  color: #D4AF37;
+  text-shadow:
+    0 0 8px rgba(212, 175, 55, 0.5),
+    0 0 16px rgba(201, 162, 39, 0.3);
+}
+
+/* Muted text for secondary information */
+.text-muted-custom {
+  color: rgba(255, 255, 255, 0.6);
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 /* Gold gradient text for extra emphasis */
@@ -335,4 +363,197 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* ===== GLOWING MOON ICON ===== */
+.moon-glow {
+  filter: drop-shadow(0 0 6px rgba(232, 197, 71, 0.8))
+          drop-shadow(0 0 12px rgba(201, 162, 39, 0.5));
+}
+
+/* ===== PREMIUM GLASS BUTTON WITH GOLD GLOW ===== */
+.gold-button-premium {
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba(140, 110, 40, 0.5) 0%,
+    rgba(90, 70, 25, 0.6) 50%,
+    rgba(140, 110, 40, 0.5) 100%
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #ffffff;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border: 2px solid rgba(212, 175, 55, 0.8);
+  box-shadow:
+    0 0 15px rgba(212, 175, 55, 0.4),
+    0 0 30px rgba(201, 162, 39, 0.25),
+    inset 0 0 20px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+/* Top highlight shine */
+.gold-button-premium::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(232, 197, 71, 0.6) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+.gold-button-premium:hover:not(:disabled) {
+  background: rgba(40, 35, 25, 0.7);
+  border-color: rgba(232, 197, 71, 0.8);
+  box-shadow:
+    0 0 30px rgba(201, 162, 39, 0.6),
+    0 0 60px rgba(201, 162, 39, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.gold-button-premium:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.gold-button-premium:disabled {
+  background: rgba(30, 30, 35, 0.5);
+  color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+/* Pulsing glow animation */
+@keyframes button-pulse-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 15px rgba(212, 175, 55, 0.4),
+      0 0 30px rgba(201, 162, 39, 0.25),
+      inset 0 0 20px rgba(0, 0, 0, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 25px rgba(212, 175, 55, 0.55),
+      0 0 45px rgba(201, 162, 39, 0.35),
+      inset 0 0 20px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.gold-button-premium.animate-pulse-glow {
+  animation: button-pulse-glow 2.5s ease-in-out infinite;
+}
+
+/* Shimmer effect - golden light sweeping left to right */
+@keyframes button-shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.gold-button-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.gold-button-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(232, 197, 71, 0.05) 20%,
+    rgba(232, 197, 71, 0.25) 50%,
+    rgba(232, 197, 71, 0.05) 80%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  animation: button-shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ===== CREDIBILITY BAR PREMIUM ===== */
+.credibility-bar-premium {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== MAP PIN ANIMATIONS ===== */
+@keyframes pin-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes pin-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(201, 162, 39, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(201, 162, 39, 0.9);
+  }
+}
+
+.map-pin {
+  animation: pin-float 3s ease-in-out infinite;
+}
+
+.map-pin-glow {
+  animation: pin-glow-pulse 2s ease-in-out infinite;
+}
+
+/* World map shimmer effect */
+@keyframes map-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.map-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.map-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(201, 162, 39, 0.15) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: map-shimmer 4s ease-in-out infinite;
+  pointer-events: none;
 }

@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import GoldButton from "@/components/GoldButton";
-import ProgressHeader from "@/components/ProgressHeader";
 import { COPY } from "@/content/copy";
 import { useQuiz } from "@/lib/quiz-state";
 
@@ -13,19 +12,9 @@ export default function Screen07Testimonial() {
     dispatch({ type: "NEXT_STEP" });
   };
 
-  const handleBack = () => {
-    dispatch({ type: "PREV_STEP" });
-  };
-
   return (
     <div className="flex-1 flex flex-col">
-      <ProgressHeader
-        currentStep={state.stepIndex}
-        showBack={true}
-        onBack={handleBack}
-      />
-
-      <div className="flex-1 flex flex-col px-6 pt-8 pb-6">
+      <div className="flex-1 flex flex-col px-6 pt-6 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
           {/* Testimonial card with gold left accent */}
@@ -35,7 +24,7 @@ export default function Screen07Testimonial() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4 }}
-              className="heading-display text-[56px] text-gold mb-2 leading-none"
+              className="heading-display text-[56px] text-gold-glow mb-2 leading-none"
             >
               &ldquo;
             </motion.div>
@@ -48,7 +37,7 @@ export default function Screen07Testimonial() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="text-body text-[17px] md:text-[18px] text-white/90 leading-relaxed mb-6 italic"
             >
-              I booked a trip to <span className="font-bold not-italic">Lisbon</span> during my power month. Within <span className="text-gold font-bold not-italic">2 weeks</span> of being there, I met my now-business partner and closed my first <span className="font-bold not-italic">5-figure client</span>.
+              I booked a trip to <span className="font-bold not-italic">Lisbon</span> during my power month. Within <span className="text-gold-glow font-bold not-italic">2 weeks</span> of being there, I met my now-business partner and closed my first <span className="font-bold not-italic">5-figure client</span>.
             </motion.p>
 
             {/* Attribution with avatar placeholder */}

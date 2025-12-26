@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 import GoldButton from "@/components/GoldButton";
 import OptionCard from "@/components/OptionCard";
-import ProgressHeader from "@/components/ProgressHeader";
 import { COPY } from "@/content/copy";
 import { useQuiz } from "@/lib/quiz-state";
 import { Briefcase, Lightbulb, Heart, Compass, Mountain, LucideIcon } from "lucide-react";
@@ -30,18 +29,8 @@ export default function Screen05Question() {
     }
   };
 
-  const handleBack = () => {
-    dispatch({ type: "PREV_STEP" });
-  };
-
   return (
     <div className="flex-1 flex flex-col">
-      <ProgressHeader
-        currentStep={state.stepIndex}
-        showBack={true}
-        onBack={handleBack}
-      />
-
       <div className="flex-1 flex flex-col px-6 pt-6 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col max-w-md mx-auto w-full">
@@ -52,7 +41,7 @@ export default function Screen05Question() {
             transition={{ duration: 0.5 }}
             className="heading-display text-[28px] md:text-[32px] text-white mb-2"
           >
-            What do you want <span className="text-gold">2026</span> to be about?
+            What do you want <span className="text-gold-glow">2026</span> to be about?
           </motion.h2>
 
           {/* Helper text - muted */}

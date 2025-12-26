@@ -30,7 +30,7 @@ export default function GoldButton({
       whileTap={{ scale: isDisabled ? 1 : 0.97 }}
       whileHover={{ scale: isDisabled ? 1 : 1.01 }}
       className={`
-        gold-button
+        gold-button-premium gold-button-shimmer animate-pulse-glow
         w-full py-4 px-8 rounded-full
         text-base tracking-wide
         ${className}

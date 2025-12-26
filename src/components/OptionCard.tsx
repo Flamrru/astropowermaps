@@ -42,7 +42,7 @@ export default function OptionCard({
           strokeWidth={1.5}
         />
       )}
-      <span className={`text-[15px] leading-snug ${selected ? "text-white" : "text-white/85"}`}>
+      <span className={`text-[15px] leading-snug ${selected ? "text-white font-medium" : "text-white"}`}>
         {text}
       </span>
     </motion.button>

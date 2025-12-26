@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import GoldButton from "@/components/GoldButton";
-import ProgressHeader from "@/components/ProgressHeader";
 import { COPY } from "@/content/copy";
 import { useQuiz } from "@/lib/quiz-state";
 
@@ -13,19 +12,9 @@ export default function Screen06Insight() {
     dispatch({ type: "NEXT_STEP" });
   };
 
-  const handleBack = () => {
-    dispatch({ type: "PREV_STEP" });
-  };
-
   return (
     <div className="flex-1 flex flex-col">
-      <ProgressHeader
-        currentStep={state.stepIndex}
-        showBack={true}
-        onBack={handleBack}
-      />
-
-      <div className="flex-1 flex flex-col px-6 pt-8 pb-6">
+      <div className="flex-1 flex flex-col px-6 pt-6 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
           {/* Headline: "Timing matters as much as location." - Large, bold */}
@@ -45,7 +34,7 @@ export default function Screen06Insight() {
             transition={{ duration: 0.5, delay: 0.15 }}
             className="text-body text-[20px] md:text-[22px] text-white/90 leading-relaxed mb-6"
           >
-            You have <span className="text-gold">3 months</span> in 2026 where everything you start gains traction. Push during those windows, and <span className="font-bold text-white">momentum builds</span>.
+            You have <span className="text-gold-glow">3 months</span> in 2026 where everything you start gains traction. Push during those windows, and <span className="font-bold text-white">momentum builds</span>.
           </motion.p>
 
           {/* Last line: muted/italic */}

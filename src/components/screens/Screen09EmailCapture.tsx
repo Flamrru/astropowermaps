@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import GoldButton from "@/components/GoldButton";
-import ProgressHeader from "@/components/ProgressHeader";
 import { COPY } from "@/content/copy";
 import { useQuiz } from "@/lib/quiz-state";
 import { Check } from "lucide-react";
@@ -65,18 +64,8 @@ export default function Screen09EmailCapture() {
     }
   };
 
-  const handleBack = () => {
-    dispatch({ type: "SET_STEP", payload: 7 });
-  };
-
   return (
     <div className="flex-1 flex flex-col">
-      <ProgressHeader
-        currentStep={state.stepIndex}
-        showBack={true}
-        onBack={handleBack}
-      />
-
       <div className="flex-1 flex flex-col px-6 pt-6 pb-6">
         {/* Main content */}
         <div className="flex-1 flex flex-col max-w-md mx-auto w-full">
@@ -97,7 +86,7 @@ export default function Screen09EmailCapture() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-body text-[15px] text-white/70 mb-5"
           >
-            In <span className="text-gold">48 hours</span>, the 2026 Power Map goes live. Enter your birth details, and you&apos;ll get:
+            In <span className="text-gold-glow">48 hours</span>, the 2026 Power Map goes live. Enter your birth details, and you&apos;ll get:
           </motion.p>
 
           {/* Benefits - bold key phrases, gold checkmarks */}

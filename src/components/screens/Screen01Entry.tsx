@@ -1,11 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import GoldButton from "@/components/GoldButton";
-import CredibilityBar from "@/components/CredibilityBar";
-import { COPY } from "@/content/copy";
 import { useQuiz } from "@/lib/quiz-state";
-import { Moon, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 export default function Screen01Entry() {
   const { dispatch } = useQuiz();
@@ -16,89 +13,120 @@ export default function Screen01Entry() {
 
   return (
     <div className="flex-1 flex flex-col">
-      {/* Header with logo */}
+      {/* Header with glowing moon */}
       <motion.header
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="flex items-center justify-center gap-2 pt-4 pb-2"
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="flex items-center justify-center gap-2.5 pt-5 pb-3"
       >
-        <Moon className="w-5 h-5 text-gold" fill="currentColor" />
-        <span className="text-[14px] text-white/80 tracking-wide font-medium">
+        {/* Crescent moon SVG with glow */}
+        <svg
+          viewBox="0 0 24 24"
+          className="w-5 h-5 moon-glow"
+          fill="#E8C547"
+        >
+          <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z" />
+        </svg>
+        <span className="text-[15px] text-gold-subtle tracking-[0.08em] font-medium uppercase">
           2026 Power Map
         </span>
-        <Sparkles className="w-4 h-4 text-gold/70" />
       </motion.header>
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col px-6 pb-6">
         <div className="flex-1 flex flex-col max-w-md mx-auto w-full">
 
-          {/* Headline section - top */}
+          {/* Headline section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-center mt-4"
+            transition={{ duration: 0.7, delay: 0.15, ease: "easeOut" }}
+            className="text-center mt-6"
           >
-            <h1 className="heading-display text-[32px] md:text-[38px] text-white mb-4 leading-tight">
-              There are <span className="text-gold font-bold">3 months</span> and{" "}
-              <span className="text-gold font-bold">3 places</span> that will define your{" "}
-              <span className="text-gold font-bold">2026</span>.
+            <h1 className="font-display text-[30px] md:text-[36px] text-white leading-[1.2] tracking-tight">
+              There are{" "}
+              <span className="text-gold-glow font-bold">3 months</span>
+              <br />
+              and{" "}
+              <span className="text-gold-glow font-bold">3 places</span>
+              {" "}that will
+              <br />
+              define your{" "}
+              <span className="text-gold-glow font-bold">2026</span>.
             </h1>
-
-            <p className="text-body text-[15px] leading-relaxed">
-              <span className="text-white/90">Based on your birth chart, there&apos;s a map for your year.</span>{" "}
-              <span className="text-muted-custom">Most people never see it.</span>
-            </p>
           </motion.div>
 
-          {/* Celestial Device - center */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="flex-1 flex items-center justify-center py-6"
+          {/* Subtext */}
+          <motion.p
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
+            className="text-center mt-5 text-[15px] leading-relaxed max-w-[320px] mx-auto"
           >
-            <div className="relative">
-              {/* Glow effect behind */}
-              <div
-                className="absolute inset-0 blur-2xl opacity-30"
-                style={{
-                  background: 'radial-gradient(circle, rgba(201, 162, 39, 0.4) 0%, transparent 70%)'
-                }}
-              />
-              {/* Celestial device image with animations */}
-              <img
-                src="/celestial-device.png"
-                alt="Celestial navigation device"
-                className="celestial-device relative z-10 w-[280px] h-auto md:w-[320px]"
-              />
+            <span className="text-white/80">Based on your birth chart, there&apos;s a map for your year.</span>
+            {" "}
+            <span className="text-gold-glow font-medium italic">Most people never see it.</span>
+          </motion.p>
+
+          {/* Spacer - pushes content to edges */}
+          <div className="flex-1 min-h-[60px]" />
+
+          {/* Credibility bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.45, ease: "easeOut" }}
+            className="credibility-bar-premium rounded-2xl py-4 px-4"
+          >
+            <p className="text-white/80 text-[10px] text-center mb-3 uppercase tracking-[0.2em] font-medium">
+              As featured in
+            </p>
+            {/* Top row */}
+            <div className="flex items-center justify-center gap-5 mb-2">
+              {/* NYTimes - Gothic style */}
+              <span className="text-white/90 text-[16px] font-serif tracking-tight" style={{ fontFamily: 'Georgia, Times, serif', fontStyle: 'italic' }}>
+                The New York Times
+              </span>
+              {/* WIRED - blocky style */}
+              <span className="text-white/90 text-[15px] font-bold tracking-widest uppercase">
+                WIRED
+              </span>
+            </div>
+            {/* Bottom row */}
+            <div className="flex items-center justify-center gap-6">
+              {/* Forbes */}
+              <span className="text-white/90 text-[16px] font-serif font-bold tracking-tight">
+                Forbes
+              </span>
+              {/* healthline */}
+              <span className="text-white/90 text-[15px] font-sans font-medium">
+                healthline
+              </span>
+              {/* girlboss */}
+              <span className="text-white/90 text-[15px] font-sans font-bold lowercase">
+                girlboss
+              </span>
             </div>
           </motion.div>
 
-          {/* Bottom section - Credibility bar + CTA */}
-          <div className="space-y-5">
-            {/* Credibility bar */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.5 }}
+          {/* CTA Button with premium glow */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.55, ease: "easeOut" }}
+            className="mt-5"
+          >
+            <motion.button
+              onClick={handleStart}
+              whileTap={{ scale: 0.97 }}
+              whileHover={{ scale: 1.02 }}
+              className="gold-button-premium gold-button-shimmer animate-pulse-glow w-full py-4 px-8 rounded-full text-[16px] flex items-center justify-center gap-2"
             >
-              <CredibilityBar publications={COPY.screen1.credibilityBar} />
-            </motion.div>
-
-            {/* CTA Button */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-            >
-              <GoldButton onClick={handleStart}>
-                {COPY.screen1.button}
-              </GoldButton>
-            </motion.div>
-          </div>
+              <span>See My Map</span>
+              <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+            </motion.button>
+          </motion.div>
         </div>
       </div>
     </div>
