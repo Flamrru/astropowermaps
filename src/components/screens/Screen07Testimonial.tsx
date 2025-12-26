@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import GoldButton from "@/components/GoldButton";
 import { COPY } from "@/content/copy";
 import { useQuiz } from "@/lib/quiz-state";
@@ -18,7 +19,12 @@ export default function Screen07Testimonial() {
         <div className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full">
 
           {/* Hero face section with decorative elements */}
-          <div className="relative flex justify-center mb-5">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="relative flex justify-center mb-5"
+          >
             {/* Outer glow ring */}
             <div
               className="absolute inset-0 flex items-center justify-center"
@@ -36,15 +42,18 @@ export default function Screen07Testimonial() {
 
             {/* Decorative stars around the face */}
             {[
-              { x: -50, y: -25, size: 3 },
-              { x: 55, y: -20, size: 2.5 },
-              { x: -60, y: 45, size: 2 },
-              { x: 60, y: 55, size: 2.5 },
-              { x: -35, y: -50, size: 2 },
-              { x: 40, y: -45, size: 1.5 },
+              { x: -50, y: -25, size: 3, delay: 0.3 },
+              { x: 55, y: -20, size: 2.5, delay: 0.4 },
+              { x: -60, y: 45, size: 2, delay: 0.5 },
+              { x: 60, y: 55, size: 2.5, delay: 0.35 },
+              { x: -35, y: -50, size: 2, delay: 0.45 },
+              { x: 40, y: -45, size: 1.5, delay: 0.55 },
             ].map((star, i) => (
-              <div
+              <motion.div
                 key={i}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3, delay: star.delay }}
                 className="absolute"
                 style={{
                   left: `calc(50% + ${star.x}px)`,
@@ -71,7 +80,7 @@ export default function Screen07Testimonial() {
                 <div className="w-full h-full rounded-full bg-[#0a0a1e]" />
               </div>
 
-              {/* Actual face - larger */}
+              {/* Actual face - preloaded in layout.tsx */}
               <img
                 src="/testimonial-face.png"
                 alt="Sarah M."
@@ -84,10 +93,13 @@ export default function Screen07Testimonial() {
                 }}
               />
             </div>
-          </div>
+          </motion.div>
 
           {/* Quote card - darker glass */}
-          <div
+          <motion.div
+            initial={{ y: 15, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
             className="rounded-2xl py-6 px-6 relative overflow-hidden w-full"
             style={{
               background: 'rgba(10, 10, 20, 0.45)',
@@ -106,23 +118,43 @@ export default function Screen07Testimonial() {
             />
 
             {/* Quote mark */}
-            <div className="heading-display text-[40px] text-gold-glow leading-none mb-2">
+            <motion.div
+              initial={{ x: -5, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.3, delay: 0.15 }}
+              className="heading-display text-[40px] text-gold-glow leading-none mb-2"
+            >
               &ldquo;
-            </div>
+            </motion.div>
 
             {/* Quote text - larger */}
-            <p className="text-body text-[17px] md:text-[18px] text-white leading-[1.7] mb-4 italic">
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              className="text-body text-[17px] md:text-[18px] text-white leading-[1.7] mb-4 italic"
+            >
               I booked a trip to <span className="font-bold not-italic">Lisbon</span> during my power month. Within <span className="text-gold-glow font-bold not-italic">2 weeks</span> of being there, I met my now-business partner and closed my first <span className="font-bold not-italic">5-figure client</span>.
-            </p>
+            </motion.p>
 
             {/* Closing quote mark */}
-            <div className="heading-display text-[40px] text-gold-glow leading-none text-right -mb-2">
+            <motion.div
+              initial={{ x: 5, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.3, delay: 0.25 }}
+              className="heading-display text-[40px] text-gold-glow leading-none text-right -mb-2"
+            >
               &rdquo;
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* Attribution below card */}
-          <div className="flex items-center justify-center gap-3 mt-5">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            className="flex items-center justify-center gap-3 mt-5"
+          >
             <div
               className="w-10 h-px"
               style={{
@@ -138,15 +170,20 @@ export default function Screen07Testimonial() {
                 background: 'linear-gradient(90deg, rgba(201,162,39,0.5) 0%, transparent 100%)',
               }}
             />
-          </div>
+          </motion.div>
         </div>
 
         {/* CTA - fixed at bottom */}
-        <div className="max-w-md mx-auto w-full pt-6 mb-6">
+        <motion.div
+          initial={{ y: 10, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.35 }}
+          className="max-w-md mx-auto w-full pt-6 mb-6"
+        >
           <GoldButton onClick={handleNext}>
             {COPY.screen7.button}
           </GoldButton>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
