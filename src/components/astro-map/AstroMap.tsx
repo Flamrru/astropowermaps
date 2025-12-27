@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import mapboxgl from "mapbox-gl";
 import { AstrocartographyResult, PlanetId, LineType, TooltipData } from "@/lib/astro/types";
 import { getShortInterpretation } from "@/lib/astro/interpretations";
 import { calculateAllPowerPlaces, LifeCategory } from "@/lib/astro/power-places";
+import { YearForecast } from "@/lib/astro/transit-types";
+import { calculatePowerMonths, calculatePowerMonthsWithConfidence } from "@/lib/astro/power-months";
 import MapControls from "./MapControls";
 import LineTooltip from "./LineTooltip";
 import CategoryFilters from "./CategoryFilters";
-import PowerPlacesPanel from "./PowerPlacesPanel";
+import PowerPlacesPanel, { PowerPlacesContent } from "./PowerPlacesPanel";
+import PowerMonthsPanel, { PowerMonthsContent } from "./PowerMonthsPanel";
+import MobileBottomNav, { MobileTab } from "./MobileBottomNav";
+import { ForecastBottomSheet, PlacesBottomSheet, LinesBottomSheet } from "./MobileBottomSheet";
 import WelcomeTutorial from "./WelcomeTutorial";
 import { useFirstVisit } from "@/lib/hooks/useFirstVisit";
 
@@ -197,6 +202,14 @@ export default function AstroMap({ data, onReset }: AstroMapProps) {
   const [showTutorial, setShowTutorial] = useState(false);
   const [powerPlacesExpanded, setPowerPlacesExpanded] = useState(false);
 
+  // Forecast state
+  const [forecastData, setForecastData] = useState<YearForecast | null>(null);
+  const [forecastLoading, setForecastLoading] = useState(false);
+
+  // Mobile navigation state
+  const [activeBottomTab, setActiveBottomTab] = useState<MobileTab>("places");
+  const [isMobile, setIsMobile] = useState(false);
+
   // First visit detection for tutorial
   const { isFirstVisit, isLoading: isFirstVisitLoading, markVisited } = useFirstVisit("astro-map-visited");
 
@@ -204,6 +217,52 @@ export default function AstroMap({ data, onReset }: AstroMapProps) {
   const powerPlaces = useMemo(() => {
     return calculateAllPowerPlaces(data.lines);
   }, [data.lines]);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Calculate 2026 forecast when birth data is available
+  useEffect(() => {
+    const calculateForecast = async () => {
+      if (!data.planets || data.planets.length === 0) return;
+
+      setForecastLoading(true);
+
+      try {
+        // Extract natal positions from the astrocartography data
+        const { calculateNatalPositions } = await import("@/lib/astro/calculations");
+        const natalPositions = calculateNatalPositions(data.birthData);
+
+        let forecast: YearForecast;
+
+        if (data.birthData.timeUnknown && data.birthData.timeWindow) {
+          // Calculate with confidence using time window sampling
+          forecast = calculatePowerMonthsWithConfidence(
+            data.birthData,
+            data.birthData.timeWindow
+          );
+        } else {
+          // Calculate with exact time
+          forecast = calculatePowerMonths(natalPositions);
+        }
+
+        setForecastData(forecast);
+      } catch (error) {
+        console.error("Error calculating forecast:", error);
+      } finally {
+        setForecastLoading(false);
+      }
+    };
+
+    calculateForecast();
+  }, [data.birthData, data.planets]);
 
   // Show tutorial on first visit after map loads
   useEffect(() => {
@@ -628,8 +687,8 @@ export default function AstroMap({ data, onReset }: AstroMapProps) {
         />
       )}
 
-      {/* Map Controls */}
-      {mapLoaded && (
+      {/* Map Controls - Desktop only */}
+      {mapLoaded && !isMobile && (
         <MapControls
           planets={data.planets}
           visiblePlanets={visiblePlanets}
@@ -651,14 +710,151 @@ export default function AstroMap({ data, onReset }: AstroMapProps) {
         />
       )}
 
-      {/* Power Places Panel */}
-      {mapLoaded && (
+      {/* Power Months Panel - Desktop only (left side) */}
+      {mapLoaded && !isMobile && forecastData && (
+        <PowerMonthsPanel
+          forecast={forecastData}
+          loading={forecastLoading}
+        />
+      )}
+
+      {/* Power Places Panel - Desktop only (right side) */}
+      {mapLoaded && !isMobile && (
         <PowerPlacesPanel
           lines={data.lines}
           onFlyToCity={handleFlyToCity}
           defaultExpanded={powerPlacesExpanded}
         />
       )}
+
+      {/* Mobile Bottom Navigation */}
+      {mapLoaded && isMobile && (
+        <MobileBottomNav
+          activeTab={activeBottomTab}
+          onTabChange={setActiveBottomTab}
+          hasForecast={!!forecastData}
+        />
+      )}
+
+      {/* Mobile Bottom Sheets */}
+      <AnimatePresence>
+        {/* Forecast Sheet */}
+        {isMobile && forecastData && (
+          <ForecastBottomSheet
+            isOpen={activeBottomTab === "forecast"}
+            onClose={() => setActiveBottomTab("places")}
+          >
+            <PowerMonthsContent
+              forecast={forecastData}
+              loading={forecastLoading}
+            />
+          </ForecastBottomSheet>
+        )}
+
+        {/* Places Sheet */}
+        {isMobile && (
+          <PlacesBottomSheet
+            isOpen={activeBottomTab === "places"}
+            onClose={() => setActiveBottomTab("lines")}
+          >
+            <PowerPlacesContent
+              lines={data.lines}
+              onFlyToCity={(lat, lng, cityName) => {
+                handleFlyToCity(lat, lng, cityName);
+                // Close the sheet after selecting a city
+                setActiveBottomTab("lines");
+              }}
+            />
+          </PlacesBottomSheet>
+        )}
+
+        {/* Lines Sheet (planet visibility controls) */}
+        {isMobile && (
+          <LinesBottomSheet
+            isOpen={activeBottomTab === "lines"}
+            onClose={() => setActiveBottomTab("places")}
+          >
+            <div className="px-6 space-y-3">
+              {data.planets.map((planet) => {
+                const isVisible = visiblePlanets.has(planet.id);
+                return (
+                  <button
+                    key={planet.id}
+                    onClick={() => togglePlanet(planet.id)}
+                    className="w-full flex items-center gap-4 p-3 rounded-xl transition-all"
+                    style={{
+                      background: isVisible
+                        ? "rgba(255, 255, 255, 0.08)"
+                        : "rgba(255, 255, 255, 0.02)",
+                      border: isVisible
+                        ? `1px solid ${planet.color}40`
+                        : "1px solid rgba(255, 255, 255, 0.05)",
+                    }}
+                  >
+                    <span
+                      className="text-2xl w-8 text-center"
+                      style={{ color: isVisible ? planet.color : "rgba(255,255,255,0.3)" }}
+                    >
+                      {planet.symbol}
+                    </span>
+                    <span
+                      className="flex-1 text-left font-medium"
+                      style={{ color: isVisible ? "white" : "rgba(255,255,255,0.4)" }}
+                    >
+                      {planet.name}
+                    </span>
+                    <div
+                      className="w-10 h-6 rounded-full flex items-center px-1 transition-all"
+                      style={{
+                        background: isVisible
+                          ? `linear-gradient(90deg, ${planet.color}80, ${planet.color})`
+                          : "rgba(255, 255, 255, 0.1)",
+                      }}
+                    >
+                      <motion.div
+                        animate={{ x: isVisible ? 16 : 0 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        className="w-4 h-4 rounded-full bg-white shadow-md"
+                      />
+                    </div>
+                  </button>
+                );
+              })}
+
+              {/* Show/Hide All Buttons */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={showAllPlanets}
+                  className="flex-1 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white transition-colors"
+                  style={{ background: "rgba(255, 255, 255, 0.05)" }}
+                >
+                  Show All
+                </button>
+                <button
+                  onClick={hideAllPlanets}
+                  className="flex-1 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white transition-colors"
+                  style={{ background: "rgba(255, 255, 255, 0.05)" }}
+                >
+                  Hide All
+                </button>
+              </div>
+
+              {/* Reset Button */}
+              <button
+                onClick={onReset}
+                className="w-full py-3 rounded-xl text-sm font-medium transition-all mt-4"
+                style={{
+                  background: "linear-gradient(135deg, rgba(232, 197, 71, 0.15) 0%, rgba(201, 162, 39, 0.1) 100%)",
+                  border: "1px solid rgba(232, 197, 71, 0.3)",
+                  color: "#E8C547",
+                }}
+              >
+                Generate New Map
+              </button>
+            </div>
+          </LinesBottomSheet>
+        )}
+      </AnimatePresence>
 
       {/* Welcome Tutorial (First Visit) */}
       {showTutorial && (

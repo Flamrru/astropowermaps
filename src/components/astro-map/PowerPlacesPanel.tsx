@@ -546,3 +546,55 @@ function PlaceCard({ place, index, onFlyTo, colors, compact }: PlaceCardProps) {
     </motion.div>
   );
 }
+
+// Export content component for use in mobile bottom sheet
+interface PowerPlacesContentProps {
+  lines: PlanetaryLine[];
+  onFlyToCity: (lat: number, lng: number, cityName: string) => void;
+}
+
+export function PowerPlacesContent({ lines, onFlyToCity }: PowerPlacesContentProps) {
+  const [activeTab, setActiveTab] = useState<LifeCategory>("love");
+
+  const powerPlaces = useMemo(() => {
+    return calculateAllPowerPlaces(lines);
+  }, [lines]);
+
+  const activeCategory = powerPlaces[activeTab];
+  const activeColors = CATEGORY_COLORS[activeTab];
+
+  return (
+    <div>
+      {/* Tabs */}
+      <div className="flex gap-2 px-6 pb-4 overflow-x-auto scrollbar-hide">
+        {CATEGORY_TABS.map((tab) => (
+          <TabButton
+            key={tab.id}
+            tab={tab}
+            isActive={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            count={powerPlaces[tab.id].places.length}
+            colors={CATEGORY_COLORS[tab.id]}
+          />
+        ))}
+      </div>
+
+      {/* Divider */}
+      <div
+        className="h-px mx-6 mb-4"
+        style={{
+          background: `linear-gradient(90deg, transparent, ${activeColors.primary}40, transparent)`,
+        }}
+      />
+
+      {/* Content */}
+      <div className="px-6">
+        <CategoryContent
+          category={activeCategory}
+          onFlyToCity={onFlyToCity}
+          colors={activeColors}
+        />
+      </div>
+    </div>
+  );
+}

@@ -285,3 +285,93 @@ export function getCategoryConfig(category: LifeCategory): CategoryConfig {
 export function getAllCategories(): LifeCategory[] {
   return Object.keys(CATEGORY_CONFIG) as LifeCategory[];
 }
+
+// ============================================
+// Timed Power Places (for 2026 Forecast)
+// ============================================
+
+import { YearForecast, TimedPowerPlace, ConfidenceLevel, getMonthName } from "./transit-types";
+
+/**
+ * Calculate best months to visit each power place
+ * Uses formula: TimedPlaceScore = PlaceScore × MonthScore
+ */
+export function enhancePlacesWithTiming(
+  places: PowerPlace[],
+  forecast: YearForecast,
+  category: LifeCategory
+): TimedPowerPlace[] {
+  // Get months for this category
+  const categoryMonths = forecast.months.filter((m) => m.category === category);
+  const bestMonthsForCategory = forecast.bestMonths[category] || [];
+
+  return places.map((place) => {
+    // Calculate place score (0-100 based on distance, closer = higher)
+    const maxDistance = 400;
+    const placeScore = Math.max(0, 100 - (place.distance / maxDistance) * 50);
+
+    // Find best months for this place (PlaceScore × MonthScore)
+    const monthScores = categoryMonths.map((month) => ({
+      month: month.month,
+      score: month.score,
+      combinedScore: (placeScore / 100) * (month.score / 100) * 100,
+      peakWindow: month.peakWindow,
+    }));
+
+    // Sort by combined score and take top 3
+    monthScores.sort((a, b) => b.combinedScore - a.combinedScore);
+    const bestMonths = monthScores.slice(0, 3).map((m) => m.month);
+    const topMonth = monthScores[0];
+
+    // Determine confidence based on forecast confidence mode
+    let confidence: ConfidenceLevel = "high";
+    if (forecast.confidenceMode) {
+      // Find the average confidence of the best months
+      const monthConfidences = bestMonths.map((m) => {
+        const monthData = categoryMonths.find((cm) => cm.month === m);
+        return monthData?.confidence || "medium";
+      });
+      // Use the most common confidence level
+      const highCount = monthConfidences.filter((c) => c === "high").length;
+      const mediumCount = monthConfidences.filter((c) => c === "medium").length;
+      if (highCount >= 2) confidence = "high";
+      else if (mediumCount >= 2 || highCount >= 1) confidence = "medium";
+      else confidence = "low";
+    }
+
+    // Generate recommendation text
+    const monthNames = bestMonths.slice(0, 2).map((m) => getMonthName(m));
+    const recommendation =
+      bestMonths.length > 1
+        ? `Visit ${place.city.name} in ${monthNames.join(" or ")} 2026`
+        : `Visit ${place.city.name} in ${monthNames[0]} 2026`;
+
+    return {
+      ...place,
+      timing: {
+        bestMonths,
+        peakWindow: topMonth?.peakWindow || null,
+        recommendation,
+        combinedScore: Math.round(topMonth?.combinedScore || 0),
+      },
+      confidence,
+    };
+  });
+}
+
+/**
+ * Get timed places for all categories
+ */
+export function getTimedPowerPlaces(
+  lines: PlanetaryLine[],
+  forecast: YearForecast
+): Record<LifeCategory, TimedPowerPlace[]> {
+  const allPlaces = calculateAllPowerPlaces(lines);
+
+  return {
+    love: enhancePlacesWithTiming(allPlaces.love.places, forecast, "love"),
+    career: enhancePlacesWithTiming(allPlaces.career.places, forecast, "career"),
+    growth: enhancePlacesWithTiming(allPlaces.growth.places, forecast, "growth"),
+    home: enhancePlacesWithTiming(allPlaces.home.places, forecast, "home"),
+  };
+}

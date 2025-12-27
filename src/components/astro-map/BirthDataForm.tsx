@@ -5,17 +5,26 @@ import { motion } from "framer-motion";
 import { Calendar, Clock, Sparkles } from "lucide-react";
 import GoldButton from "@/components/GoldButton";
 import LocationSearch from "./LocationSearch";
-import { BirthData, BirthLocation } from "@/lib/astro/types";
+import { BirthData, BirthLocation, BirthTimeWindow } from "@/lib/astro/types";
 
 interface BirthDataFormProps {
   onSubmit: (data: BirthData) => void;
   loading?: boolean;
 }
 
+// Time window options for unknown birth time
+const TIME_WINDOW_OPTIONS: { id: BirthTimeWindow; label: string; icon: string; hours: string }[] = [
+  { id: "morning", label: "Morning", icon: "🌅", hours: "6am - 12pm" },
+  { id: "afternoon", label: "Afternoon", icon: "☀️", hours: "12pm - 6pm" },
+  { id: "evening", label: "Evening", icon: "🌙", hours: "6pm - 12am" },
+  { id: "unknown", label: "No idea", icon: "✨", hours: "Full day" },
+];
+
 export default function BirthDataForm({ onSubmit, loading = false }: BirthDataFormProps) {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [timeUnknown, setTimeUnknown] = useState(false);
+  const [timeWindow, setTimeWindow] = useState<BirthTimeWindow | null>(null);
   const [location, setLocation] = useState<BirthLocation | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -43,11 +52,24 @@ export default function BirthDataForm({ onSubmit, loading = false }: BirthDataFo
 
     if (!validateForm()) return;
 
+    // Calculate default time based on time window
+    let defaultTime = "12:00";
+    if (timeUnknown && timeWindow) {
+      const windowDefaults: Record<BirthTimeWindow, string> = {
+        morning: "09:00",
+        afternoon: "15:00",
+        evening: "21:00",
+        unknown: "12:00",
+      };
+      defaultTime = windowDefaults[timeWindow];
+    }
+
     const birthData: BirthData = {
       date,
-      time: timeUnknown ? "12:00" : time,
+      time: timeUnknown ? defaultTime : time,
       timeUnknown,
       location: location!,
+      timeWindow: timeUnknown ? (timeWindow ?? undefined) : undefined,
     };
 
     onSubmit(birthData);
@@ -223,17 +245,79 @@ export default function BirthDataForm({ onSubmit, loading = false }: BirthDataFo
           )}
         </div>
 
-        {/* Disclaimer for unknown time */}
+        {/* Time Window Selector - shown when time is unknown */}
         {timeUnknown && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            className="mb-5 p-3 rounded-lg bg-[#C9A227]/10 border border-[#C9A227]/20"
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="mb-5"
           >
-            <p className="text-[#E8C547]/80 text-sm">
-              Without an exact birth time, we&apos;ll use noon (12:00). The Moon&apos;s position and
-              Ascendant/Descendant lines may be less accurate.
-            </p>
+            <div className="p-4 rounded-xl bg-gradient-to-br from-[#C9A227]/15 to-[#C9A227]/5 border border-[#C9A227]/20">
+              <p className="text-white/70 text-sm mb-3">
+                Do you remember approximately when you were born?
+              </p>
+
+              {/* Time Window Options */}
+              <div className="grid grid-cols-2 gap-2">
+                {TIME_WINDOW_OPTIONS.map((option) => (
+                  <motion.button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setTimeWindow(option.id)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="relative p-3 rounded-xl text-left transition-all overflow-hidden"
+                    style={{
+                      background: timeWindow === option.id
+                        ? "linear-gradient(135deg, rgba(201, 162, 39, 0.25) 0%, rgba(201, 162, 39, 0.1) 100%)"
+                        : "rgba(255, 255, 255, 0.05)",
+                      border: timeWindow === option.id
+                        ? "1px solid rgba(201, 162, 39, 0.5)"
+                        : "1px solid rgba(255, 255, 255, 0.1)",
+                      boxShadow: timeWindow === option.id
+                        ? "0 0 20px rgba(201, 162, 39, 0.2)"
+                        : "none",
+                    }}
+                  >
+                    {/* Glow effect when selected */}
+                    {timeWindow === option.id && (
+                      <motion.div
+                        layoutId="timeWindowGlow"
+                        className="absolute inset-0 rounded-xl"
+                        style={{
+                          background: "radial-gradient(circle at center, rgba(201, 162, 39, 0.15) 0%, transparent 70%)",
+                        }}
+                      />
+                    )}
+                    <div className="relative z-10 flex items-center gap-2">
+                      <span className="text-lg">{option.icon}</span>
+                      <div>
+                        <p className={`text-sm font-medium ${timeWindow === option.id ? "text-[#E8C547]" : "text-white/80"}`}>
+                          {option.label}
+                        </p>
+                        <p className="text-xs text-white/40">{option.hours}</p>
+                      </div>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+
+              {/* Explanation */}
+              <div className="mt-3 pt-3 border-t border-white/10">
+                <p className="text-white/50 text-xs leading-relaxed">
+                  {timeWindow ? (
+                    <>
+                      We&apos;ll sample multiple times within your window to calculate results with
+                      <span className="text-[#E8C547]"> confidence ratings</span>.
+                    </>
+                  ) : (
+                    "Select an approximate time window for more accurate results."
+                  )}
+                </p>
+              </div>
+            </div>
           </motion.div>
         )}
 

@@ -448,6 +448,19 @@ export function calculateAstrocartography(birthData: BirthData): Astrocartograph
 }
 
 // ============================================
+// Additional Calculation Functions
+// ============================================
+
+/**
+ * Calculate natal positions for all planets from birth data
+ * Used for transit calculations
+ */
+export function calculateNatalPositions(birthData: BirthData): PlanetPosition[] {
+  const jd = birthDataToJulianDay(birthData);
+  return PLANET_ORDER.map((planetId) => calculatePlanetPosition(planetId, jd));
+}
+
+// ============================================
 // Utility Exports
 // ============================================
 

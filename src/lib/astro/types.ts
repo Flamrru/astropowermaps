@@ -16,11 +16,15 @@ export interface BirthLocation {
   timezone: string;    // "America/New_York"
 }
 
+/** Time window for unknown birth times - used for confidence calculations */
+export type BirthTimeWindow = "morning" | "afternoon" | "evening" | "unknown";
+
 export interface BirthData {
   date: string;        // "1990-05-15" (ISO date)
   time: string;        // "14:30" (24h format) or "12:00" if unknown
   timeUnknown: boolean; // True if user doesn't know birth time
   location: BirthLocation;
+  timeWindow?: BirthTimeWindow; // Optional: if timeUnknown, which window
 }
 
 // ============================================
