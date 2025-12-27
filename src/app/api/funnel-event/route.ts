@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
+// Whitelist of allowed event names (must match QuizShell.tsx)
+const ALLOWED_EVENTS = [
+  "quiz_start",
+  "q1_answered",
+  "q2_answered",
+  "email_screen",
+] as const;
+
 interface FunnelEventPayload {
   session_id: string;
   event_name: string;
@@ -15,6 +23,14 @@ export async function POST(request: NextRequest) {
     if (!body.session_id || !body.event_name || body.step_number === undefined) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    // Validate event_name against whitelist
+    if (!ALLOWED_EVENTS.includes(body.event_name as typeof ALLOWED_EVENTS[number])) {
+      return NextResponse.json(
+        { error: "Invalid event name" },
         { status: 400 }
       );
     }

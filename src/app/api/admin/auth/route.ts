@@ -4,7 +4,78 @@ import { cookies } from "next/headers";
 const COOKIE_NAME = "admin_session";
 const COOKIE_MAX_AGE = 60 * 60 * 24; // 24 hours
 
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_ATTEMPTS = 5;
+
+// In-memory store for rate limiting (resets on server restart)
+// For production with multiple instances, use Redis instead
+const loginAttempts = new Map<string, { count: number; firstAttempt: number }>();
+
+function getClientIP(request: NextRequest): string {
+  // Check common headers for real IP (behind proxies like Vercel)
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    return forwarded.split(",")[0].trim();
+  }
+  const realIP = request.headers.get("x-real-ip");
+  if (realIP) {
+    return realIP;
+  }
+  return "unknown";
+}
+
+function isRateLimited(ip: string): { limited: boolean; retryAfterSeconds?: number } {
+  const now = Date.now();
+  const record = loginAttempts.get(ip);
+
+  if (!record) {
+    return { limited: false };
+  }
+
+  // Check if window has expired
+  if (now - record.firstAttempt > RATE_LIMIT_WINDOW_MS) {
+    loginAttempts.delete(ip);
+    return { limited: false };
+  }
+
+  if (record.count >= MAX_ATTEMPTS) {
+    const retryAfterSeconds = Math.ceil(
+      (RATE_LIMIT_WINDOW_MS - (now - record.firstAttempt)) / 1000
+    );
+    return { limited: true, retryAfterSeconds };
+  }
+
+  return { limited: false };
+}
+
+function recordAttempt(ip: string): void {
+  const now = Date.now();
+  const record = loginAttempts.get(ip);
+
+  if (!record || now - record.firstAttempt > RATE_LIMIT_WINDOW_MS) {
+    loginAttempts.set(ip, { count: 1, firstAttempt: now });
+  } else {
+    record.count++;
+  }
+}
+
+function clearAttempts(ip: string): void {
+  loginAttempts.delete(ip);
+}
+
 export async function POST(request: NextRequest) {
+  const clientIP = getClientIP(request);
+
+  // Check rate limit before processing
+  const { limited, retryAfterSeconds } = isRateLimited(clientIP);
+  if (limited) {
+    return NextResponse.json(
+      { error: `Too many login attempts. Try again in ${retryAfterSeconds} seconds.` },
+      { status: 429 }
+    );
+  }
+
   try {
     const { password } = await request.json();
     const adminPassword = process.env.ADMIN_PASSWORD;
@@ -18,11 +89,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (password !== adminPassword) {
+      // Record failed attempt
+      recordAttempt(clientIP);
       return NextResponse.json(
         { error: "Invalid password" },
         { status: 401 }
       );
     }
+
+    // Successful login - clear any previous failed attempts
+    clearAttempts(clientIP);
 
     // Set HTTP-only cookie for session
     const cookieStore = await cookies();
