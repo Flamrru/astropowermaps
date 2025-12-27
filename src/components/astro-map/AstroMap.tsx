@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
 import { AstrocartographyResult, PlanetId, LineType, TooltipData } from "@/lib/astro/types";
 import { getShortInterpretation } from "@/lib/astro/interpretations";
 import MapControls from "./MapControls";
