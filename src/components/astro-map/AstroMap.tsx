@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import mapboxgl from "mapbox-gl";
 import { AstrocartographyResult, PlanetId, LineType, TooltipData } from "@/lib/astro/types";
 import { getShortInterpretation } from "@/lib/astro/interpretations";
+import { calculateAllPowerPlaces, LifeCategory } from "@/lib/astro/power-places";
 import MapControls from "./MapControls";
 import LineTooltip from "./LineTooltip";
 import CategoryFilters from "./CategoryFilters";
@@ -16,6 +17,14 @@ interface AstroMapProps {
   data: AstrocartographyResult;
   onReset: () => void;
 }
+
+// Category colors for city markers
+const CATEGORY_MARKER_COLORS: Record<LifeCategory, { color: string; glow: string }> = {
+  love: { color: "#E8A4C9", glow: "rgba(232, 164, 201, 0.6)" },
+  career: { color: "#E8C547", glow: "rgba(232, 197, 71, 0.6)" },
+  growth: { color: "#9B7ED9", glow: "rgba(155, 126, 217, 0.6)" },
+  home: { color: "#C4C4C4", glow: "rgba(196, 196, 196, 0.5)" },
+};
 
 /**
  * Creates a custom marker element using safe DOM methods
@@ -41,6 +50,76 @@ function createMarkerElement(): HTMLDivElement {
 }
 
 /**
+ * Creates a city marker element with category-specific styling
+ */
+function createCityMarkerElement(
+  cityName: string,
+  category: LifeCategory,
+  planetSymbol: string
+): HTMLDivElement {
+  const colors = CATEGORY_MARKER_COLORS[category];
+
+  const markerEl = document.createElement("div");
+  markerEl.className = "city-marker";
+  markerEl.style.cssText = `
+    position: relative;
+    cursor: pointer;
+    z-index: 10;
+  `;
+
+  // Outer glow ring (pulsing)
+  const glowRing = document.createElement("div");
+  glowRing.className = "city-marker-glow";
+  glowRing.style.cssText = `
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: ${colors.glow};
+    animation: cityPulse 2.5s ease-out infinite;
+    opacity: 0.6;
+  `;
+
+  // Inner dot
+  const dot = document.createElement("div");
+  dot.className = "city-marker-dot";
+  dot.style.cssText = `
+    position: relative;
+    width: 14px;
+    height: 14px;
+    background: ${colors.color};
+    border-radius: 50%;
+    border: 2px solid rgba(5, 5, 16, 0.8);
+    box-shadow: 0 0 12px ${colors.glow}, 0 0 24px ${colors.glow};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+  `;
+
+  // Planet symbol inside
+  const symbol = document.createElement("span");
+  symbol.textContent = planetSymbol;
+  symbol.style.cssText = `
+    color: rgba(5, 5, 16, 0.9);
+    font-size: 7px;
+    font-weight: bold;
+  `;
+
+  dot.appendChild(symbol);
+  markerEl.appendChild(glowRing);
+  markerEl.appendChild(dot);
+
+  // Store city name for popup
+  markerEl.setAttribute("data-city", cityName);
+
+  return markerEl;
+}
+
+/**
  * Creates popup content using safe DOM methods
  */
 function createPopupContent(locationName: string): HTMLDivElement {
@@ -61,9 +140,71 @@ function createPopupContent(locationName: string): HTMLDivElement {
   return container;
 }
 
+/**
+ * Creates city popup content
+ */
+function createCityPopupContent(
+  cityName: string,
+  category: string,
+  interpretation: string
+): HTMLDivElement {
+  const container = document.createElement("div");
+  container.className = "city-popup";
+  container.style.cssText = `
+    color: #050510;
+    padding: 4px 0;
+    font-size: 13px;
+    line-height: 1.4;
+    max-width: 200px;
+  `;
+
+  const header = document.createElement("div");
+  header.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  `;
+
+  const strong = document.createElement("strong");
+  strong.textContent = cityName;
+  strong.style.cssText = `
+    color: #0a0a1e;
+    font-size: 14px;
+  `;
+
+  const badge = document.createElement("span");
+  badge.textContent = category;
+  badge.style.cssText = `
+    background: rgba(201, 162, 39, 0.15);
+    color: #8b6914;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+  `;
+
+  header.appendChild(strong);
+  header.appendChild(badge);
+
+  const desc = document.createElement("p");
+  desc.textContent = interpretation;
+  desc.style.cssText = `
+    color: #444;
+    font-size: 12px;
+    margin: 0;
+  `;
+
+  container.appendChild(header);
+  container.appendChild(desc);
+
+  return container;
+}
+
 export default function AstroMap({ data, onReset }: AstroMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  const cityMarkersRef = useRef<mapboxgl.Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [visiblePlanets, setVisiblePlanets] = useState<Set<PlanetId>>(
     new Set(data.planets.map((p) => p.id))
@@ -71,9 +212,15 @@ export default function AstroMap({ data, onReset }: AstroMapProps) {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [showTutorial, setShowTutorial] = useState(false);
+  const [powerPlacesExpanded, setPowerPlacesExpanded] = useState(false);
 
   // First visit detection for tutorial
   const { isFirstVisit, isLoading: isFirstVisitLoading, markVisited } = useFirstVisit("astro-map-visited");
+
+  // Calculate power places for city markers
+  const powerPlaces = useMemo(() => {
+    return calculateAllPowerPlaces(data.lines);
+  }, [data.lines]);
 
   // Show tutorial on first visit after map loads
   useEffect(() => {
@@ -233,6 +380,74 @@ export default function AstroMap({ data, onReset }: AstroMapProps) {
     });
   }, [mapLoaded, data]);
 
+  // Add city markers for power places
+  useEffect(() => {
+    if (!mapLoaded || !map.current) return;
+
+    const currentMap = map.current;
+
+    // Clear existing city markers
+    cityMarkersRef.current.forEach((marker) => marker.remove());
+    cityMarkersRef.current = [];
+
+    // Track which cities we've already added to avoid duplicates
+    const addedCities = new Set<string>();
+
+    // Add markers for all power places across categories
+    const categories: LifeCategory[] = ["love", "career", "growth", "home"];
+
+    categories.forEach((category) => {
+      const categoryPlaces = powerPlaces[category];
+
+      categoryPlaces.places.forEach((place) => {
+        // Skip if we've already added this city
+        const cityKey = `${place.city.name}-${place.city.lat}-${place.city.lng}`;
+        if (addedCities.has(cityKey)) return;
+        addedCities.add(cityKey);
+
+        // Get planet symbol from PLANETS config
+        const planetSymbol = getPlanetSymbol(place.planet);
+
+        // Create marker element
+        const markerEl = createCityMarkerElement(
+          place.city.name,
+          category,
+          planetSymbol
+        );
+
+        // Create popup
+        const popupContent = createCityPopupContent(
+          place.city.name,
+          categoryPlaces.label,
+          place.interpretation
+        );
+
+        const popup = new mapboxgl.Popup({
+          offset: 15,
+          closeButton: false,
+          closeOnClick: true,
+        }).setDOMContent(popupContent);
+
+        // Create and add marker
+        const marker = new mapboxgl.Marker({
+          element: markerEl,
+          anchor: "center",
+        })
+          .setLngLat([place.city.lng, place.city.lat])
+          .setPopup(popup)
+          .addTo(currentMap);
+
+        cityMarkersRef.current.push(marker);
+      });
+    });
+
+    return () => {
+      // Cleanup markers on unmount
+      cityMarkersRef.current.forEach((marker) => marker.remove());
+      cityMarkersRef.current = [];
+    };
+  }, [mapLoaded, powerPlaces]);
+
   // Handle line click for tooltips
   useEffect(() => {
     if (!mapLoaded || !map.current) return;
@@ -383,15 +598,23 @@ export default function AstroMap({ data, onReset }: AstroMapProps) {
     []
   );
 
-  // Handle tutorial close
+  // Handle tutorial close - auto-expand Power Places panel
   const handleTutorialClose = useCallback(() => {
     setShowTutorial(false);
+    // Auto-expand Power Places panel after tutorial
+    setTimeout(() => {
+      setPowerPlacesExpanded(true);
+    }, 500);
   }, []);
 
-  // Handle "don't show again"
+  // Handle "don't show again" - also auto-expand Power Places
   const handleDontShowAgain = useCallback(() => {
     markVisited();
     setShowTutorial(false);
+    // Auto-expand Power Places panel after tutorial
+    setTimeout(() => {
+      setPowerPlacesExpanded(true);
+    }, 500);
   }, [markVisited]);
 
   return (
@@ -450,6 +673,7 @@ export default function AstroMap({ data, onReset }: AstroMapProps) {
         <PowerPlacesPanel
           lines={data.lines}
           onFlyToCity={handleFlyToCity}
+          defaultExpanded={powerPlacesExpanded}
         />
       )}
 
@@ -509,6 +733,30 @@ export default function AstroMap({ data, onReset }: AstroMapProps) {
           }
         }
 
+        @keyframes cityPulse {
+          0% {
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 0.6;
+          }
+          50% {
+            transform: translate(-50%, -50%) scale(1.2);
+            opacity: 0.3;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 0.6;
+          }
+        }
+
+        .city-marker {
+          transition: transform 0.2s ease;
+        }
+
+        .city-marker:hover {
+          transform: scale(1.2);
+          z-index: 100 !important;
+        }
+
         .birth-popup {
           color: #050510;
           padding: 4px 0;
@@ -551,4 +799,21 @@ export default function AstroMap({ data, onReset }: AstroMapProps) {
       `}</style>
     </div>
   );
+}
+
+// Helper to get planet symbol
+function getPlanetSymbol(planetId: PlanetId): string {
+  const symbols: Record<PlanetId, string> = {
+    sun: "☉",
+    moon: "☽",
+    mercury: "☿",
+    venus: "♀",
+    mars: "♂",
+    jupiter: "♃",
+    saturn: "♄",
+    uranus: "♅",
+    neptune: "♆",
+    pluto: "♇",
+  };
+  return symbols[planetId] || "★";
 }
