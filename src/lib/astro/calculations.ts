@@ -1,8 +1,9 @@
 /**
  * Astrocartography Calculations
  *
- * This module calculates planetary positions and generates the geographic
- * coordinates for astrocartography lines (MC, IC, AC, DC).
+ * This module calculates planetary positions using the astronomia library
+ * (VSOP87 theory for planets, full lunar theory for Moon) and generates
+ * the geographic coordinates for astrocartography lines (MC, IC, AC, DC).
  *
  * Key concepts:
  * - MC (Midheaven): Where a planet culminates (highest point in sky)
@@ -21,6 +22,25 @@ import {
 } from "./types";
 import { PLANETS, PLANET_ORDER, LINE_TYPES, getDefaultPlanets, getLineId } from "./planets";
 
+// Import astronomia modules
+import * as julian from "astronomia/julian";
+import * as sidereal from "astronomia/sidereal";
+import * as moonposition from "astronomia/moonposition";
+import * as nutation from "astronomia/nutation";
+import * as solar from "astronomia/solar";
+import { Planet } from "astronomia/planetposition";
+import { Ecliptic } from "astronomia/coord";
+
+// Import VSOP87 data for planets
+import vsop87Bmercury from "astronomia/data/vsop87Bmercury";
+import vsop87Bvenus from "astronomia/data/vsop87Bvenus";
+import vsop87Bearth from "astronomia/data/vsop87Bearth";
+import vsop87Bmars from "astronomia/data/vsop87Bmars";
+import vsop87Bjupiter from "astronomia/data/vsop87Bjupiter";
+import vsop87Bsaturn from "astronomia/data/vsop87Bsaturn";
+import vsop87Buranus from "astronomia/data/vsop87Buranus";
+import vsop87Bneptune from "astronomia/data/vsop87Bneptune";
+
 // ============================================
 // Constants
 // ============================================
@@ -28,50 +48,29 @@ import { PLANETS, PLANET_ORDER, LINE_TYPES, getDefaultPlanets, getLineId } from 
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
 
-// Earth's axial tilt (obliquity of ecliptic) - approximate for modern era
-const OBLIQUITY = 23.4393;
-
 // Latitude limits for AC/DC lines (beyond these, planets may be circumpolar)
 const LAT_MIN = -66;
 const LAT_MAX = 66;
 
-// Number of points to generate per line for smooth curves
-const POINTS_PER_LINE = 180;
+// ============================================
+// Planet Instances (VSOP87)
+// ============================================
+
+// Create planet instances using VSOP87 data
+const planetInstances: Record<string, Planet> = {
+  mercury: new Planet(vsop87Bmercury),
+  venus: new Planet(vsop87Bvenus),
+  earth: new Planet(vsop87Bearth),
+  mars: new Planet(vsop87Bmars),
+  jupiter: new Planet(vsop87Bjupiter),
+  saturn: new Planet(vsop87Bsaturn),
+  uranus: new Planet(vsop87Buranus),
+  neptune: new Planet(vsop87Bneptune),
+};
 
 // ============================================
 // Julian Day Calculation
 // ============================================
-
-/**
- * Convert a date/time to Julian Day Number
- * This is the astronomical time standard used for calculations
- */
-function dateToJulianDay(
-  year: number,
-  month: number,
-  day: number,
-  hour: number = 0,
-  minute: number = 0
-): number {
-  // Algorithm from Astronomical Algorithms by Jean Meeus
-  if (month <= 2) {
-    year -= 1;
-    month += 12;
-  }
-
-  const A = Math.floor(year / 100);
-  const B = 2 - A + Math.floor(A / 4);
-
-  const JD =
-    Math.floor(365.25 * (year + 4716)) +
-    Math.floor(30.6001 * (month + 1)) +
-    day +
-    B -
-    1524.5 +
-    (hour + minute / 60) / 24;
-
-  return JD;
-}
 
 /**
  * Parse birth data into Julian Day
@@ -80,10 +79,12 @@ export function birthDataToJulianDay(birthData: BirthData): number {
   const [year, month, day] = birthData.date.split("-").map(Number);
   const [hour, minute] = birthData.time.split(":").map(Number);
 
-  // TODO: Convert local time to UTC using timezone
-  // For now, we'll use the time as-is (simplified)
+  // Create a calendar date and convert to Julian Day
+  // Note: astronomia uses UT, so we use the time as provided
+  // For more accuracy, timezone conversion should be applied
+  const decimalHour = hour + minute / 60;
 
-  return dateToJulianDay(year, month, day, hour, minute);
+  return julian.CalendarGregorianToJD(year, month, day + decimalHour / 24);
 }
 
 // ============================================
@@ -95,117 +96,181 @@ export function birthDataToJulianDay(birthData: BirthData): number {
  * Returns the sidereal time in degrees (0-360)
  */
 function getGMST(jd: number): number {
-  // Julian centuries from J2000.0
-  const T = (jd - 2451545.0) / 36525.0;
+  // Use astronomia's sidereal time calculation (returns seconds)
+  const gmstSeconds = sidereal.mean(jd);
 
-  // GMST in degrees
-  let gmst =
-    280.46061837 +
-    360.98564736629 * (jd - 2451545.0) +
-    0.000387933 * T * T -
-    (T * T * T) / 38710000.0;
+  // Convert seconds to degrees (24 hours = 360 degrees)
+  const gmstDegrees = (gmstSeconds / 86400) * 360;
 
-  // Normalize to 0-360
-  gmst = ((gmst % 360) + 360) % 360;
-
-  return gmst;
-}
-
-/**
- * Calculate Local Sidereal Time for a given Julian Day and longitude
- */
-function getLST(jd: number, longitude: number): number {
-  const gmst = getGMST(jd);
-  let lst = gmst + longitude;
-
-  // Normalize to 0-360
-  lst = ((lst % 360) + 360) % 360;
-
-  return lst;
+  return gmstDegrees;
 }
 
 // ============================================
-// Simplified Planetary Positions
+// Planetary Position Calculations
 // ============================================
 
 /**
- * Mean orbital elements for planets (simplified)
- * These are approximate and sufficient for astrocartography visualization
- * For production accuracy, use Swiss Ephemeris or similar
+ * Get mean obliquity of the ecliptic for a given JDE
  */
-const ORBITAL_ELEMENTS: Record<
-  PlanetId,
-  {
-    L0: number; // Mean longitude at epoch (degrees)
-    Lrate: number; // Daily motion (degrees/day)
-    e: number; // Eccentricity
-    i: number; // Inclination (degrees)
-  }
-> = {
-  sun: { L0: 280.46, Lrate: 0.9856474, e: 0.0167, i: 0 },
-  moon: { L0: 218.32, Lrate: 13.176358, e: 0.0549, i: 5.145 },
-  mercury: { L0: 252.25, Lrate: 4.0923344, e: 0.2056, i: 7.0 },
-  venus: { L0: 181.98, Lrate: 1.6021302, e: 0.0068, i: 3.4 },
-  mars: { L0: 355.45, Lrate: 0.5240208, e: 0.0934, i: 1.85 },
-  jupiter: { L0: 34.4, Lrate: 0.0830853, e: 0.0484, i: 1.3 },
-  saturn: { L0: 49.94, Lrate: 0.0334979, e: 0.0542, i: 2.49 },
-  uranus: { L0: 313.23, Lrate: 0.011725, e: 0.0472, i: 0.77 },
-  neptune: { L0: 304.88, Lrate: 0.006020, e: 0.0086, i: 1.77 },
-  pluto: { L0: 238.93, Lrate: 0.003979, e: 0.2488, i: 17.16 },
-};
+function getObliquity(jde: number): number {
+  return nutation.meanObliquity(jde);
+}
 
 /**
- * Calculate simplified planetary position for a given Julian Day
- * Returns ecliptic longitude, latitude, and equatorial coordinates
+ * Calculate geocentric position for a planet using VSOP87
+ * This converts heliocentric coordinates to geocentric
  */
-export function calculatePlanetPosition(planet: PlanetId, jd: number): PlanetPosition {
-  const elements = ORBITAL_ELEMENTS[planet];
-  const daysSinceEpoch = jd - 2451545.0; // Days since J2000.0
+function calculatePlanetPositionVSOP87(
+  planetId: PlanetId,
+  jde: number,
+  earthPosition: { lon: number; lat: number; range: number }
+): PlanetPosition {
+  const planet = planetInstances[planetId];
 
-  // Calculate mean longitude
-  let longitude = elements.L0 + elements.Lrate * daysSinceEpoch;
-  longitude = ((longitude % 360) + 360) % 360;
+  // Get heliocentric position of the planet
+  const helio = planet.position2000(jde);
 
-  // Simplified latitude (mostly 0 for planets, except Moon and Pluto)
-  const latitude = 0; // Simplified - real calculation would use orbital elements
+  // Convert heliocentric to geocentric coordinates
+  // Geocentric longitude = heliocentric longitude + 180° (approximately, for outer planets)
+  // For more accuracy, we need proper coordinate transformation
 
-  // Convert ecliptic to equatorial coordinates
-  const { ra, dec } = eclipticToEquatorial(longitude, latitude, OBLIQUITY);
+  // Calculate geocentric position using vector subtraction
+  const helioX = helio.range * Math.cos(helio.lat) * Math.cos(helio.lon);
+  const helioY = helio.range * Math.cos(helio.lat) * Math.sin(helio.lon);
+  const helioZ = helio.range * Math.sin(helio.lat);
+
+  const earthX = earthPosition.range * Math.cos(earthPosition.lat) * Math.cos(earthPosition.lon);
+  const earthY = earthPosition.range * Math.cos(earthPosition.lat) * Math.sin(earthPosition.lon);
+  const earthZ = earthPosition.range * Math.sin(earthPosition.lat);
+
+  // Geocentric coordinates (planet position relative to Earth)
+  const geoX = helioX - earthX;
+  const geoY = helioY - earthY;
+  const geoZ = helioZ - earthZ;
+
+  // Convert back to spherical coordinates
+  const geoRange = Math.sqrt(geoX * geoX + geoY * geoY + geoZ * geoZ);
+  const geoLon = Math.atan2(geoY, geoX);
+  const geoLat = Math.asin(geoZ / geoRange);
+
+  // Convert ecliptic to equatorial using astronomia's coord module
+  const obliquity = getObliquity(jde);
+  const ecliptic = new Ecliptic(geoLon, geoLat);
+  const equatorial = ecliptic.toEquatorial(obliquity);
 
   return {
-    id: planet,
-    longitude,
-    latitude,
-    rightAscension: ra,
-    declination: dec,
+    id: planetId,
+    longitude: ((geoLon * RAD_TO_DEG % 360) + 360) % 360,
+    latitude: geoLat * RAD_TO_DEG,
+    rightAscension: equatorial.ra * RAD_TO_DEG,
+    declination: equatorial.dec * RAD_TO_DEG,
   };
 }
 
 /**
- * Convert ecliptic coordinates to equatorial coordinates
+ * Calculate Sun position (geocentric)
  */
-function eclipticToEquatorial(
-  eclLon: number,
-  eclLat: number,
-  obliquity: number
-): { ra: number; dec: number } {
-  const lonRad = eclLon * DEG_TO_RAD;
-  const latRad = eclLat * DEG_TO_RAD;
-  const oblRad = obliquity * DEG_TO_RAD;
+function calculateSunPosition(jde: number): PlanetPosition {
+  // Get Sun's apparent position
+  const T = (jde - 2451545.0) / 36525;
+  const { lon } = solar.trueLongitude(T);
 
-  // Declination
-  const sinDec =
-    Math.sin(latRad) * Math.cos(oblRad) +
-    Math.cos(latRad) * Math.sin(oblRad) * Math.sin(lonRad);
-  const dec = Math.asin(sinDec) * RAD_TO_DEG;
+  // Sun's latitude is essentially 0
+  const lat = 0;
 
-  // Right Ascension
-  const y = Math.sin(lonRad) * Math.cos(oblRad) - Math.tan(latRad) * Math.sin(oblRad);
-  const x = Math.cos(lonRad);
-  let ra = Math.atan2(y, x) * RAD_TO_DEG;
-  ra = ((ra % 360) + 360) % 360;
+  // Convert to equatorial
+  const obliquity = getObliquity(jde);
+  const ecliptic = new Ecliptic(lon, lat);
+  const equatorial = ecliptic.toEquatorial(obliquity);
 
-  return { ra, dec };
+  return {
+    id: "sun",
+    longitude: ((lon * RAD_TO_DEG % 360) + 360) % 360,
+    latitude: 0,
+    rightAscension: equatorial.ra * RAD_TO_DEG,
+    declination: equatorial.dec * RAD_TO_DEG,
+  };
+}
+
+/**
+ * Calculate Moon position (already geocentric)
+ */
+function calculateMoonPosition(jde: number): PlanetPosition {
+  // moonposition.position returns geocentric ecliptic coordinates
+  const moon = moonposition.position(jde);
+
+  // Convert to equatorial
+  const obliquity = getObliquity(jde);
+  const ecliptic = new Ecliptic(moon.lon, moon.lat);
+  const equatorial = ecliptic.toEquatorial(obliquity);
+
+  return {
+    id: "moon",
+    longitude: ((moon.lon * RAD_TO_DEG % 360) + 360) % 360,
+    latitude: moon.lat * RAD_TO_DEG,
+    rightAscension: equatorial.ra * RAD_TO_DEG,
+    declination: equatorial.dec * RAD_TO_DEG,
+  };
+}
+
+/**
+ * Calculate Pluto position (simplified - VSOP87 doesn't cover Pluto)
+ * Uses simplified orbital elements
+ */
+function calculatePlutoPosition(jde: number): PlanetPosition {
+  // Simplified Pluto calculation (approximate)
+  const T = (jde - 2451545.0) / 36525;
+
+  // Mean longitude (approximate)
+  let lon = 238.93 + 0.003979 * (jde - 2451545.0);
+  lon = ((lon % 360) + 360) % 360;
+
+  // Pluto's inclination causes significant latitude variation
+  const lat = 0; // Simplified
+
+  const lonRad = lon * DEG_TO_RAD;
+  const latRad = lat * DEG_TO_RAD;
+
+  // Convert to equatorial
+  const obliquity = getObliquity(jde);
+  const ecliptic = new Ecliptic(lonRad, latRad);
+  const equatorial = ecliptic.toEquatorial(obliquity);
+
+  return {
+    id: "pluto",
+    longitude: lon,
+    latitude: lat,
+    rightAscension: equatorial.ra * RAD_TO_DEG,
+    declination: equatorial.dec * RAD_TO_DEG,
+  };
+}
+
+/**
+ * Calculate planetary position for a given planet and Julian Day
+ */
+export function calculatePlanetPosition(planet: PlanetId, jd: number): PlanetPosition {
+  // Special cases
+  if (planet === "sun") {
+    return calculateSunPosition(jd);
+  }
+
+  if (planet === "moon") {
+    return calculateMoonPosition(jd);
+  }
+
+  if (planet === "pluto") {
+    return calculatePlutoPosition(jd);
+  }
+
+  // For VSOP87 planets, we need Earth's position first
+  const earth = planetInstances.earth.position2000(jd);
+  const earthPosition = {
+    lon: earth.lon,
+    lat: earth.lat,
+    range: earth.range,
+  };
+
+  return calculatePlanetPositionVSOP87(planet, jd, earthPosition);
 }
 
 // ============================================
@@ -386,4 +451,4 @@ export function calculateAstrocartography(birthData: BirthData): Astrocartograph
 // Utility Exports
 // ============================================
 
-export { getGMST, getLST, dateToJulianDay };
+export { getGMST, birthDataToJulianDay as dateToJulianDay };
