@@ -109,8 +109,8 @@ export default function Screen10Confirmation() {
         await navigator.clipboard.writeText(window.location.origin);
         alert("Link copied to clipboard!");
       }
-    } catch (error) {
-      console.log("Share failed:", error);
+    } catch {
+      // Share cancelled or failed - no action needed
     }
   };
 
