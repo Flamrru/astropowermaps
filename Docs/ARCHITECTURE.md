@@ -91,6 +91,17 @@ Actions: `NEXT_STEP`, `PREV_STEP`, `SET_ANSWER_Q1`, `TOGGLE_ANSWER_Q2`, `SET_EMA
 - **Decision**: `scale(1.15)` on entry/nebula videos
 - **Rationale**: Prevents black edge strips on various aspect ratios
 
+### Astronomical Calculations (VSOP87 via astronomia)
+- **Decision**: Use `astronomia` library with VSOP87 theory instead of Swiss Ephemeris
+- **Rationale**:
+  - VSOP87 accuracy (~1 arcsecond) is sufficient for astrocartography and aspects
+  - Swiss Ephemeris requires GPL compliance or $290 commercial license
+  - `astronomia` is MIT-licensed, free for commercial use
+  - Smaller bundle size (~100KB vs 2-50MB for Swiss Ephemeris)
+- **Covers**: Sun, Moon, Mercury–Neptune, natal charts, aspects, transits
+- **Limitation**: Simplified Pluto calculation (no VSOP87 data available)
+- **When to reconsider**: If adding asteroids (Chiron, Lilith) or pre-3000 BCE charts
+
 ## Operational Notes
 - **Deploy**: `vercel --prod` or push to main
 - **Logs**: Vercel dashboard or `vercel logs`
