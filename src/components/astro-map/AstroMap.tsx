@@ -50,70 +50,53 @@ function createMarkerElement(): HTMLDivElement {
 }
 
 /**
- * Creates a city marker element with category-specific styling
+ * Creates a city marker element as a glowing map pin
  */
 function createCityMarkerElement(
   cityName: string,
   category: LifeCategory,
-  planetSymbol: string
+  _planetSymbol: string
 ): HTMLDivElement {
   const colors = CATEGORY_MARKER_COLORS[category];
 
   const markerEl = document.createElement("div");
-  markerEl.className = "city-marker";
+  markerEl.className = "city-pin-marker";
   markerEl.style.cssText = `
-    position: relative;
     cursor: pointer;
-    z-index: 10;
-  `;
-
-  // Outer glow ring (pulsing)
-  const glowRing = document.createElement("div");
-  glowRing.className = "city-marker-glow";
-  glowRing.style.cssText = `
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 28px;
+    width: 20px;
     height: 28px;
-    border-radius: 50%;
-    background: ${colors.glow};
-    animation: cityPulse 2.5s ease-out infinite;
-    opacity: 0.6;
   `;
 
-  // Inner dot
-  const dot = document.createElement("div");
-  dot.className = "city-marker-dot";
-  dot.style.cssText = `
-    position: relative;
-    width: 14px;
-    height: 14px;
-    background: ${colors.color};
-    border-radius: 50%;
-    border: 2px solid rgba(5, 5, 16, 0.8);
-    box-shadow: 0 0 12px ${colors.glow}, 0 0 24px ${colors.glow};
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 8px;
+  // SVG Pin shape - simple and performant
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.setAttribute("viewBox", "0 0 20 28");
+  svg.setAttribute("width", "20");
+  svg.setAttribute("height", "28");
+  svg.style.cssText = `
+    display: block;
+    filter: drop-shadow(0 0 4px ${colors.glow}) drop-shadow(0 1px 2px rgba(0,0,0,0.5));
   `;
 
-  // Planet symbol inside
-  const symbol = document.createElement("span");
-  symbol.textContent = planetSymbol;
-  symbol.style.cssText = `
-    color: rgba(5, 5, 16, 0.9);
-    font-size: 7px;
-    font-weight: bold;
-  `;
+  // Pin body (teardrop shape) - pointing down
+  const pinPath = document.createElementNS(svgNS, "path");
+  pinPath.setAttribute("d", "M10 0C4.5 0 0 4.5 0 10c0 6 10 18 10 18s10-12 10-18C20 4.5 15.5 0 10 0z");
+  pinPath.setAttribute("fill", colors.color);
+  pinPath.setAttribute("stroke", "rgba(0, 0, 0, 0.3)");
+  pinPath.setAttribute("stroke-width", "0.5");
 
-  dot.appendChild(symbol);
-  markerEl.appendChild(glowRing);
-  markerEl.appendChild(dot);
+  // Inner highlight circle
+  const innerCircle = document.createElementNS(svgNS, "circle");
+  innerCircle.setAttribute("cx", "10");
+  innerCircle.setAttribute("cy", "9");
+  innerCircle.setAttribute("r", "4");
+  innerCircle.setAttribute("fill", "rgba(255, 255, 255, 0.3)");
 
-  // Store city name for popup
+  svg.appendChild(pinPath);
+  svg.appendChild(innerCircle);
+  markerEl.appendChild(svg);
+
+  // Store city name
   markerEl.setAttribute("data-city", cityName);
 
   return markerEl;
@@ -428,10 +411,10 @@ export default function AstroMap({ data, onReset }: AstroMapProps) {
           closeOnClick: true,
         }).setDOMContent(popupContent);
 
-        // Create and add marker
+        // Create and add marker - anchor at bottom so pin tip is at location
         const marker = new mapboxgl.Marker({
           element: markerEl,
-          anchor: "center",
+          anchor: "bottom",
         })
           .setLngLat([place.city.lng, place.city.lat])
           .setPopup(popup)
@@ -733,28 +716,12 @@ export default function AstroMap({ data, onReset }: AstroMapProps) {
           }
         }
 
-        @keyframes cityPulse {
-          0% {
-            transform: translate(-50%, -50%) scale(0.8);
-            opacity: 0.6;
-          }
-          50% {
-            transform: translate(-50%, -50%) scale(1.2);
-            opacity: 0.3;
-          }
-          100% {
-            transform: translate(-50%, -50%) scale(0.8);
-            opacity: 0.6;
-          }
+        .city-pin-marker {
+          transition: filter 0.15s ease;
         }
 
-        .city-marker {
-          transition: transform 0.2s ease;
-        }
-
-        .city-marker:hover {
-          transform: scale(1.2);
-          z-index: 100 !important;
+        .city-pin-marker:hover svg {
+          filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 16px currentColor) drop-shadow(0 1px 2px rgba(0,0,0,0.5));
         }
 
         .birth-popup {
