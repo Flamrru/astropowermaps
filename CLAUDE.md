@@ -38,6 +38,12 @@ ADMIN_PASSWORD               # Dashboard login password
 NEXT_PUBLIC_META_PIXEL_ID    # Meta Pixel ID (848967188002206)
 ```
 
+## Database
+- **Supabase project:** `lbfjjwmjaycacdtvpewq.supabase.co` (different from MCP!)
+- **Leads table:** `astro_leads` — stores email, quiz answers, UTM params
+- **Direct vs Ad leads:** `utm_source` = null (direct) or `fb`/`ig` (Meta ads)
+- Use curl with service role key from `.env.local` to query/modify
+
 ## Guardrails
 - Always test on mobile viewport before deploying
 - Don't modify copy.ts without explicit approval

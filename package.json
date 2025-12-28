@@ -12,6 +12,8 @@
     "@sentry/nextjs": "^10.32.1",
     "@supabase/supabase-js": "^2.89.0",
     "astronomia": "^4.2.0",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "framer-motion": "^12.23.26",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.562.0",

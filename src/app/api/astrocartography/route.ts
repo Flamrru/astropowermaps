@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { calculateAstrocartography } from "@/lib/astro/calculations";
 import { BirthData, AstrocartographyResponse } from "@/lib/astro/types";
+import { validateBirthDataTimezone } from "@/lib/astro/timezone-utils";
 
 /**
  * POST /api/astrocartography
@@ -61,6 +62,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<Astrocart
     if (birthData.location.lng < -180 || birthData.location.lng > 180) {
       return NextResponse.json(
         { success: false, error: "Longitude must be between -180 and 180." },
+        { status: 400 }
+      );
+    }
+
+    // Validate timezone (CRITICAL for accurate calculations!)
+    const timezoneError = validateBirthDataTimezone(birthData);
+    if (timezoneError) {
+      return NextResponse.json(
+        { success: false, error: timezoneError },
         { status: 400 }
       );
     }

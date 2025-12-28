@@ -21,6 +21,7 @@ import {
   AstrocartographyResult,
 } from "./types";
 import { PLANETS, PLANET_ORDER, LINE_TYPES, getDefaultPlanets, getLineId } from "./planets";
+import { localToUTC } from "./timezone-utils";
 
 // Import astronomia modules
 import * as julian from "astronomia/julian";
@@ -73,18 +74,50 @@ const planetInstances: Record<string, Planet> = {
 // ============================================
 
 /**
- * Parse birth data into Julian Day
+ * Convert birth data to Julian Day (in UTC/UT for astronomia library)
+ *
+ * IMPORTANT: The astronomia library expects UTC time, not local time.
+ * This function converts local birth time to UTC before calculating Julian Day.
+ *
+ * Previously, this function had a critical bug where it treated local time
+ * as UTC, causing all planetary positions to be wrong by the timezone offset.
+ * For example, a birth at 2:00 PM in New York (UTC-4) was calculated as if
+ * it were 2:00 PM UTC, creating a 4-hour error and shifting lines by ~60°.
+ *
+ * @param birthData - Birth date, time, and location with timezone
+ * @returns Julian Day number (JD) for the UTC moment of birth
+ *
+ * @example
+ * // Born 2:00 PM on May 15, 1990 in New York (EDT = UTC-4)
+ * const jd = birthDataToJulianDay({
+ *   date: "1990-05-15",
+ *   time: "14:00",
+ *   location: { timezone: "America/New_York", ... }
+ * });
+ * // Correctly calculates JD for 6:00 PM UTC (not 2:00 PM UTC!)
  */
 export function birthDataToJulianDay(birthData: BirthData): number {
-  const [year, month, day] = birthData.date.split("-").map(Number);
-  const [hour, minute] = birthData.time.split(":").map(Number);
+  // Convert local time to UTC using timezone-aware conversion
+  const utcDate = localToUTC(
+    birthData.date,
+    birthData.time,
+    birthData.location.timezone
+  );
 
-  // Create a calendar date and convert to Julian Day
-  // Note: astronomia uses UT, so we use the time as provided
-  // For more accuracy, timezone conversion should be applied
-  const decimalHour = hour + minute / 60;
+  // Extract UTC components (astronomia requires UTC!)
+  const year = utcDate.getUTCFullYear();
+  const month = utcDate.getUTCMonth() + 1; // JavaScript months are 0-indexed
+  const day = utcDate.getUTCDate();
+  const hour = utcDate.getUTCHours();
+  const minute = utcDate.getUTCMinutes();
+  const second = utcDate.getUTCSeconds();
 
-  return julian.CalendarGregorianToJD(year, month, day + decimalHour / 24);
+  // Calculate decimal day for Julian Day conversion
+  // Include seconds for maximum accuracy
+  const decimalDay = day + (hour + minute / 60 + second / 3600) / 24;
+
+  // Convert to Julian Day using UTC time
+  return julian.CalendarGregorianToJD(year, month, decimalDay);
 }
 
 // ============================================

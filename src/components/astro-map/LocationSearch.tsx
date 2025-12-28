@@ -94,12 +94,30 @@ export default function LocationSearch({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSelect = (result: GeocodingResult) => {
+  const handleSelect = async (result: GeocodingResult) => {
+    const lat = result.center[1];
+    const lng = result.center[0];
+
+    // Fetch timezone from our API
+    let timezone = 'UTC';
+    try {
+      const response = await fetch(`/api/timezone?lat=${lat}&lng=${lng}`);
+      const data = await response.json();
+      timezone = data.timezone;
+
+      if (data.error) {
+        console.warn('Timezone lookup warning:', data.error);
+      }
+    } catch (error) {
+      console.error('Timezone lookup failed, using UTC:', error);
+      // Fallback to UTC if lookup fails
+    }
+
     const location: BirthLocation = {
       name: result.place_name,
-      lng: result.center[0],
-      lat: result.center[1],
-      timezone: "UTC", // TODO: Get timezone from Mapbox or separate API
+      lng,
+      lat,
+      timezone, // Now uses accurate timezone from GeoNames!
     };
 
     setQuery(result.place_name);
