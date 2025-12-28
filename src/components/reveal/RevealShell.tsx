@@ -91,6 +91,15 @@ export default function RevealShell({ children }: RevealShellProps) {
       const devMode = searchParams.get("dev") === "1" || dParam !== null;
       const startStep = parseInt(dParam || searchParams.get("step") || "3", 10);
 
+      // PAYMENT SUCCESS: Redirect from Stripe after successful payment
+      const paymentStatus = searchParams.get("payment_status");
+      if (paymentStatus === "complete") {
+        console.log("✅ Payment completed - redirecting to map");
+        // Redirect to map with payment success flag
+        window.location.href = "/map?payment=success";
+        return;
+      }
+
       // DEV MODE: Skip birth data entry, pre-fill and jump to specified step
       if (devMode) {
         console.log("🔧 Dev mode enabled - using preset birth data");

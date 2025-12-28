@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useReveal } from "@/lib/reveal-state";
 import GoldButton from "@/components/GoldButton";
 import { Lock, Check, Shield, Zap, Calendar, MapPin } from "lucide-react";
+import StripeCheckout from "@/components/reveal/StripeCheckout";
 import { calculateAllPowerPlaces, LifeCategory } from "@/lib/astro/power-places";
 
 // Month names for display
@@ -19,7 +20,7 @@ type SimplifiedPlace = {
 
 export default function RevealScreen09Paywall() {
   const { state, dispatch } = useReveal();
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
 
   // Get forecast data for blurred preview
   const forecast = state.forecastData;
@@ -40,16 +41,9 @@ export default function RevealScreen09Paywall() {
     return allPlaces.slice(0, 3);
   }, [state.astroData?.lines]);
 
-  // Simulate purchase (replace with Stripe Elements later)
-  const handlePurchase = async () => {
-    setIsProcessing(true);
-
-    // Simulate payment processing
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // Mark as complete and advance
-    dispatch({ type: "SET_PAYMENT_COMPLETE", payload: { orderId: "demo-order-123" } });
-    dispatch({ type: "NEXT_STEP" });
+  // Show Stripe checkout when user clicks the button
+  const handleShowCheckout = () => {
+    setShowCheckout(true);
   };
 
   return (
@@ -172,25 +166,33 @@ export default function RevealScreen09Paywall() {
             ))}
           </div>
 
-          {/* Purchase Button */}
-          <GoldButton onClick={handlePurchase} loading={isProcessing}>
-            <span className="flex items-center gap-2">
-              <Lock className="w-4 h-4" />
-              Unlock My 2026 Map
-            </span>
-          </GoldButton>
+          {/* Purchase Button or Checkout Form */}
+          {!showCheckout ? (
+            <>
+              <GoldButton onClick={handleShowCheckout}>
+                <span className="flex items-center gap-2">
+                  <Lock className="w-4 h-4" />
+                  Unlock My 2026 Map
+                </span>
+              </GoldButton>
 
-          {/* Trust indicators */}
-          <div className="flex items-center justify-center gap-4 mt-4 text-white/40 text-xs">
-            <div className="flex items-center gap-1">
-              <Shield className="w-3 h-3" />
-              <span>Secure payment</span>
+              {/* Trust indicators */}
+              <div className="flex items-center justify-center gap-4 mt-4 text-white/40 text-xs">
+                <div className="flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  <span>Secure payment</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Zap className="w-3 h-3" />
+                  <span>Instant access</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="mt-2">
+              <StripeCheckout />
             </div>
-            <div className="flex items-center gap-1">
-              <Zap className="w-3 h-3" />
-              <span>Instant access</span>
-            </div>
-          </div>
+          )}
         </motion.div>
 
         {/* Urgency note */}

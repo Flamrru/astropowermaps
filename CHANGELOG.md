@@ -2,6 +2,13 @@
 
 ## 2025-12-28
 ### Added
+- **Stripe Payment Integration** - $27 one-time payment for 2026 Power Map
+  - Embedded Checkout (stays on paywall page)
+  - Webhook handler for payment confirmation
+  - Updates `astro_purchases` table on success
+  - Sets `has_purchased = true` on `astro_leads`
+  - Auto-redirect to `/map` after successful payment
+  - Dark theme with gold accent (via Stripe Dashboard branding)
 - **Reveal Flow** (`/reveal`) - 10-screen guided onboarding after quiz
   - Birth data entry with location search and timezone detection
   - Astrocartography map generation (planetary lines calculation)

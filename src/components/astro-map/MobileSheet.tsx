@@ -1,7 +1,7 @@
 "use client";
 
-import { ReactNode, useCallback, useRef, useEffect } from "react";
-import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from "framer-motion";
+import { ReactNode, useCallback } from "react";
+import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { X } from "lucide-react";
 
 interface MobileSheetProps {
@@ -25,31 +25,14 @@ export default function MobileSheet({
   glowColor = "rgba(232, 197, 71, 0.25)",
   children,
 }: MobileSheetProps) {
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const dragY = useMotionValue(0);
-
-  // Reset drag position when sheet opens
-  useEffect(() => {
-    if (isOpen) {
-      dragY.set(0);
-    }
-  }, [isOpen, dragY]);
-
-  // Transform drag into backdrop opacity
-  const backdropOpacity = useTransform(dragY, [0, 300], [1, 0]);
-  const sheetScale = useTransform(dragY, [0, 300], [1, 0.95]);
-
   const handleDragEnd = useCallback(
     (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
       // Close if dragged down more than 100px or with velocity
       if (info.offset.y > 100 || info.velocity.y > 400) {
         onClose();
-      } else {
-        // Snap back to top
-        dragY.set(0);
       }
     },
-    [onClose, dragY]
+    [onClose]
   );
 
   return (
@@ -59,12 +42,11 @@ export default function MobileSheet({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.15 }}
           className="fixed inset-0 z-50"
         >
           {/* Backdrop with blur */}
           <motion.div
-            style={{ opacity: backdropOpacity }}
             className="absolute inset-0"
             onClick={onClose}
           >
@@ -86,7 +68,6 @@ export default function MobileSheet({
 
           {/* Sheet */}
           <motion.div
-            ref={sheetRef}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -95,10 +76,6 @@ export default function MobileSheet({
               damping: 32,
               stiffness: 400,
               mass: 0.8,
-            }}
-            style={{
-              y: dragY,
-              scale: sheetScale,
             }}
             drag="y"
             dragConstraints={{ top: 0, bottom: 0 }}

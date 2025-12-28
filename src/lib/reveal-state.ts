@@ -150,7 +150,9 @@ export function revealReducer(
       return { ...state, isLoading: action.payload };
 
     case "SET_EMAIL":
-      return { ...state, email: action.payload, hasEmail: true };
+      // Don't set hasEmail here - it should only be true when coming from quiz
+      // or after form submission. Setting it on every keystroke hides the field!
+      return { ...state, email: action.payload };
 
     case "SET_PAYMENT_COMPLETE":
       return {
