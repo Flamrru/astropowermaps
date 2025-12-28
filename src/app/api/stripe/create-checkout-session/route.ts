@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
-// Initialize Stripe with the secret key (server-side only)
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Lazy-initialize Stripe to avoid build-time errors when env vars aren't set
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    throw new Error("STRIPE_SECRET_KEY is not configured");
+  }
+  return new Stripe(key);
+}
 
 // Product configuration
 const PRODUCT_NAME = "2026 Astro Power Map";
@@ -34,6 +40,7 @@ export async function POST(request: NextRequest) {
     const origin = request.headers.get("origin") || "http://localhost:3000";
 
     // Create Stripe Checkout Session in embedded mode
+    const stripe = getStripe();
     const checkoutSession = await stripe.checkout.sessions.create({
       ui_mode: "embedded",
       mode: "payment",
