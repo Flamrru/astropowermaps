@@ -408,22 +408,6 @@ function LinesSheetContent({
         );
       })}
 
-      {/* Generate new map button */}
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={onReset}
-        className="w-full py-4 rounded-2xl text-sm font-semibold mt-6 transition-all"
-        style={{
-          background: "linear-gradient(135deg, rgba(232, 197, 71, 0.18) 0%, rgba(201, 162, 39, 0.1) 100%)",
-          border: "1px solid rgba(232, 197, 71, 0.35)",
-          color: "#E8C547",
-          boxShadow: "0 0 30px rgba(232, 197, 71, 0.1)",
-        }}
-      >
-        <Sparkles size={16} className="inline mr-2" />
-        Generate New Map
-      </motion.button>
     </div>
   );
 }
