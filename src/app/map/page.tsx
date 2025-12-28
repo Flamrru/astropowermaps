@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import BirthDataForm from "@/components/astro-map/BirthDataForm";
 import AstroMap from "@/components/astro-map/AstroMap";
 import { BirthData, AstrocartographyResult } from "@/lib/astro/types";
+import { loadAstroData, clearAstroData } from "@/lib/astro-storage";
 
 type ViewState = "form" | "loading" | "map";
 
@@ -12,6 +13,15 @@ export default function AstrocartographyPage() {
   const [viewState, setViewState] = useState<ViewState>("form");
   const [mapData, setMapData] = useState<AstrocartographyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Check for saved data on mount (from reveal flow)
+  useEffect(() => {
+    const savedData = loadAstroData();
+    if (savedData) {
+      setMapData(savedData);
+      setViewState("map");
+    }
+  }, []);
 
   const handleFormSubmit = async (birthData: BirthData) => {
     setViewState("loading");
@@ -40,6 +50,7 @@ export default function AstrocartographyPage() {
   };
 
   const handleReset = () => {
+    clearAstroData(); // Clear localStorage so they can start fresh
     setMapData(null);
     setViewState("form");
   };
