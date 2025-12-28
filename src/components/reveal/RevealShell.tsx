@@ -86,8 +86,10 @@ export default function RevealShell({ children }: RevealShellProps) {
   useEffect(() => {
     const hydrateState = async () => {
       const sid = searchParams.get("sid");
-      const devMode = searchParams.get("dev") === "1";
-      const startStep = parseInt(searchParams.get("step") || "3", 10);
+      // Dev mode: ?dev=1 OR ?d OR ?d=4 (step number)
+      const dParam = searchParams.get("d");
+      const devMode = searchParams.get("dev") === "1" || dParam !== null;
+      const startStep = parseInt(dParam || searchParams.get("step") || "3", 10);
 
       // DEV MODE: Skip birth data entry, pre-fill and jump to specified step
       if (devMode) {
