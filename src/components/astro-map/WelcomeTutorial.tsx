@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronRight, ChevronLeft, Sparkles, Map, MousePointer, Layers } from "lucide-react";
+import { X, ChevronRight, ChevronLeft, Sparkles, Map, MousePointer, Layers, Compass } from "lucide-react";
 
 interface WelcomeTutorialProps {
   onClose: () => void;
@@ -118,7 +118,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     icon: <MousePointer size={28} />,
     visual: (
       <div className="space-y-3">
-        <div className="flex gap-2 justify-center">
+        <div className="flex gap-2 justify-center flex-wrap">
           {["💕 Love", "💼 Career", "🌟 Growth", "🏠 Home"].map((filter) => (
             <div
               key={filter}
@@ -145,11 +145,27 @@ export default function WelcomeTutorial({
   onClose,
   onDontShowAgain,
 }: WelcomeTutorialProps) {
-  const [currentStep, setCurrentStep] = useState(0);
+  // Start with "ask first" prompt (step -1), then tutorial steps (0+)
+  const [currentStep, setCurrentStep] = useState(-1);
   const [dontShow, setDontShow] = useState(false);
 
+  const isAskingFirst = currentStep === -1;
   const isLastStep = currentStep === TUTORIAL_STEPS.length - 1;
-  const step = TUTORIAL_STEPS[currentStep];
+  const step = isAskingFirst ? null : TUTORIAL_STEPS[currentStep];
+
+  const handleStartTutorial = () => {
+    setCurrentStep(0);
+  };
+
+  const handleSkip = () => {
+    // If on ask-first prompt or any step, close and optionally mark as visited
+    if (dontShow) {
+      onDontShowAgain();
+    } else {
+      onDontShowAgain(); // Skip = don't show again
+    }
+    onClose();
+  };
 
   const handleNext = () => {
     if (isLastStep) {
@@ -168,13 +184,145 @@ export default function WelcomeTutorial({
     }
   };
 
-  const handleSkip = () => {
-    if (dontShow) {
-      onDontShowAgain();
-    }
-    onClose();
-  };
+  // "Ask First" Prompt
+  if (isAskingFirst) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      >
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-black/50"
+          style={{
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
+          }}
+          onClick={handleSkip}
+        />
 
+        {/* Prompt Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 40, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 40, scale: 0.95 }}
+          transition={{ type: "spring", damping: 28, stiffness: 350 }}
+          className="relative w-full max-w-sm rounded-3xl overflow-hidden mb-4 sm:mb-0"
+          style={{
+            background: "linear-gradient(145deg, rgba(18, 18, 42, 0.97) 0%, rgba(10, 10, 28, 0.98) 100%)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            boxShadow: `
+              0 24px 48px rgba(0, 0, 0, 0.4),
+              0 0 80px rgba(232, 197, 71, 0.08),
+              inset 0 1px 0 rgba(255, 255, 255, 0.05)
+            `,
+          }}
+        >
+          {/* Top accent */}
+          <div
+            className="absolute top-0 left-0 right-0 h-[1px]"
+            style={{
+              background: "linear-gradient(90deg, transparent 10%, rgba(232, 197, 71, 0.5) 50%, transparent 90%)",
+            }}
+          />
+
+          <div className="p-6 pt-7">
+            {/* Icon with glow */}
+            <div className="flex justify-center mb-5">
+              <motion.div
+                animate={{
+                  boxShadow: [
+                    "0 0 30px rgba(232, 197, 71, 0.2)",
+                    "0 0 50px rgba(232, 197, 71, 0.3)",
+                    "0 0 30px rgba(232, 197, 71, 0.2)",
+                  ],
+                }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                className="w-16 h-16 rounded-2xl flex items-center justify-center relative overflow-hidden"
+                style={{
+                  background: "linear-gradient(135deg, rgba(232, 197, 71, 0.15) 0%, rgba(232, 197, 71, 0.05) 100%)",
+                  border: "1px solid rgba(232, 197, 71, 0.25)",
+                }}
+              >
+                {/* Inner glow */}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: "radial-gradient(circle at 30% 30%, rgba(232, 197, 71, 0.2) 0%, transparent 60%)",
+                  }}
+                />
+                <Compass size={28} className="text-[#E8C547] relative z-10" />
+              </motion.div>
+            </div>
+
+            {/* Title */}
+            <h2
+              className="text-[22px] font-semibold text-center mb-2 tracking-[-0.02em]"
+              style={{ color: "rgba(255, 255, 255, 0.95)" }}
+            >
+              First time here?
+            </h2>
+
+            {/* Description */}
+            <p
+              className="text-center text-[15px] leading-relaxed mb-7"
+              style={{ color: "rgba(255, 255, 255, 0.5)" }}
+            >
+              Want a quick tour of your astrocartography map?
+              <br />
+              <span className="text-white/40">It only takes 30 seconds.</span>
+            </p>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <motion.button
+                whileHover={{ scale: 1.02, backgroundColor: "rgba(255, 255, 255, 0.08)" }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleSkip}
+                className="flex-1 py-3.5 rounded-2xl font-medium text-[15px] transition-colors"
+                style={{
+                  background: "rgba(255, 255, 255, 0.05)",
+                  color: "rgba(255, 255, 255, 0.6)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                }}
+              >
+                Skip
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleStartTutorial}
+                className="flex-1 py-3.5 rounded-2xl font-semibold text-[15px] transition-all"
+                style={{
+                  background: "linear-gradient(135deg, #D4A82A 0%, #9A7B1C 100%)",
+                  color: "white",
+                  boxShadow: "0 4px 20px rgba(212, 168, 42, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15)",
+                }}
+              >
+                Show me!
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Bottom accent */}
+          <div
+            className="h-1"
+            style={{
+              background: "linear-gradient(90deg, transparent 20%, rgba(232, 197, 71, 0.4) 50%, transparent 80%)",
+            }}
+          />
+        </motion.div>
+      </motion.div>
+    );
+  }
+
+  // Full Tutorial Steps
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -215,52 +363,58 @@ export default function WelcomeTutorial({
         {/* Content */}
         <div className="p-6 pt-8">
           {/* Icon */}
-          <div className="flex justify-center mb-4">
-            <motion.div
-              key={currentStep}
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", damping: 15, stiffness: 300 }}
-              className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{
-                background: "linear-gradient(135deg, rgba(201, 162, 39, 0.2) 0%, rgba(232, 197, 71, 0.1) 100%)",
-                border: "1px solid rgba(201, 162, 39, 0.3)",
-                color: "#E8C547",
-              }}
-            >
-              {step.icon}
-            </motion.div>
-          </div>
+          {step && (
+            <div className="flex justify-center mb-4">
+              <motion.div
+                key={currentStep}
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", damping: 15, stiffness: 300 }}
+                className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg, rgba(201, 162, 39, 0.2) 0%, rgba(232, 197, 71, 0.1) 100%)",
+                  border: "1px solid rgba(201, 162, 39, 0.3)",
+                  color: "#E8C547",
+                }}
+              >
+                {step.icon}
+              </motion.div>
+            </div>
+          )}
 
           {/* Title */}
-          <AnimatePresence mode="wait">
-            <motion.h2
-              key={`title-${currentStep}`}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="text-white text-xl font-semibold text-center mb-2"
-            >
-              {step.title}
-            </motion.h2>
-          </AnimatePresence>
+          {step && (
+            <AnimatePresence mode="wait">
+              <motion.h2
+                key={`title-${currentStep}`}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="text-white text-xl font-semibold text-center mb-2"
+              >
+                {step.title}
+              </motion.h2>
+            </AnimatePresence>
+          )}
 
           {/* Description */}
-          <AnimatePresence mode="wait">
-            <motion.p
-              key={`desc-${currentStep}`}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ delay: 0.1 }}
-              className="text-white/60 text-sm text-center mb-6 leading-relaxed"
-            >
-              {step.description}
-            </motion.p>
-          </AnimatePresence>
+          {step && (
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={`desc-${currentStep}`}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ delay: 0.1 }}
+                className="text-white/60 text-sm text-center mb-6 leading-relaxed"
+              >
+                {step.description}
+              </motion.p>
+            </AnimatePresence>
+          )}
 
           {/* Visual */}
-          {step.visual && (
+          {step?.visual && (
             <AnimatePresence mode="wait">
               <motion.div
                 key={`visual-${currentStep}`}
