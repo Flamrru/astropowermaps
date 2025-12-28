@@ -61,6 +61,8 @@ STRIPE_WEBHOOK_SECRET         # Stripe whsec_... (from webhook setup)
 - Always test on mobile viewport before deploying
 - Don't modify copy.ts without explicit approval
 - Update CHANGELOG.md after features
+- **NEVER deploy to production** (`vercel --prod`) without explicit approval
+- Use `vercel` (preview) only — let user promote to production manually
 
 ## Dev Mode (Testing Only)
 The reveal flow has a **dev mode** for quick testing that bypasses normal user flow:
