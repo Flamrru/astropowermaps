@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useCallback, useRef } from "react";
+import { ReactNode, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from "framer-motion";
 import { X } from "lucide-react";
 
@@ -28,6 +28,13 @@ export default function MobileSheet({
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragY = useMotionValue(0);
 
+  // Reset drag position when sheet opens
+  useEffect(() => {
+    if (isOpen) {
+      dragY.set(0);
+    }
+  }, [isOpen, dragY]);
+
   // Transform drag into backdrop opacity
   const backdropOpacity = useTransform(dragY, [0, 300], [1, 0]);
   const sheetScale = useTransform(dragY, [0, 300], [1, 0.95]);
@@ -37,13 +44,16 @@ export default function MobileSheet({
       // Close if dragged down more than 100px or with velocity
       if (info.offset.y > 100 || info.velocity.y > 400) {
         onClose();
+      } else {
+        // Snap back to top
+        dragY.set(0);
       }
     },
-    [onClose]
+    [onClose, dragY]
   );
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       {isOpen && (
         <motion.div
           initial={{ opacity: 0 }}

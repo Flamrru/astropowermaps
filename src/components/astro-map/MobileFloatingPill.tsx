@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Calendar, Layers, Eye, EyeOff, Sparkles } from "lucide-react";
 import { PlanetaryLine, PlanetId } from "@/lib/astro/types";
@@ -45,6 +45,7 @@ export default function MobileFloatingPill({
   onReset,
 }: MobileFloatingPillProps) {
   const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
+  const hasShownOnce = useRef(false);
 
   // Calculate places count
   const powerPlaces = useMemo(() => calculateAllPowerPlaces(lines), [lines]);
@@ -66,17 +67,20 @@ export default function MobileFloatingPill({
   return (
     <>
       {/* Floating Pill - Only visible when no sheet is open */}
-      <AnimatePresence>
+      <AnimatePresence mode="popLayout">
         {activeSheet === null && (
           <motion.div
-            initial={{ y: 100, opacity: 0, scale: 0.9 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 80, opacity: 0, scale: 0.95 }}
+            initial={{ y: 60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
             transition={{
               type: "spring",
-              damping: 28,
-              stiffness: 350,
-              delay: 0.4,
+              damping: 25,
+              stiffness: 400,
+              delay: hasShownOnce.current ? 0 : 0.4,
+            }}
+            onAnimationComplete={() => {
+              hasShownOnce.current = true;
             }}
             className="fixed bottom-5 left-3 right-3 z-30 md:hidden"
           >
