@@ -80,9 +80,6 @@ export default function RevealScreen01BirthData() {
     dispatch({ type: "NEXT_STEP" });
   };
 
-  // If user doesn't have email (direct visitor), show email field first
-  const showEmailField = !state.hasEmail;
-
   return (
     <div className="flex-1 flex flex-col px-5 pb-6">
       <motion.div
@@ -131,23 +128,6 @@ export default function RevealScreen01BirthData() {
               border: "1px solid rgba(255, 255, 255, 0.08)",
             }}
           >
-            {/* Email field for direct visitors */}
-            {showEmailField && (
-              <div className="mb-4">
-                <label className="block text-white/80 text-sm font-medium mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={state.email}
-                  onChange={(e) => dispatch({ type: "SET_EMAIL", payload: e.target.value })}
-                  placeholder="your@email.com"
-                  className="w-full px-4 py-3.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-white/40 focus:outline-none focus:border-gold/50 transition-all [color-scheme:dark]"
-                  required
-                />
-              </div>
-            )}
-
             {/* Birth Date */}
             <div className="mb-4">
               <label className="flex items-center gap-2 text-white/80 text-sm font-medium mb-2">
