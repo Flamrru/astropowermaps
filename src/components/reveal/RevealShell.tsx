@@ -10,6 +10,20 @@ import {
   getMapOpacity,
 } from "@/lib/reveal-state";
 import AstroMap from "@/components/astro-map/AstroMap";
+import { saveAstroData } from "@/lib/astro-storage";
+
+// Dev mode birth data (Flamur's data for testing)
+const DEV_BIRTH_DATA = {
+  date: "1988-05-05",
+  time: "17:00",
+  timeUnknown: false,
+  location: {
+    name: "Bratislava, Slovakia",
+    lat: 48.1486,
+    lng: 17.1077,
+    timezone: "Europe/Bratislava",
+  },
+};
 
 // Reveal flow events for analytics
 const REVEAL_EVENTS: Record<number, string> = {
@@ -72,6 +86,41 @@ export default function RevealShell({ children }: RevealShellProps) {
   useEffect(() => {
     const hydrateState = async () => {
       const sid = searchParams.get("sid");
+      const devMode = searchParams.get("dev") === "1";
+      const startStep = parseInt(searchParams.get("step") || "3", 10);
+
+      // DEV MODE: Skip birth data entry, pre-fill and jump to specified step
+      if (devMode) {
+        console.log("🔧 Dev mode enabled - using preset birth data");
+
+        // Set birth data
+        dispatch({ type: "SET_BIRTH_DATA", payload: DEV_BIRTH_DATA });
+
+        // Call API to get astro data
+        try {
+          const res = await fetch("/api/astrocartography", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ birthData: DEV_BIRTH_DATA }),
+          });
+
+          if (res.ok) {
+            const response = await res.json();
+            if (response.success && response.data) {
+              dispatch({ type: "SET_ASTRO_DATA", payload: response.data });
+              saveAstroData(response.data);
+              // Jump to specified step (default: 3 = map reveal)
+              dispatch({ type: "SET_STEP", payload: startStep });
+            }
+          }
+        } catch (error) {
+          console.error("Dev mode API error:", error);
+        }
+
+        setIsHydrating(false);
+        setMounted(true);
+        return;
+      }
 
       if (sid) {
         // Fetch lead from Supabase

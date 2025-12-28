@@ -2,7 +2,9 @@
 
 import { motion } from "framer-motion";
 import { COPY } from "@/content/copy";
-import { Check, Share2, Mail, Sparkles } from "lucide-react";
+import { Check, Share2, Mail, Sparkles, Map, ArrowRight } from "lucide-react";
+import { useQuiz } from "@/lib/quiz-state";
+import GoldButton from "@/components/GoldButton";
 
 // Animated star burst component
 function StarBurst() {
@@ -95,6 +97,13 @@ function FloatingParticles() {
 }
 
 export default function Screen10Confirmation() {
+  const { state } = useQuiz();
+
+  const handleSeeChart = () => {
+    // Navigate to reveal flow with session ID
+    window.location.href = `/reveal?sid=${state.session_id}`;
+  };
+
   const handleShare = async () => {
     const shareData = {
       title: "2026 Power Map",
@@ -241,11 +250,27 @@ export default function Screen10Confirmation() {
             </div>
           </motion.div>
 
-          {/* Share section */}
+          {/* See My Birth Chart CTA */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.6 }}
+            className="mb-6"
+          >
+            <GoldButton onClick={handleSeeChart}>
+              <span className="flex items-center gap-2">
+                <Map className="w-5 h-5" />
+                See My Birth Chart
+                <ArrowRight className="w-4 h-4" />
+              </span>
+            </GoldButton>
+          </motion.div>
+
+          {/* Share section */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.7 }}
           >
             <p className="text-center text-[13px] text-white/40 mb-3">
               Know someone who needs their map?
@@ -270,7 +295,7 @@ export default function Screen10Confirmation() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.8 }}
+            transition={{ duration: 0.5, delay: 0.9 }}
             className="flex items-center justify-center gap-3 mt-8"
           >
             <div
