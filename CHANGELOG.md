@@ -1,5 +1,32 @@
 # Changelog
 
+## 2025-12-28
+### Added
+- **Reveal Flow** (`/reveal`) - 10-screen guided onboarding after quiz
+  - Birth data entry with location search and timezone detection
+  - Astrocartography map generation (planetary lines calculation)
+  - Auto-animated map reveal (globe pan → fly to birth location)
+  - Onboarding screens explaining astrocartography, lines, and power places
+  - 2026 Power Forecast generation with power months and avoid months
+  - Paywall with blurred preview of power months/cities
+  - Confirmation screen with unlocked data
+- **AstroMap background mode** for reveal flow integration
+  - Dimmed opacity during onboarding screens
+  - Line highlight support (glow specific planets/line types)
+  - City highlight with map pan and pulse animation
+  - Single teaser city marker display
+- **localStorage persistence** for user session
+  - Astro data saved after calculation
+  - `/map` auto-loads saved data (no re-entry needed after payment)
+  - 30-day expiry with clear on reset
+- **Timezone support** (`tz-lookup` package)
+  - Auto-detect timezone from birth city coordinates
+
+### Technical
+- Integrated AstroMap into reveal flow (replaced broken MapBackground)
+- Fixed type system alignment between reveal-state and astro/types
+- Added `astro-storage.ts` utility for localStorage operations
+
 ## 2025-12-26
 ### Added
 - Meta Pixel integration (Pixel ID: 848967188002206)

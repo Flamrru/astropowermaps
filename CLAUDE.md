@@ -3,14 +3,23 @@
 > Keep this file **short**. Link to other docs for details.
 
 ## Project Goal
-Mobile-first astrology quiz funnel to capture email leads from Meta ads. 10-screen flow ending in email capture.
+Mobile-first astrology app with quiz funnel, astrocartography map, and reveal onboarding flow.
+
+## Main Routes
+| Route | Purpose |
+|-------|---------|
+| `/` | Quiz funnel (10 screens) → email capture |
+| `/map` | Full astrocartography map with birth data entry |
+| `/reveal` | Guided reveal flow (birth data → map → onboarding → paywall) |
+| `/admin` | Dashboard with leads and funnel analytics |
 
 ## Repo Map
-- `/docs` — architecture + status
 - `/src/app` — Next.js pages + API routes
-- `/src/components` — React components (screens, UI)
+- `/src/components/screens` — Quiz flow screens
+- `/src/components/reveal` — Reveal flow screens + shell
+- `/src/components/astro-map` — AstroMap, BirthDataForm, PowerPlacesPanel
+- `/src/lib/astro` — Planetary calculations, types, power places
 - `/src/content` — **LOCKED** copy text (do not modify)
-- `/src/lib` — state management, utilities
 
 ## Source-of-Truth Docs
 - Architecture: docs/ARCHITECTURE.md
@@ -31,11 +40,12 @@ npm run lint     # ESLint
 
 ## Environment Variables
 ```
-NEXT_PUBLIC_SUPABASE_URL     # Supabase project URL
+NEXT_PUBLIC_SUPABASE_URL      # Supabase project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY # Supabase anon key
-SUPABASE_SERVICE_ROLE_KEY    # Supabase admin (server-side only)
-ADMIN_PASSWORD               # Dashboard login password
-NEXT_PUBLIC_META_PIXEL_ID    # Meta Pixel ID (848967188002206)
+SUPABASE_SERVICE_ROLE_KEY     # Supabase admin (server-side only)
+ADMIN_PASSWORD                # Dashboard login password
+NEXT_PUBLIC_META_PIXEL_ID     # Meta Pixel ID (848967188002206)
+NEXT_PUBLIC_MAPBOX_TOKEN      # Mapbox GL JS token (for AstroMap)
 ```
 
 ## Database
