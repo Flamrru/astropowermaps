@@ -197,10 +197,12 @@ export default function RevealShell({ children }: RevealShellProps) {
   const handleBack = useCallback(() => {
     if (state.stepIndex > 1) {
       // Skip loading screens when going back
-      if (state.stepIndex === 4) {
-        dispatch({ type: "SET_STEP", payload: 1 }); // Back to birth data
+      if (state.stepIndex === 3) {
+        dispatch({ type: "SET_STEP", payload: 1 }); // Map reveal → back to birth data (skip loading)
+      } else if (state.stepIndex === 4) {
+        dispatch({ type: "SET_STEP", payload: 3 }); // Onboard 1 → back to map reveal (skip loading)
       } else if (state.stepIndex === 9) {
-        dispatch({ type: "SET_STEP", payload: 7 }); // Back to pivot
+        dispatch({ type: "SET_STEP", payload: 7 }); // Paywall → back to pivot (skip loading)
       } else {
         dispatch({ type: "PREV_STEP" });
       }
