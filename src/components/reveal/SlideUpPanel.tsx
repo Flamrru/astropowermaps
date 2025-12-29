@@ -79,6 +79,10 @@ export default function SlideUpPanel({
             `,
             border: "1px solid rgba(255, 255, 255, 0.06)",
             borderBottom: "none",
+            // GPU optimization to prevent flickering
+            transform: "translateZ(0)",
+            willChange: "transform",
+            backfaceVisibility: "hidden",
           }}
         >
           {/* Golden accent line at top */}
