@@ -112,7 +112,7 @@ export default function RevealScreen09Paywall() {
               </div>
             </>
           ) : (
-            <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(10, 10, 30, 0.8)" }}>
+            <div id="stripe-checkout" className="rounded-2xl overflow-hidden" style={{ background: "rgba(10, 10, 30, 0.8)" }}>
               <StripeCheckout />
             </div>
           )}
@@ -172,8 +172,10 @@ export default function RevealScreen09Paywall() {
               whileTap={{ scale: 0.98 }}
               onClick={() => {
                 setShowCheckout(true);
-                // Scroll to checkout section
-                document.getElementById("checkout-section")?.scrollIntoView({ behavior: "smooth" });
+                // Scroll to checkout section with delay to allow render
+                setTimeout(() => {
+                  document.getElementById("stripe-checkout")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }, 100);
               }}
               className="w-full max-w-sm mx-auto py-4 rounded-full text-[16px] font-semibold flex items-center justify-center gap-2"
               style={{

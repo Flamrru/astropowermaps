@@ -229,8 +229,8 @@ export default function RevealScreen01BirthData() {
               </motion.div>
             )}
 
-            {/* Birth Location */}
-            <div>
+            {/* Birth Location - higher z-index to ensure dropdown appears above button */}
+            <div className="relative z-[60]">
               <label className="flex items-center gap-2 text-white/80 text-sm font-medium mb-2">
                 <MapPin size={14} className="text-gold" />
                 Birth City
