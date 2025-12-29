@@ -46,7 +46,15 @@ export default function RevealScreen03MapReveal() {
         transition={{ duration: 1.2, ease: "easeOut" }}
         className="absolute inset-0 flex flex-col items-center justify-end pb-8 px-6"
       >
-        <div className="relative z-10 text-center max-w-sm w-full">
+        <div
+          className="relative z-10 text-center max-w-sm w-full px-6 py-8 rounded-3xl"
+          style={{
+            background: "rgba(5, 5, 16, 0.75)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
+          }}
+        >
           {/* Main headline with elegant styling */}
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
