@@ -101,6 +101,20 @@ function CrossfadeOrbVideo({ isActive, autoplayBlocked }: { isActive: boolean; a
     };
   }, [isActive]);
 
+  // Show static image fallback when autoplay is blocked
+  if (autoplayBlocked) {
+    return (
+      <div className="absolute inset-0">
+        <img
+          src="/orb-question-bg-poster.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          style={{ transform: 'scale(0.9)' }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="absolute inset-0">
       <video
@@ -110,7 +124,7 @@ function CrossfadeOrbVideo({ isActive, autoplayBlocked }: { isActive: boolean; a
         playsInline
         className="absolute inset-0 w-full h-full object-cover object-center"
         style={{
-          opacity: autoplayBlocked ? 0 : opacityA,
+          opacity: opacityA,
           transform: 'scale(0.9)'
         }}
       />
@@ -121,7 +135,7 @@ function CrossfadeOrbVideo({ isActive, autoplayBlocked }: { isActive: boolean; a
         playsInline
         className="absolute inset-0 w-full h-full object-cover object-center"
         style={{
-          opacity: autoplayBlocked ? 0 : opacityB,
+          opacity: opacityB,
           transform: 'scale(0.9)'
         }}
       />
@@ -263,6 +277,15 @@ export default function QuizShell({ children }: QuizShellProps) {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute inset-0"
           >
+            {/* Static fallback image when autoplay blocked */}
+            {autoplayBlocked && (
+              <img
+                src="/question-bg-poster.jpg"
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover object-center"
+                style={{ transform: 'scale(1.15)' }}
+              />
+            )}
             <video
               ref={entryVideoRef}
               src="/question-bg.mp4?v=3"
@@ -273,7 +296,7 @@ export default function QuizShell({ children }: QuizShellProps) {
               className="absolute inset-0 w-full h-full object-cover object-center"
               style={{
                 transform: 'scale(1.15)',
-                opacity: autoplayBlocked ? 0 : 1,
+                display: autoplayBlocked ? 'none' : 'block',
               }}
             />
           </motion.div>
@@ -285,6 +308,14 @@ export default function QuizShell({ children }: QuizShellProps) {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute inset-0"
           >
+            {/* Static fallback image when autoplay blocked */}
+            {autoplayBlocked && (
+              <img
+                src="/globe-bg-poster.jpg"
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+            )}
             <video
               ref={globeVideoRef}
               src="/globe-bg.mp4?v=8"
@@ -293,7 +324,7 @@ export default function QuizShell({ children }: QuizShellProps) {
               muted
               playsInline
               className="absolute inset-0 w-full h-full object-cover object-center"
-              style={{ opacity: autoplayBlocked ? 0 : 1 }}
+              style={{ display: autoplayBlocked ? 'none' : 'block' }}
             />
           </motion.div>
 
@@ -314,6 +345,15 @@ export default function QuizShell({ children }: QuizShellProps) {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute inset-0"
           >
+            {/* Static fallback image when autoplay blocked */}
+            {autoplayBlocked && (
+              <img
+                src="/nebula-bg-poster.jpg"
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover object-center"
+                style={{ transform: 'scale(1.15)' }}
+              />
+            )}
             <video
               ref={nebulaVideoRef}
               src="/nebula-bg.mp4?v=1"
@@ -324,7 +364,7 @@ export default function QuizShell({ children }: QuizShellProps) {
               className="absolute inset-0 w-full h-full object-cover object-center"
               style={{
                 transform: 'scale(1.15)',
-                opacity: autoplayBlocked ? 0 : 1,
+                display: autoplayBlocked ? 'none' : 'block',
               }}
             />
           </motion.div>
