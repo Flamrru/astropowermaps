@@ -33,7 +33,7 @@ async function trackFunnelEvent(sessionId: string, eventName: string, stepNumber
 }
 
 // Crossfade video loop component for smooth looping (60fps)
-function CrossfadeOrbVideo({ isActive }: { isActive: boolean }) {
+function CrossfadeOrbVideo({ isActive, autoplayBlocked }: { isActive: boolean; autoplayBlocked: boolean }) {
   const videoARef = useRef<HTMLVideoElement>(null);
   const videoBRef = useRef<HTMLVideoElement>(null);
   const [opacityA, setOpacityA] = useState(1);
@@ -110,7 +110,7 @@ function CrossfadeOrbVideo({ isActive }: { isActive: boolean }) {
         playsInline
         className="absolute inset-0 w-full h-full object-cover object-center"
         style={{
-          opacity: opacityA,
+          opacity: autoplayBlocked ? 0 : opacityA,
           transform: 'scale(0.9)'
         }}
       />
@@ -121,7 +121,7 @@ function CrossfadeOrbVideo({ isActive }: { isActive: boolean }) {
         playsInline
         className="absolute inset-0 w-full h-full object-cover object-center"
         style={{
-          opacity: opacityB,
+          opacity: autoplayBlocked ? 0 : opacityB,
           transform: 'scale(0.9)'
         }}
       />
@@ -142,19 +142,24 @@ export default function QuizShell({ children }: QuizShellProps) {
   const globeVideoRef = useRef<HTMLVideoElement>(null);
   const nebulaVideoRef = useRef<HTMLVideoElement>(null);
 
+  // Track if autoplay is blocked (Low Power Mode, etc.)
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+
   // Wait for client-side mount to prevent hydration flash
   useEffect(() => {
     setMounted(true);
   }, []);
 
   // Force play videos on mobile (iOS autoplay workaround)
+  // If blocked, hide videos to remove the play button
   useEffect(() => {
     if (!mounted) return;
 
     const playVideo = (video: HTMLVideoElement | null) => {
       if (video) {
         video.play().catch(() => {
-          // Silent catch - autoplay may be blocked
+          // Autoplay blocked - hide videos to remove play button
+          setAutoplayBlocked(true);
         });
       }
     };
@@ -266,7 +271,10 @@ export default function QuizShell({ children }: QuizShellProps) {
               muted
               playsInline
               className="absolute inset-0 w-full h-full object-cover object-center"
-              style={{ transform: 'scale(1.15)' }}
+              style={{
+                transform: 'scale(1.15)',
+                opacity: autoplayBlocked ? 0 : 1,
+              }}
             />
           </motion.div>
 
@@ -285,6 +293,7 @@ export default function QuizShell({ children }: QuizShellProps) {
               muted
               playsInline
               className="absolute inset-0 w-full h-full object-cover object-center"
+              style={{ opacity: autoplayBlocked ? 0 : 1 }}
             />
           </motion.div>
 
@@ -295,7 +304,7 @@ export default function QuizShell({ children }: QuizShellProps) {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute inset-0 flex items-center justify-center"
           >
-            <CrossfadeOrbVideo isActive={useQuestionOrbBg} />
+            <CrossfadeOrbVideo isActive={useQuestionOrbBg} autoplayBlocked={autoplayBlocked} />
           </motion.div>
 
           {/* Nebula background (all other steps) */}
@@ -313,7 +322,10 @@ export default function QuizShell({ children }: QuizShellProps) {
               muted
               playsInline
               className="absolute inset-0 w-full h-full object-cover object-center"
-              style={{ transform: 'scale(1.15)' }}
+              style={{
+                transform: 'scale(1.15)',
+                opacity: autoplayBlocked ? 0 : 1,
+              }}
             />
           </motion.div>
 
