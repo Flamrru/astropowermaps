@@ -61,24 +61,25 @@ export default function SlideUpPanel({
           style={{
             maxHeight: maxHeightMap[height],
             borderRadius: "2rem 2rem 0 0",
-            // Premium glassmorphism effect
+            // Frosted glass - map visible through panel
             background: `
               linear-gradient(180deg,
-                rgba(12, 12, 28, 0.97) 0%,
-                rgba(8, 8, 20, 0.98) 50%,
-                rgba(5, 5, 16, 0.99) 100%
+                rgba(10, 10, 25, 0.02) 0%,
+                rgba(8, 8, 20, 0.03) 50%,
+                rgba(5, 5, 16, 0.05) 100%
               )
             `,
-            backdropFilter: "blur(24px)",
-            WebkitBackdropFilter: "blur(24px)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
             boxShadow: `
-              0 -4px 60px rgba(0, 0, 0, 0.7),
-              0 -1px 0 rgba(201, 162, 39, 0.15),
-              0 0 100px rgba(201, 162, 39, 0.08),
-              inset 0 1px 0 rgba(255, 255, 255, 0.05)
+              0 -4px 40px rgba(0, 0, 0, 0.3),
+              0 -1px 0 rgba(201, 162, 39, 0.12),
+              0 0 60px rgba(201, 162, 39, 0.05),
+              inset 0 1px 0 rgba(255, 255, 255, 0.06)
             `,
-            border: "1px solid rgba(255, 255, 255, 0.06)",
-            borderBottom: "none",
+            borderTop: "1px solid rgba(201, 162, 39, 0.15)",
+            borderLeft: "1px solid rgba(201, 162, 39, 0.15)",
+            borderRight: "1px solid rgba(201, 162, 39, 0.15)",
             // GPU optimization to prevent flickering
             transform: "translateZ(0)",
             willChange: "transform",
@@ -112,7 +113,7 @@ export default function SlideUpPanel({
 
           {/* Content Area - hidden scrollbar */}
           <div
-            className="overflow-y-auto overscroll-contain px-5 pb-8 scrollbar-hide"
+            className="overflow-y-auto overscroll-contain px-5 pb-12 scrollbar-hide"
             style={{
               maxHeight: `calc(${maxHeightMap[height]} - 60px)`,
               scrollbarWidth: "none", /* Firefox */
@@ -126,7 +127,7 @@ export default function SlideUpPanel({
           <div
             className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none"
             style={{
-              background: "linear-gradient(to top, rgba(5, 5, 16, 0.95), transparent)",
+              background: "linear-gradient(to top, rgba(5, 5, 16, 0.4), transparent)",
             }}
           />
         </motion.div>

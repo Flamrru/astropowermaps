@@ -64,7 +64,7 @@ export default function RevealScreen04OnboardA() {
           </div>
 
           {/* Pinned CTA - always visible */}
-          <div className="flex-shrink-0 pt-6 pb-2">
+          <div className="flex-shrink-0 pt-4 pb-2">
             <GoldButton onClick={() => dispatch({ type: "NEXT_STEP" })}>
               Why do some places feel different?
             </GoldButton>

@@ -197,7 +197,7 @@ export function getMapOpacity(step: number): number {
   if (step === 1) return 0.3; // Subtle background during birth data entry
   if (step === 2) return 0.4; // Slightly more visible during generation
   if (step === 3) return 1; // Full opacity during reveal
-  if (step >= 4 && step <= 9) return 0.45; // Increased visibility during onboarding (6 screens)
-  if (step >= 10) return 0.2; // More dimmed during generation2/paywall/confirmation
+  if (step >= 4 && step <= 9) return 0.45; // Visible during onboarding (panels are transparent)
+  if (step >= 10) return 0.2; // Dimmed during generation2/paywall/confirmation
   return 0.3;
 }

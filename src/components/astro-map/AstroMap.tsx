@@ -386,7 +386,7 @@ export default function AstroMap({
     const zoomOutTimer = setTimeout(() => {
       currentMap.easeTo({
         center: [birthLng, birthLat + 10], // Slight pan up for better global view
-        zoom: 1.8,
+        zoom: 1.5, // Zoomed out to show more of the globe
         duration: 2500,
         easing: (t) => t * (2 - t), // Ease-out for smooth deceleration
       });
