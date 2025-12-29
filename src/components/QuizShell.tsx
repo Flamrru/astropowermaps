@@ -137,10 +137,33 @@ export default function QuizShell({ children }: QuizShellProps) {
   const [state, dispatch] = useReducer(quizReducer, initialQuizState);
   const [mounted, setMounted] = useState(false);
 
+  // Refs for background videos to force autoplay on mobile
+  const entryVideoRef = useRef<HTMLVideoElement>(null);
+  const globeVideoRef = useRef<HTMLVideoElement>(null);
+  const nebulaVideoRef = useRef<HTMLVideoElement>(null);
+
   // Wait for client-side mount to prevent hydration flash
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Force play videos on mobile (iOS autoplay workaround)
+  useEffect(() => {
+    if (!mounted) return;
+
+    const playVideo = (video: HTMLVideoElement | null) => {
+      if (video) {
+        video.play().catch(() => {
+          // Silent catch - autoplay may be blocked
+        });
+      }
+    };
+
+    // Try to play all videos
+    playVideo(entryVideoRef.current);
+    playVideo(globeVideoRef.current);
+    playVideo(nebulaVideoRef.current);
+  }, [mounted]);
 
   // Capture UTM parameters on mount
   useEffect(() => {
@@ -236,6 +259,7 @@ export default function QuizShell({ children }: QuizShellProps) {
             className="absolute inset-0"
           >
             <video
+              ref={entryVideoRef}
               src="/question-bg.mp4?v=3"
               autoPlay
               loop
@@ -254,6 +278,7 @@ export default function QuizShell({ children }: QuizShellProps) {
             className="absolute inset-0"
           >
             <video
+              ref={globeVideoRef}
               src="/globe-bg.mp4?v=8"
               autoPlay
               loop
@@ -281,6 +306,7 @@ export default function QuizShell({ children }: QuizShellProps) {
             className="absolute inset-0"
           >
             <video
+              ref={nebulaVideoRef}
               src="/nebula-bg.mp4?v=1"
               autoPlay
               loop
