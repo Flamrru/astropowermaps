@@ -30,13 +30,15 @@ const REVEAL_EVENTS: Record<number, string> = {
   1: "reveal_birth_data",
   2: "reveal_generating",
   3: "reveal_map_shown",
-  4: "reveal_onboard_1",
-  5: "reveal_onboard_2",
-  6: "reveal_onboard_3",
-  7: "reveal_pivot",
-  8: "reveal_2026_gen",
-  9: "reveal_paywall",
-  10: "reveal_purchase",
+  4: "reveal_recognition",      // Screen A: Recognition
+  5: "reveal_legitimacy",       // Screen B: Legitimacy + Lines
+  6: "reveal_social_proof",     // Screen C: Tribe + Gap
+  7: "reveal_timing",           // Screen D: Timing
+  8: "reveal_pivot",            // Screen E: Pivot
+  9: "reveal_urgency",          // Screen F: Urgency
+  10: "reveal_2026_gen",
+  11: "reveal_paywall",
+  12: "reveal_purchase",
 };
 
 // Track funnel event
@@ -200,18 +202,18 @@ export default function RevealShell({ children }: RevealShellProps) {
       if (state.stepIndex === 3) {
         dispatch({ type: "SET_STEP", payload: 1 }); // Map reveal → back to birth data (skip loading)
       } else if (state.stepIndex === 4) {
-        dispatch({ type: "SET_STEP", payload: 3 }); // Onboard 1 → back to map reveal (skip loading)
-      } else if (state.stepIndex === 9) {
-        dispatch({ type: "SET_STEP", payload: 7 }); // Paywall → back to pivot (skip loading)
+        dispatch({ type: "SET_STEP", payload: 3 }); // Screen A → back to map reveal
+      } else if (state.stepIndex === 11) {
+        dispatch({ type: "SET_STEP", payload: 9 }); // Paywall → back to Screen F (skip generation)
       } else {
         dispatch({ type: "PREV_STEP" });
       }
     }
   }, [state.stepIndex]);
 
-  // Progress indicator for onboarding (steps 4-7)
-  const onboardingProgress = state.stepIndex >= 4 && state.stepIndex <= 7
-    ? ((state.stepIndex - 4) / 3) * 100
+  // Progress indicator for onboarding (steps 4-9, 6 screens)
+  const onboardingProgress = state.stepIndex >= 4 && state.stepIndex <= 9
+    ? ((state.stepIndex - 4) / 5) * 100
     : null;
 
   return (
@@ -270,7 +272,7 @@ export default function RevealShell({ children }: RevealShellProps) {
                 interactive={state.stepIndex === 3}
                 showPanels={false}
                 showControls={false}
-                showCityMarkers={1} // Just 1 teaser city
+                showCityMarkers={state.stepIndex === 3 ? true : 1} // All cities during reveal, 1 teaser otherwise
                 autoAnimation={state.stepIndex === 3 ? "reveal" : "none"}
                 onAnimationComplete={() => {}} // Animation callback - no longer auto-advances, button handles navigation
               />

@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReveal } from "@/lib/reveal-state";
 import GoldButton from "@/components/GoldButton";
-import { Check, Calendar, MapPin, AlertTriangle, Sparkles, Download } from "lucide-react";
+import { Check, Calendar, MapPin, AlertTriangle, Sparkles } from "lucide-react";
 import { calculateAllPowerPlaces, LifeCategory } from "@/lib/astro/power-places";
 
 // Month names for display
@@ -20,7 +20,7 @@ type SimplifiedPlace = {
   categoryLabel: string;
 };
 
-export default function RevealScreen10Confirmation() {
+export default function RevealScreen12Confirmation() {
   const { state } = useReveal();
   const [showContent, setShowContent] = useState(false);
   const [celebrationComplete, setCelebrationComplete] = useState(false);

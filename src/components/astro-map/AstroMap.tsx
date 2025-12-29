@@ -66,16 +66,20 @@ function createMarkerElement(): HTMLDivElement {
 
 /**
  * Creates a city marker element as a glowing map pin
+ * @param animated - If true, marker will have pop-in animation
  */
 function createCityMarkerElement(
   cityName: string,
   category: LifeCategory,
-  _planetSymbol: string
+  _planetSymbol: string,
+  animated: boolean = false
 ): HTMLDivElement {
   const colors = CATEGORY_MARKER_COLORS[category];
 
   const markerEl = document.createElement("div");
   markerEl.className = "city-pin-marker";
+
+  // Marker container - NO transform here (Mapbox uses transform for positioning)
   markerEl.style.cssText = `
     cursor: pointer;
     width: 20px;
@@ -88,10 +92,23 @@ function createCityMarkerElement(
   svg.setAttribute("viewBox", "0 0 20 28");
   svg.setAttribute("width", "20");
   svg.setAttribute("height", "28");
-  svg.style.cssText = `
-    display: block;
-    filter: drop-shadow(0 0 4px ${colors.glow}) drop-shadow(0 1px 2px rgba(0,0,0,0.5));
-  `;
+
+  // Apply animation to SVG (not the marker container) to avoid conflicting with Mapbox transforms
+  const baseFilter = `drop-shadow(0 0 4px ${colors.glow}) drop-shadow(0 1px 2px rgba(0,0,0,0.5))`;
+  if (animated) {
+    svg.style.cssText = `
+      display: block;
+      filter: ${baseFilter};
+      opacity: 0;
+      transform: scale(0) translateY(10px);
+      animation: cityPinPopIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    `;
+  } else {
+    svg.style.cssText = `
+      display: block;
+      filter: ${baseFilter};
+    `;
+  }
 
   // Pin body (teardrop shape) - pointing down
   const pinPath = document.createElementNS(svgNS, "path");
@@ -309,11 +326,18 @@ export default function AstroMap({
 
     mapboxgl.accessToken = token;
 
+    // In reveal mode, start zoomed in on birth city; otherwise use world view
+    const isReveal = autoAnimation === "reveal";
+    const initialCenter: [number, number] = isReveal
+      ? [data.birthData.location.lng, data.birthData.location.lat]
+      : [0, 20];
+    const initialZoom = isReveal ? 5 : 1.5;
+
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/dark-v11",
-      center: [0, 20],
-      zoom: 1.5,
+      center: initialCenter,
+      zoom: initialZoom,
       projection: "mercator",
       attributionControl: false,
     });
@@ -486,6 +510,7 @@ export default function AstroMap({
     if (!mapLoaded || !map.current) return;
 
     const currentMap = map.current;
+    const timeouts: NodeJS.Timeout[] = [];
 
     // Clear existing city markers
     cityMarkersRef.current.forEach((marker) => marker.remove());
@@ -496,44 +521,61 @@ export default function AstroMap({
 
     // Determine marker limit (number = limit, true = no limit)
     const markerLimit = typeof showCityMarkers === "number" ? showCityMarkers : Infinity;
-    let markersAdded = 0;
 
     // Track which cities we've already added to avoid duplicates
     const addedCities = new Set<string>();
 
-    // Add markers for all power places across categories
+    // Collect all places to add
     const categories: LifeCategory[] = ["love", "career", "growth", "home"];
+    const placesToAdd: Array<{
+      place: typeof powerPlaces.love.places[0];
+      category: LifeCategory;
+      label: string;
+    }> = [];
 
     categories.forEach((category) => {
-      // Stop if we've reached the marker limit
-      if (markersAdded >= markerLimit) return;
-
       const categoryPlaces = powerPlaces[category];
-
       categoryPlaces.places.forEach((place) => {
-        // Stop if we've reached the marker limit
-        if (markersAdded >= markerLimit) return;
-
-        // Skip if we've already added this city
         const cityKey = `${place.city.name}-${place.city.lat}-${place.city.lng}`;
-        if (addedCities.has(cityKey)) return;
-        addedCities.add(cityKey);
+        if (!addedCities.has(cityKey) && placesToAdd.length < markerLimit) {
+          addedCities.add(cityKey);
+          placesToAdd.push({ place, category, label: categoryPlaces.label });
+        }
+      });
+    });
 
-        // Get planet symbol from PLANETS config
-        const planetSymbol = getPlanetSymbol(place.planet);
+    // Animation settings for reveal mode
+    // Zoom animation: starts at 800ms, duration 2500ms, finishes at ~3300ms
+    const isRevealMode = autoAnimation === "reveal";
+    const startDelay = isRevealMode ? 3400 : 0; // Start AFTER zoom out completes
+    const staggerDelay = isRevealMode ? 150 : 0; // 150ms between each pin
 
-        // Create marker element
+    // Shuffle array for random appearance in reveal mode
+    if (isRevealMode) {
+      for (let i = placesToAdd.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [placesToAdd[i], placesToAdd[j]] = [placesToAdd[j], placesToAdd[i]];
+      }
+    }
+
+    // Add markers (staggered if in reveal mode)
+    placesToAdd.forEach((item, index) => {
+      const addMarker = () => {
+        const planetSymbol = getPlanetSymbol(item.place.planet);
+
+        // Create marker element (animated in reveal mode)
         const markerEl = createCityMarkerElement(
-          place.city.name,
-          category,
-          planetSymbol
+          item.place.city.name,
+          item.category,
+          planetSymbol,
+          isRevealMode // Enable pop-in animation
         );
 
         // Create popup
         const popupContent = createCityPopupContent(
-          place.city.name,
-          categoryPlaces.label,
-          place.interpretation
+          item.place.city.name,
+          item.label,
+          item.place.interpretation
         );
 
         const popup = new mapboxgl.Popup({
@@ -547,21 +589,30 @@ export default function AstroMap({
           element: markerEl,
           anchor: "bottom",
         })
-          .setLngLat([place.city.lng, place.city.lat])
+          .setLngLat([item.place.city.lng, item.place.city.lat])
           .setPopup(popup)
           .addTo(currentMap);
 
         cityMarkersRef.current.push(marker);
-        markersAdded++;
-      });
+      };
+
+      if (isRevealMode) {
+        // Stagger marker additions during reveal
+        const timeout = setTimeout(addMarker, startDelay + index * staggerDelay);
+        timeouts.push(timeout);
+      } else {
+        // Add immediately in normal mode
+        addMarker();
+      }
     });
 
     return () => {
-      // Cleanup markers on unmount
+      // Cleanup timeouts and markers on unmount
+      timeouts.forEach((t) => clearTimeout(t));
       cityMarkersRef.current.forEach((marker) => marker.remove());
       cityMarkersRef.current = [];
     };
-  }, [mapLoaded, powerPlaces, showCityMarkers]);
+  }, [mapLoaded, powerPlaces, showCityMarkers, autoAnimation]);
 
   // Handle line click for tooltips
   useEffect(() => {

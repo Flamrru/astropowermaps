@@ -7,18 +7,20 @@ import { RevealShell, useReveal } from "@/components/reveal";
 import RevealScreen01BirthData from "@/components/reveal/screens/RevealScreen01BirthData";
 import RevealScreen02Generation from "@/components/reveal/screens/RevealScreen02Generation";
 import RevealScreen03MapReveal from "@/components/reveal/screens/RevealScreen03MapReveal";
-import RevealScreen04Onboard1 from "@/components/reveal/screens/RevealScreen04Onboard1";
-import RevealScreen05Onboard2 from "@/components/reveal/screens/RevealScreen05Onboard2";
-import RevealScreen06Onboard3 from "@/components/reveal/screens/RevealScreen06Onboard3";
-import RevealScreen07Pivot from "@/components/reveal/screens/RevealScreen07Pivot";
-import RevealScreen08Generation2 from "@/components/reveal/screens/RevealScreen08Generation2";
-import RevealScreen09Paywall from "@/components/reveal/screens/RevealScreen09Paywall";
-import RevealScreen10Confirmation from "@/components/reveal/screens/RevealScreen10Confirmation";
+import RevealScreen04OnboardA from "@/components/reveal/screens/RevealScreen04OnboardA";
+import RevealScreen05OnboardB from "@/components/reveal/screens/RevealScreen05OnboardB";
+import RevealScreen06OnboardC from "@/components/reveal/screens/RevealScreen06OnboardC";
+import RevealScreen07OnboardD from "@/components/reveal/screens/RevealScreen07OnboardD";
+import RevealScreen08OnboardE from "@/components/reveal/screens/RevealScreen08OnboardE";
+import RevealScreen09OnboardF from "@/components/reveal/screens/RevealScreen09OnboardF";
+import RevealScreen10Generation2 from "@/components/reveal/screens/RevealScreen10Generation2";
+import RevealScreen11Paywall from "@/components/reveal/screens/RevealScreen11Paywall";
+import RevealScreen12Confirmation from "@/components/reveal/screens/RevealScreen12Confirmation";
 
 function RevealScreens() {
   const { state } = useReveal();
 
-  // Render screen based on current step
+  // Render screen based on current step (1-12)
   const renderScreen = () => {
     switch (state.stepIndex) {
       case 1:
@@ -28,19 +30,23 @@ function RevealScreens() {
       case 3:
         return <RevealScreen03MapReveal />;
       case 4:
-        return <RevealScreen04Onboard1 />;
+        return <RevealScreen04OnboardA />; // Screen A: Recognition
       case 5:
-        return <RevealScreen05Onboard2 />;
+        return <RevealScreen05OnboardB />; // Screen B: Legitimacy + Lines
       case 6:
-        return <RevealScreen06Onboard3 />;
+        return <RevealScreen06OnboardC />; // Screen C: Tribe + Gap
       case 7:
-        return <RevealScreen07Pivot />;
+        return <RevealScreen07OnboardD />; // Screen D: Timing
       case 8:
-        return <RevealScreen08Generation2 />;
+        return <RevealScreen08OnboardE />; // Screen E: Pivot
       case 9:
-        return <RevealScreen09Paywall />;
+        return <RevealScreen09OnboardF />; // Screen F: Urgency
       case 10:
-        return <RevealScreen10Confirmation />;
+        return <RevealScreen10Generation2 />;
+      case 11:
+        return <RevealScreen11Paywall />;
+      case 12:
+        return <RevealScreen12Confirmation />;
       default:
         // Step 0 or loading state - show birth data form
         return <RevealScreen01BirthData />;

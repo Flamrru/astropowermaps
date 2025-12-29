@@ -22,12 +22,12 @@ const WHAT_YOU_GET = [
   { text: "Best Month for Major Decisions", sub: "When your clarity peaks — decide here" },
   { text: "Months to Avoid", sub: "Stop wasting energy fighting the current" },
   { text: "All 12 Months Ranked", sub: "See your entire year at a glance" },
-  { text: "Full Location Analysis", sub: "47 cities matched to your chart" },
+  { text: "Full Location Analysis", sub: "338 cities matched to your chart" },
   { text: "2026 Calendar Overview", sub: "Color-coded month-by-month energy map" },
   { text: "Locations That Drain You", sub: "Know where NOT to go" },
 ];
 
-export default function RevealScreen09Paywall() {
+export default function RevealScreen11Paywall() {
   const { state } = useReveal();
   const [showCheckout, setShowCheckout] = useState(false);
   const daysUntil2026 = calculateDaysUntil2026();
