@@ -296,9 +296,9 @@ export default function RevealShell({ children }: RevealShellProps) {
           <main className="flex-1 flex flex-col relative z-10 safe-area-padding">
             {/* Header with back button and progress */}
             <header className="flex items-center justify-between px-4 py-4 relative z-20">
-              {/* Back button */}
+              {/* Back button - hidden on step 3 (map reveal) since there's nowhere logical to go back to */}
               <AnimatePresence>
-                {state.stepIndex > 1 && (
+                {state.stepIndex > 1 && state.stepIndex !== 3 && (
                   <motion.button
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
