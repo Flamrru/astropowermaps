@@ -106,11 +106,13 @@ export default function SlideUpPanel({
             </div>
           )}
 
-          {/* Content Area */}
+          {/* Content Area - hidden scrollbar */}
           <div
-            className="overflow-y-auto overscroll-contain px-5 pb-8"
+            className="overflow-y-auto overscroll-contain px-5 pb-8 scrollbar-hide"
             style={{
               maxHeight: `calc(${maxHeightMap[height]} - 60px)`,
+              scrollbarWidth: "none", /* Firefox */
+              msOverflowStyle: "none", /* IE/Edge */
             }}
           >
             {children}
