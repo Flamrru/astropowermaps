@@ -189,7 +189,7 @@ export default function LocationSearch({
             transition={{ duration: 0.2 }}
             className="
               absolute z-50 w-full mt-2
-              bg-[#0a0a1e]/95 backdrop-blur-xl
+              bg-[#0a0a1e]
               border border-white/20 rounded-xl
               shadow-[0_10px_40px_rgba(0,0,0,0.5)]
               overflow-hidden
