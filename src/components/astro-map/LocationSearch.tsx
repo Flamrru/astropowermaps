@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Search, X } from "lucide-react";
+import { createPortal } from "react-dom";
 import { BirthLocation } from "@/lib/astro/types";
 
 interface LocationSearchProps {
@@ -27,8 +28,56 @@ export default function LocationSearch({
   const [results, setResults] = useState<GeocodingResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Client-side only
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Calculate dropdown position synchronously before paint
+  useLayoutEffect(() => {
+    if (isOpen && inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: "fixed",
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      });
+    }
+  }, [isOpen]);
+
+  // Update position on scroll/resize
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const updatePosition = () => {
+      if (inputRef.current) {
+        const rect = inputRef.current.getBoundingClientRect();
+        setDropdownStyle({
+          position: "fixed",
+          top: rect.bottom + 8,
+          left: rect.left,
+          width: rect.width,
+          zIndex: 9999,
+        });
+      }
+    };
+
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [isOpen]);
 
   // Debounced search
   useEffect(() => {
@@ -66,7 +115,9 @@ export default function LocationSearch({
 
         const data = await response.json();
         setResults(data.features || []);
-        setIsOpen(data.features?.length > 0);
+        if (data.features?.length > 0) {
+          setIsOpen(true);
+        }
       } catch (error) {
         console.error("Location search error:", error);
         setResults([]);
@@ -82,17 +133,29 @@ export default function LocationSearch({
     };
   }, [query, value]);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking/tapping outside
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+    if (!isOpen) return;
+
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
+      const target = event.target as Node;
+      // Check if click is outside container AND outside the portal dropdown
+      if (containerRef.current && !containerRef.current.contains(target)) {
+        // Also check if click is on the dropdown itself (in portal)
+        const dropdown = document.getElementById("location-dropdown");
+        if (!dropdown || !dropdown.contains(target)) {
+          setIsOpen(false);
+        }
       }
     }
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isOpen]);
 
   const handleSelect = async (result: GeocodingResult) => {
     const lat = result.center[1];
@@ -110,14 +173,13 @@ export default function LocationSearch({
       }
     } catch (error) {
       console.error('Timezone lookup failed, using UTC:', error);
-      // Fallback to UTC if lookup fails
     }
 
     const location: BirthLocation = {
       name: result.place_name,
       lng,
       lat,
-      timezone, // Now uses accurate timezone from GeoNames!
+      timezone,
     };
 
     setQuery(result.place_name);
@@ -131,6 +193,48 @@ export default function LocationSearch({
     setResults([]);
     setIsOpen(false);
   };
+
+  // Dropdown content rendered via portal
+  const dropdownContent = isOpen && results.length > 0 && mounted && (
+    <div
+      id="location-dropdown"
+      style={{
+        ...dropdownStyle,
+        backgroundColor: "#0a0a1e",
+        border: "1px solid rgba(255, 255, 255, 0.2)",
+        borderRadius: "0.75rem",
+        boxShadow: "0 10px 40px rgba(0,0,0,0.8)",
+        overflow: "hidden",
+      }}
+    >
+      {results.map((result, index) => (
+        <button
+          key={result.id}
+          type="button"
+          onClick={() => handleSelect(result)}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            handleSelect(result);
+          }}
+          className="
+            w-full px-4 py-3 text-left
+            flex items-center gap-3
+            text-white/80 hover:text-white hover:bg-[#15152a]
+            active:bg-[#15152a]
+            border-b border-white/5 last:border-b-0
+            transition-colors
+          "
+          style={{
+            backgroundColor: "#0a0a1e",
+            animationDelay: `${index * 50}ms`,
+          }}
+        >
+          <MapPin size={16} className="text-[#C9A227] flex-shrink-0" />
+          <span className="truncate">{result.place_name}</span>
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -150,6 +254,7 @@ export default function LocationSearch({
         </div>
 
         <input
+          ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -179,46 +284,8 @@ export default function LocationSearch({
         )}
       </div>
 
-      {/* Dropdown Results */}
-      <AnimatePresence>
-        {isOpen && results.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="
-              absolute z-[100] w-full mt-2
-              bg-[#0a0a1e]
-              border border-white/20 rounded-xl
-              shadow-[0_10px_40px_rgba(0,0,0,0.5)]
-              overflow-hidden
-            "
-          >
-            {results.map((result, index) => (
-              <motion.button
-                key={result.id}
-                type="button"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-                onClick={() => handleSelect(result)}
-                className="
-                  w-full px-4 py-3 text-left
-                  flex items-center gap-3
-                  text-white/80 hover:text-white
-                  bg-[#0a0a1e] hover:bg-[#15152a]
-                  border-b border-white/5 last:border-b-0
-                  transition-colors
-                "
-              >
-                <MapPin size={16} className="text-[#C9A227] flex-shrink-0" />
-                <span className="truncate">{result.place_name}</span>
-              </motion.button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Dropdown rendered via portal to escape stacking contexts */}
+      {mounted && createPortal(dropdownContent, document.body)}
     </div>
   );
 }

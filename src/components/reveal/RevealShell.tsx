@@ -216,6 +216,9 @@ export default function RevealShell({ children }: RevealShellProps) {
     ? ((state.stepIndex - 4) / 5) * 100
     : null;
 
+  // Prevent scroll/bounce on map reveal screen (step 3)
+  const isMapRevealScreen = state.stepIndex === 3;
+
   return (
     <RevealContext.Provider value={{ state, dispatch }}>
       {/* Outer cosmic gradient wrapper */}
@@ -228,6 +231,13 @@ export default function RevealShell({ children }: RevealShellProps) {
             radial-gradient(ellipse 50% 60% at 70% 80%, rgba(80, 60, 140, 0.1) 0%, transparent 50%),
             linear-gradient(180deg, #030308 0%, #050510 30%, #0a0a1e 70%, #050510 100%)
           `,
+          // Prevent iOS bounce/rubber-band scrolling on map reveal
+          ...(isMapRevealScreen && {
+            position: "fixed" as const,
+            inset: 0,
+            overscrollBehavior: "none",
+            touchAction: "none",
+          }),
         }}
       >
         {/* Subtle animated stars layer */}

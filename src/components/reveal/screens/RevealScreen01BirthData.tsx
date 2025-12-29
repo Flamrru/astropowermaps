@@ -229,8 +229,8 @@ export default function RevealScreen01BirthData() {
               </motion.div>
             )}
 
-            {/* Birth Location - higher z-index to ensure dropdown appears above button */}
-            <div className="relative z-[60]">
+            {/* Birth Location */}
+            <div className="relative">
               <label className="flex items-center gap-2 text-white/80 text-sm font-medium mb-2">
                 <MapPin size={14} className="text-gold" />
                 Birth City
@@ -247,8 +247,8 @@ export default function RevealScreen01BirthData() {
             </div>
           </div>
 
-          {/* Submit Button - z-[50] is lower than location dropdown's z-[60] parent */}
-          <div className="mt-auto pt-4 relative z-[50]">
+          {/* Submit Button */}
+          <div className="mt-auto pt-4">
             <GoldButton type="submit" loading={isSubmitting}>
               Generate my power map
             </GoldButton>
