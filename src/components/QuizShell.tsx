@@ -165,23 +165,36 @@ export default function QuizShell({ children }: QuizShellProps) {
   }, []);
 
   // Force play videos on mobile (iOS autoplay workaround)
-  // If blocked, hide videos to remove the play button
+  // Check if videos are actually playing after attempting autoplay
   useEffect(() => {
     if (!mounted) return;
 
-    const playVideo = (video: HTMLVideoElement | null) => {
-      if (video) {
-        video.play().catch(() => {
-          // Autoplay blocked - hide videos to remove play button
-          setAutoplayBlocked(true);
-        });
+    const checkAutoplay = async () => {
+      const video = entryVideoRef.current;
+      if (!video) return;
+
+      try {
+        // Try to play
+        await video.play();
+
+        // Even if promise resolves, check if video is actually playing
+        // iOS sometimes resolves the promise but video is still paused
+        setTimeout(() => {
+          if (video.paused || video.currentTime === 0) {
+            setAutoplayBlocked(true);
+          }
+        }, 100);
+      } catch {
+        // Autoplay explicitly blocked
+        setAutoplayBlocked(true);
       }
     };
 
-    // Try to play all videos
-    playVideo(entryVideoRef.current);
-    playVideo(globeVideoRef.current);
-    playVideo(nebulaVideoRef.current);
+    checkAutoplay();
+
+    // Also try to play other videos
+    globeVideoRef.current?.play().catch(() => {});
+    nebulaVideoRef.current?.play().catch(() => {});
   }, [mounted]);
 
   // Capture UTM parameters on mount
