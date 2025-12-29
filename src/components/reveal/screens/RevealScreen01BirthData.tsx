@@ -247,8 +247,8 @@ export default function RevealScreen01BirthData() {
             </div>
           </div>
 
-          {/* Submit Button */}
-          <div className="mt-auto pt-4">
+          {/* Submit Button - z-[50] is lower than location dropdown's z-[60] parent */}
+          <div className="mt-auto pt-4 relative z-[50]">
             <GoldButton type="submit" loading={isSubmitting}>
               Generate my power map
             </GoldButton>
