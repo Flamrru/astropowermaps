@@ -270,7 +270,7 @@ export default function RevealShell({ children }: RevealShellProps) {
                 showControls={false}
                 showCityMarkers={1} // Just 1 teaser city
                 autoAnimation={state.stepIndex === 3 ? "reveal" : "none"}
-                onAnimationComplete={() => dispatch({ type: "NEXT_STEP" })}
+                onAnimationComplete={() => {}} // Animation callback - no longer auto-advances, button handles navigation
               />
             ) : (
               /* Fallback cosmic background before data loads */

@@ -12,10 +12,10 @@ import { fromZonedTime } from "date-fns-tz";
 
 // Time window options
 const TIME_WINDOWS: { id: BirthTimeWindow; label: string; icon: string; hours: string }[] = [
-  { id: "morning", label: "Morning", icon: "🌅", hours: "6am - 12pm" },
-  { id: "afternoon", label: "Afternoon", icon: "☀️", hours: "12pm - 6pm" },
-  { id: "evening", label: "Evening", icon: "🌙", hours: "6pm - 12am" },
-  { id: "unknown", label: "No idea", icon: "✨", hours: "Full day" },
+  { id: "morning", label: "Morning", icon: "🌅", hours: "(6am-12pm)" },
+  { id: "afternoon", label: "Afternoon", icon: "☀️", hours: "(12pm-6pm)" },
+  { id: "evening", label: "Evening", icon: "🌙", hours: "(6pm-12am)" },
+  { id: "unknown", label: "Not sure", icon: "✨", hours: "(use full day)" },
 ];
 
 export default function RevealScreen01BirthData() {
@@ -105,10 +105,13 @@ export default function RevealScreen01BirthData() {
           </motion.div>
 
           <h1 className="text-[26px] font-bold text-white mb-2">
-            Map Your <span className="text-gold">Birth Sky</span>
+            You&apos;re in! Now the exciting part:
           </h1>
+          <h2 className="text-[22px] font-semibold text-gold mb-3">
+            Let&apos;s find your specific map.
+          </h2>
           <p className="text-white/60 text-[15px]">
-            We need your birth details to calculate where your cosmic lines cross the Earth.
+            Enter your birth details below. The more precise, the more accurate your power places and power months will be.
           </p>
         </div>
 
@@ -181,7 +184,7 @@ export default function RevealScreen01BirthData() {
                     </svg>
                   )}
                 </div>
-                <span className="text-white/60 text-sm">I don&apos;t know my birth time</span>
+                <span className="text-white/60 text-sm">I don&apos;t know my exact time</span>
               </label>
 
               {errors.time && <p className="text-red-400 text-sm mt-1">{errors.time}</p>}
@@ -198,7 +201,7 @@ export default function RevealScreen01BirthData() {
                   border: "1px solid rgba(201, 162, 39, 0.2)",
                 }}
               >
-                <p className="text-white/70 text-sm mb-3">Do you remember approximately when?</p>
+                <p className="text-white/70 text-sm mb-3">No worries — we can still calculate with high accuracy. Do you remember roughly when?</p>
                 <div className="grid grid-cols-2 gap-2">
                   {TIME_WINDOWS.map((opt) => (
                     <button
@@ -247,7 +250,7 @@ export default function RevealScreen01BirthData() {
           {/* Submit Button */}
           <div className="mt-auto pt-4">
             <GoldButton type="submit" loading={isSubmitting}>
-              Generate My Birth Chart
+              Generate my power map
             </GoldButton>
           </div>
         </motion.form>

@@ -4,17 +4,17 @@ import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReveal } from "@/lib/reveal-state";
 import { saveAstroData } from "@/lib/astro-storage";
+import MatrixCodeEffect from "../MatrixCodeEffect";
 
-// Technical-sounding loading messages
+// PRD-specified loading messages - mix of technical and emotional
 const LOADING_MESSAGES = [
   "Converting birth time to UTC...",
-  "Accessing planetary ephemeris database...",
   "Calculating planetary positions at your birth...",
-  "Computing Earth's rotation at coordinates...",
-  "Determining house cusps and angles...",
+  "Most people never see this map.",
   "Mapping celestial bodies to geographic lines...",
+  "Finding where your energy naturally amplifies...",
   "Matching your lines to 100+ world cities...",
-  "Rendering your personal birth sky...",
+  "Discovering what you've been missing...",
 ];
 
 export default function RevealScreen02Generation() {
@@ -24,18 +24,18 @@ export default function RevealScreen02Generation() {
   const hasCalledApiRef = useRef(false);
   const [apiComplete, setApiComplete] = useState(false);
 
-  // Rotate loading text
+  // Rotate loading text every 0.8s (PRD spec)
   useEffect(() => {
     const interval = setInterval(() => {
       setTextIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
-    }, 900);
+    }, 800);
     return () => clearInterval(interval);
   }, []);
 
-  // Progress animation (5 seconds minimum)
+  // Progress animation (~5-6 seconds for 7 messages)
   useEffect(() => {
     const startTime = Date.now();
-    const duration = 5000;
+    const duration = 5600; // 7 messages × 0.8s
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime;
@@ -80,7 +80,6 @@ export default function RevealScreen02Generation() {
           const response = await res.json();
           if (response.success && response.data) {
             dispatch({ type: "SET_ASTRO_DATA", payload: response.data });
-            // Save to localStorage so /map can access it without re-entering data
             saveAstroData(response.data);
           }
         }
@@ -94,158 +93,92 @@ export default function RevealScreen02Generation() {
     fetchAstroData();
   }, [state.birthData, dispatch]);
 
+  // Check if current message is "emotional" (no ellipsis, makes a statement)
+  const isEmotionalMessage = !LOADING_MESSAGES[textIndex].endsWith("...");
+
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-6">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className="max-w-sm w-full rounded-3xl py-10 px-8 text-center relative overflow-hidden"
-        style={{
-          background: "rgba(10, 10, 20, 0.6)",
-          backdropFilter: "blur(16px)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
-          boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
-        }}
-      >
-        {/* Gold accent line */}
+    <div className="flex-1 flex flex-col relative overflow-hidden">
+      {/* Layer 1: Cosmic nebula background (inherited from parent) */}
+
+      {/* Layer 2: Matrix code effect (~20% opacity) */}
+      <div className="absolute inset-0">
+        <MatrixCodeEffect opacity={0.15} speed={0.8} />
+      </div>
+
+      {/* Layer 3: Content - centered status display */}
+      <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-6">
+        {/* Subtle vignette for focus */}
         <div
-          className="absolute top-0 left-1/4 right-1/4 h-px"
+          className="absolute inset-0 pointer-events-none"
           style={{
-            background: "linear-gradient(90deg, transparent, rgba(232, 197, 71, 0.5), transparent)",
+            background: "radial-gradient(ellipse at center, transparent 0%, rgba(5, 5, 16, 0.4) 100%)",
           }}
         />
 
-        {/* Decorative stars */}
-        {[
-          { x: 15, y: 20, size: 2, delay: 0 },
-          { x: 85, y: 25, size: 1.5, delay: 0.5 },
-          { x: 10, y: 75, size: 1.5, delay: 1 },
-          { x: 90, y: 80, size: 2, delay: 1.5 },
-        ].map((star, i) => (
+        {/* Main content container */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="relative z-10 text-center max-w-md w-full"
+        >
+          {/* Status indicator glow */}
           <motion.div
-            key={i}
-            animate={{ opacity: [0.3, 0.8, 0.3] }}
-            transition={{ duration: 2, repeat: Infinity, delay: star.delay }}
-            className="absolute"
+            animate={{
+              boxShadow: [
+                "0 0 20px rgba(201, 162, 39, 0.3)",
+                "0 0 40px rgba(201, 162, 39, 0.5)",
+                "0 0 20px rgba(201, 162, 39, 0.3)",
+              ],
+            }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="w-3 h-3 rounded-full mx-auto mb-8"
             style={{
-              left: `${star.x}%`,
-              top: `${star.y}%`,
-              width: `${star.size}px`,
-              height: `${star.size}px`,
-              background: "radial-gradient(circle, rgba(232, 197, 71, 0.9) 0%, transparent 70%)",
-              borderRadius: "50%",
-              boxShadow: `0 0 ${star.size * 3}px rgba(232, 197, 71, 0.5)`,
+              background: "radial-gradient(circle, #E8C547 0%, #C9A227 100%)",
             }}
           />
-        ))}
 
-        {/* Orbital animation */}
-        <div className="mb-8">
-          <div className="relative w-32 h-32 mx-auto">
-            {/* Outer glow */}
-            <div
-              className="absolute inset-0 rounded-full"
-              style={{
-                background: "radial-gradient(circle, rgba(201, 162, 39, 0.15) 0%, transparent 70%)",
-                filter: "blur(10px)",
-              }}
-            />
-
-            {/* Rings */}
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-              className="absolute inset-0 rounded-full"
-              style={{
-                border: "1px solid rgba(232, 197, 71, 0.25)",
-              }}
-            />
-            <motion.div
-              animate={{ rotate: -360 }}
-              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-              className="absolute inset-4 rounded-full"
-              style={{ border: "1px solid rgba(201, 162, 39, 0.35)" }}
-            />
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-              className="absolute inset-8 rounded-full"
-              style={{ border: "2px solid rgba(201, 162, 39, 0.5)" }}
-            />
-
-            {/* Center core */}
-            <motion.div
-              animate={{ scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute inset-0 flex items-center justify-center"
-            >
-              <div
-                className="w-5 h-5 rounded-full"
+          {/* Single bright status line - the center of attention */}
+          <div className="min-h-[60px] flex items-center justify-center mb-8">
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={textIndex}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.3 }}
+                className={`text-[16px] sm:text-[18px] leading-relaxed ${
+                  isEmotionalMessage
+                    ? "text-white font-medium"
+                    : "text-white/70 font-mono"
+                }`}
                 style={{
-                  background: "radial-gradient(circle, #E8C547 0%, #C9A227 60%, #8B6914 100%)",
-                  boxShadow: "0 0 20px rgba(232, 197, 71, 0.8), 0 0 40px rgba(201, 162, 39, 0.5)",
+                  textShadow: isEmotionalMessage
+                    ? "0 0 30px rgba(232, 197, 71, 0.4), 0 2px 10px rgba(0, 0, 0, 0.5)"
+                    : "0 2px 10px rgba(0, 0, 0, 0.5)",
+                  letterSpacing: isEmotionalMessage ? "0.02em" : "0.05em",
+                }}
+              >
+                {LOADING_MESSAGES[textIndex]}
+              </motion.p>
+            </AnimatePresence>
+          </div>
+
+          {/* Minimal progress indicator */}
+          <div className="w-48 mx-auto">
+            <div className="h-px rounded-full overflow-hidden bg-white/10">
+              <motion.div
+                className="h-full"
+                style={{
+                  width: `${progress}%`,
+                  background: "linear-gradient(90deg, rgba(201, 162, 39, 0.5), rgba(232, 197, 71, 0.8))",
+                  boxShadow: "0 0 10px rgba(201, 162, 39, 0.5)",
                 }}
               />
-            </motion.div>
-
-            {/* Orbiting particles */}
-            {[0, 1, 2].map((i) => (
-              <motion.div
-                key={i}
-                animate={{ rotate: 360 }}
-                transition={{ duration: 4 + i * 2, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0"
-                style={{ rotate: i * 120 }}
-              >
-                <div
-                  className="absolute rounded-full"
-                  style={{
-                    top: "5%",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: "6px",
-                    height: "6px",
-                    background: "linear-gradient(135deg, #E8C547, #C9A227)",
-                    boxShadow: "0 0 8px rgba(232, 197, 71, 0.6)",
-                  }}
-                />
-              </motion.div>
-            ))}
+            </div>
           </div>
-        </div>
-
-        {/* Rotating text */}
-        <div className="h-12 mb-6 flex items-center justify-center">
-          <AnimatePresence mode="wait">
-            <motion.p
-              key={textIndex}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
-              className="text-[14px] text-white/70 leading-relaxed"
-            >
-              {LOADING_MESSAGES[textIndex]}
-            </motion.p>
-          </AnimatePresence>
-        </div>
-
-        {/* Progress bar */}
-        <div className="w-full max-w-[200px] mx-auto">
-          <div className="h-1.5 rounded-full overflow-hidden bg-white/10">
-            <motion.div
-              className="h-full rounded-full"
-              style={{
-                width: `${progress}%`,
-                background: "linear-gradient(90deg, #8B6914, #C9A227, #E8C547)",
-                boxShadow: "0 0 10px rgba(201, 162, 39, 0.5)",
-              }}
-            />
-          </div>
-          <p className="text-xs text-gold/60 mt-2 tabular-nums">{Math.round(progress)}%</p>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }

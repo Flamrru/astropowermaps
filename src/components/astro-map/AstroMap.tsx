@@ -345,7 +345,7 @@ export default function AstroMap({
     };
   }, []);
 
-  // Auto-animation for reveal mode
+  // Auto-animation for reveal mode - ZOOM OUT from birth location
   useEffect(() => {
     if (!mapLoaded || !map.current || autoAnimation !== "reveal") return;
 
@@ -353,38 +353,29 @@ export default function AstroMap({
     const birthLng = data.birthData.location.lng;
     const birthLat = data.birthData.location.lat;
 
-    // Step 1: Start with a globe overview
-    currentMap.setCenter([0, 20]);
-    currentMap.setZoom(1.2);
+    // Step 1: Start ZOOMED IN on birth location (so user sees "this is where I was born")
+    currentMap.setCenter([birthLng, birthLat]);
+    currentMap.setZoom(5);
 
-    // Step 2: Slow pan across the globe to show the world
-    const panTimer = setTimeout(() => {
+    // Step 2: Smooth zoom OUT to show the entire planet over 2.5 seconds
+    // This creates the "holy shit, this is everywhere" moment
+    const zoomOutTimer = setTimeout(() => {
       currentMap.easeTo({
-        center: [30, 20],
-        zoom: 1.4,
-        duration: 2000,
-        easing: (t) => t, // Linear easing
-      });
-    }, 500);
-
-    // Step 3: Fly to birth location
-    const flyTimer = setTimeout(() => {
-      currentMap.flyTo({
-        center: [birthLng, birthLat],
-        zoom: 3,
+        center: [birthLng, birthLat + 10], // Slight pan up for better global view
+        zoom: 1.8,
         duration: 2500,
-        curve: 1.5,
+        easing: (t) => t * (2 - t), // Ease-out for smooth deceleration
       });
-    }, 2800);
+    }, 800);
 
-    // Step 4: Call completion callback
+    // Step 3: After zoom completes, signal animation done (for UI updates)
+    // NOTE: We no longer auto-advance - the callback just signals zoom is done
     const completeTimer = setTimeout(() => {
       onAnimationComplete?.();
-    }, 5500);
+    }, 3500);
 
     return () => {
-      clearTimeout(panTimer);
-      clearTimeout(flyTimer);
+      clearTimeout(zoomOutTimer);
       clearTimeout(completeTimer);
     };
   }, [mapLoaded, autoAnimation, data.birthData.location, onAnimationComplete]);
