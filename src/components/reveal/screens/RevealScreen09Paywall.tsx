@@ -38,7 +38,7 @@ export default function RevealScreen09Paywall() {
       <BlurredReportPreview forecastData={state.forecastData} />
 
       {/* SECTION B: Primary Checkout */}
-      <section className="px-5 py-8">
+      <section id="checkout-section" className="px-5 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -173,7 +173,7 @@ export default function RevealScreen09Paywall() {
               onClick={() => {
                 setShowCheckout(true);
                 // Scroll to checkout section
-                window.scrollTo({ top: 0, behavior: "smooth" });
+                document.getElementById("checkout-section")?.scrollIntoView({ behavior: "smooth" });
               }}
               className="w-full max-w-sm mx-auto py-4 rounded-full text-[16px] font-semibold flex items-center justify-center gap-2"
               style={{
