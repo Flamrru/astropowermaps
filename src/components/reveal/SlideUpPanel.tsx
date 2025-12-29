@@ -6,7 +6,7 @@ import { motion, AnimatePresence, useDragControls, PanInfo } from "framer-motion
 interface SlideUpPanelProps {
   children: ReactNode;
   isVisible: boolean;
-  height?: "70%" | "80%" | "90%" | "100%";
+  height?: "auto" | "50%" | "70%" | "80%" | "90%" | "100%";
   onBack?: () => void;
   showDragHandle?: boolean;
   className?: string;
@@ -30,7 +30,9 @@ export default function SlideUpPanel({
   };
 
   // Calculate max-height based on height prop
-  const maxHeightMap = {
+  const maxHeightMap: Record<string, string> = {
+    "auto": "auto",
+    "50%": "50dvh",
     "70%": "70dvh",
     "80%": "80dvh",
     "90%": "90dvh",
