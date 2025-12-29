@@ -207,7 +207,7 @@ export default function LocationSearch({
                   w-full px-4 py-3 text-left
                   flex items-center gap-3
                   text-white/80 hover:text-white
-                  hover:bg-white/10
+                  bg-[#0a0a1e] hover:bg-[#15152a]
                   border-b border-white/5 last:border-b-0
                   transition-colors
                 "
