@@ -1,27 +1,79 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import BirthDataForm from "@/components/astro-map/BirthDataForm";
 import AstroMap from "@/components/astro-map/AstroMap";
 import { BirthData, AstrocartographyResult } from "@/lib/astro/types";
-import { loadAstroData, clearAstroData } from "@/lib/astro-storage";
+import { loadAstroData, clearAstroData, saveAstroData } from "@/lib/astro-storage";
+
+// Dev mode birth data for testing
+const DEV_BIRTH_DATA = {
+  date: "1988-05-05",
+  time: "17:00",
+  timeUnknown: false,
+  location: {
+    name: "Bratislava, Slovakia",
+    lat: 48.1486,
+    lng: 17.1077,
+    timezone: "Europe/Bratislava",
+  },
+};
 
 type ViewState = "form" | "loading" | "map";
 
-export default function AstrocartographyPage() {
+function MapPageContent() {
   const [viewState, setViewState] = useState<ViewState>("form");
   const [mapData, setMapData] = useState<AstrocartographyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
 
-  // Check for saved data on mount (from reveal flow)
+  // Check for saved data or dev mode on mount
   useEffect(() => {
-    const savedData = loadAstroData();
-    if (savedData) {
-      setMapData(savedData);
-      setViewState("map");
-    }
-  }, []);
+    const initMap = async () => {
+      // Dev mode: ?d or ?d=1 skips form with test data
+      const dParam = searchParams.get("d");
+      const devMode = dParam !== null;
+
+      if (devMode) {
+        console.log("🔧 Map dev mode - loading test birth data");
+        setViewState("loading");
+
+        try {
+          const res = await fetch("/api/astrocartography", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ birthData: DEV_BIRTH_DATA }),
+          });
+
+          if (res.ok) {
+            const response = await res.json();
+            if (response.success && response.data) {
+              saveAstroData(response.data);
+              setMapData(response.data);
+              setViewState("map");
+              console.log("🔧 Map dev mode - data loaded, forecast will calculate automatically");
+            }
+          }
+        } catch (error) {
+          console.error("Dev mode API error:", error);
+          setViewState("form");
+        }
+        return;
+      }
+
+      // Normal flow: check for saved data
+      const savedData = loadAstroData();
+      if (savedData) {
+        setMapData(savedData);
+        setViewState("map");
+      }
+    };
+
+    initMap();
+  }, [searchParams]);
 
   const handleFormSubmit = async (birthData: BirthData) => {
     setViewState("loading");
@@ -231,5 +283,20 @@ function LoadingAnimation() {
         This may take a moment...
       </p>
     </div>
+  );
+}
+
+// Main page export with Suspense for useSearchParams
+export default function AstrocartographyPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#050510] flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-[#C9A227]/30 border-t-[#C9A227] rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <MapPageContent />
+    </Suspense>
   );
 }

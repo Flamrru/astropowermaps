@@ -22,6 +22,10 @@ export interface PowerPlace {
   distance: number; // km from line
   interpretation: string;
   flag: string;
+  // Scoring fields
+  score: number;        // Raw calculated score (0-200 typical range)
+  stars: number;        // Normalized to 0-5 with 0.5 precision
+  multiLineBonus: boolean; // True if city has multiple beneficial lines
 }
 
 export interface CategoryResult {
@@ -80,6 +84,127 @@ const CATEGORY_CONFIG: Record<LifeCategory, CategoryConfig> = {
     priority: ["moon"],
   },
 };
+
+// ============================================
+// Scoring System
+// ============================================
+
+/**
+ * Line type power multipliers
+ * MC (Midheaven) is the most powerful angular point
+ */
+const LINE_TYPE_MULTIPLIERS: Record<LineType, number> = {
+  MC: 1.25, // Midheaven - career/public image
+  AC: 1.20, // Ascendant - personal energy/identity
+  DC: 1.15, // Descendant - relationships
+  IC: 1.10, // Imum Coeli - home/roots
+};
+
+/**
+ * Planet relevance by category
+ * High relevance = 1.5x, Medium = 1.2x, Low = 1.0x
+ */
+const PLANET_RELEVANCE: Record<LifeCategory, Record<PlanetId, number>> = {
+  love: {
+    venus: 1.5, moon: 1.5, neptune: 1.2,
+    sun: 1.0, mars: 1.0, mercury: 1.0, jupiter: 1.0,
+    saturn: 1.0, uranus: 1.0, pluto: 1.0,
+  },
+  career: {
+    sun: 1.5, jupiter: 1.5, saturn: 1.2, mars: 1.2,
+    venus: 1.0, moon: 1.0, mercury: 1.0,
+    uranus: 1.0, neptune: 1.0, pluto: 1.0,
+  },
+  growth: {
+    jupiter: 1.5, uranus: 1.5, neptune: 1.2, pluto: 1.2,
+    sun: 1.0, venus: 1.0, moon: 1.0, mars: 1.0,
+    mercury: 1.0, saturn: 1.0,
+  },
+  home: {
+    moon: 1.5, saturn: 1.5, venus: 1.2,
+    sun: 1.0, mars: 1.0, mercury: 1.0, jupiter: 1.0,
+    uranus: 1.0, neptune: 1.0, pluto: 1.0,
+  },
+};
+
+/**
+ * Calculate proximity score based on distance from line
+ * Closer = higher score. More granular at close distances for better differentiation.
+ */
+function getProximityScore(distance: number): number {
+  // Very close cities get premium scores
+  if (distance < 30) return 100;  // Exceptionally close
+  if (distance < 75) return 90;   // Very close
+  if (distance < 150) return 70;  // Close
+  if (distance < 250) return 50;  // Moderate
+  if (distance < 350) return 30;  // Far
+  return 20; // 350-400 km - Very far
+}
+
+/**
+ * Convert raw score to star rating (3-5 with 0.5 precision)
+ *
+ * IMPORTANT: All cities shown are ON beneficial planetary lines!
+ * The minimum is 3 stars because being on ANY line is already good.
+ * Stars represent "intensity" not "quality" - even 3-star cities are beneficial.
+ *
+ * Score range (based on formula):
+ * - Min: ~22 (400km + IC line + low relevance) → 3.0 stars
+ * - Max: ~200 (< 30km + MC line + high relevance + multi-line) → 5.0 stars
+ *
+ * Example mappings:
+ * - 5.0 stars: < 30km, strong line/planet match
+ * - 4.0 stars: ~150km, moderate match
+ * - 3.0 stars: 350-400km, still beneficial but less intense
+ */
+function scoreToStars(score: number): number {
+  // Map score to 3-5 star range (all shown cities are beneficial)
+  const minStars = 3;
+  const maxStars = 5;
+  const minScore = 22;  // Worst case: 20 * 1.10 * 1.0
+  const maxScore = 200; // Best case: (100 * 1.25 * 1.5) + 15
+
+  // Normalize to 0-1 range, then scale to 3-5 stars
+  const normalized = Math.min(Math.max((score - minScore) / (maxScore - minScore), 0), 1);
+  const stars = minStars + normalized * (maxStars - minStars);
+
+  // Round to nearest 0.5
+  return Math.round(stars * 2) / 2;
+}
+
+/**
+ * Calculate city score based on multiple factors
+ * Formula: ProximityScore × LineTypeMultiplier × PlanetRelevance
+ */
+function calculateCityScore(
+  distance: number,
+  lineType: LineType,
+  planet: PlanetId,
+  category: LifeCategory,
+  hasMultipleLines: boolean
+): { score: number; stars: number } {
+  // Factor 1: Proximity (0-100)
+  const proximityScore = getProximityScore(distance);
+
+  // Factor 2: Line type multiplier (1.10-1.25)
+  const lineMultiplier = LINE_TYPE_MULTIPLIERS[lineType];
+
+  // Factor 3: Planet relevance (1.0-1.5)
+  const planetRelevance = PLANET_RELEVANCE[category][planet] || 1.0;
+
+  // Calculate raw score
+  let rawScore = proximityScore * lineMultiplier * planetRelevance;
+
+  // Factor 4: Multi-line bonus
+  if (hasMultipleLines) {
+    rawScore += 15; // Bonus for having multiple beneficial lines nearby
+  }
+
+  // Convert to stars
+  const stars = scoreToStars(rawScore);
+
+  return { score: Math.round(rawScore), stars };
+}
 
 // ============================================
 // Geo Calculations
@@ -201,6 +326,7 @@ export function calculateAllPowerPlaces(
 
 /**
  * Calculate power places for a specific category
+ * Uses multi-factor scoring system for city ranking
  */
 export function calculateCategoryPlaces(
   category: LifeCategory,
@@ -208,7 +334,6 @@ export function calculateCategoryPlaces(
   maxDistance: number = 400
 ): CategoryResult {
   const config = CATEGORY_CONFIG[category];
-  const places: PowerPlace[] = [];
 
   // Filter lines by category configuration
   const relevantLines = lines.filter(
@@ -217,7 +342,17 @@ export function calculateCategoryPlaces(
       config.lineTypes.includes(line.lineType)
   );
 
-  // Check each city against relevant lines
+  // First pass: Collect all city-line matches and count lines per city
+  interface CityMatch {
+    city: WorldCity;
+    planet: PlanetId;
+    lineType: LineType;
+    distance: number;
+  }
+
+  const allMatches: CityMatch[] = [];
+  const cityLineCount: Map<string, number> = new Map();
+
   for (const city of MAJOR_CITIES) {
     for (const line of relevantLines) {
       const distance = pointToPolylineDistance(
@@ -226,33 +361,48 @@ export function calculateCategoryPlaces(
       );
 
       if (distance <= maxDistance) {
-        places.push({
+        allMatches.push({
           city,
           planet: line.planet,
           lineType: line.lineType,
           distance: Math.round(distance),
-          interpretation: getPlainSummary(line.planet, line.lineType),
-          flag: getCountryFlag(city.countryCode),
         });
+
+        // Track how many lines pass near this city
+        const count = cityLineCount.get(city.name) || 0;
+        cityLineCount.set(city.name, count + 1);
       }
     }
   }
 
-  // Sort by:
-  // 1. Priority planet order (more beneficial planets first)
-  // 2. Distance (closer is better)
-  places.sort((a, b) => {
-    const priorityA = config.priority.indexOf(a.planet);
-    const priorityB = config.priority.indexOf(b.planet);
+  // Second pass: Create scored places
+  const places: PowerPlace[] = allMatches.map((match) => {
+    const hasMultipleLines = (cityLineCount.get(match.city.name) || 0) >= 2;
+    const { score, stars } = calculateCityScore(
+      match.distance,
+      match.lineType,
+      match.planet,
+      category,
+      hasMultipleLines
+    );
 
-    if (priorityA !== priorityB) {
-      return priorityA - priorityB;
-    }
-
-    return a.distance - b.distance;
+    return {
+      city: match.city,
+      planet: match.planet,
+      lineType: match.lineType,
+      distance: match.distance,
+      interpretation: getPlainSummary(match.planet, match.lineType),
+      flag: getCountryFlag(match.city.countryCode),
+      score,
+      stars,
+      multiLineBonus: hasMultipleLines,
+    };
   });
 
-  // Remove duplicate cities (keep only closest line per city)
+  // Sort by score (highest first)
+  places.sort((a, b) => b.score - a.score);
+
+  // Remove duplicate cities (keep only highest-scoring line per city)
   const uniquePlaces: PowerPlace[] = [];
   const seenCities = new Set<string>();
 
@@ -268,7 +418,7 @@ export function calculateCategoryPlaces(
     label: config.label,
     icon: config.icon,
     description: config.description,
-    places: uniquePlaces.slice(0, 5), // Top 5 places per category
+    places: uniquePlaces.slice(0, 25), // Top 25 places per category
   };
 }
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { Sparkles } from "lucide-react";
 import mapboxgl from "mapbox-gl";
 import { AstrocartographyResult, PlanetId, LineType, TooltipData } from "@/lib/astro/types";
 import { getShortInterpretation } from "@/lib/astro/interpretations";
@@ -13,9 +14,9 @@ import MapControls from "./MapControls";
 import LineTooltip from "./LineTooltip";
 import CategoryFilters from "./CategoryFilters";
 import PowerPlacesPanel from "./PowerPlacesPanel";
-import PowerMonthsPanel from "./PowerMonthsPanel";
 import MobileFloatingPill from "./MobileFloatingPill";
 import WelcomeTutorial from "./WelcomeTutorial";
+import { Report2026DesktopPanel } from "./report";
 import { useFirstVisit } from "@/lib/hooks/useFirstVisit";
 
 interface AstroMapProps {
@@ -156,61 +157,236 @@ function createPopupContent(locationName: string): HTMLDivElement {
 }
 
 /**
- * Creates city popup content
+ * Category colors for popup theming
+ */
+const POPUP_CATEGORY_COLORS: Record<string, { primary: string; glow: string }> = {
+  love: { primary: "#E8A4C9", glow: "rgba(232, 164, 201, 0.4)" },
+  career: { primary: "#E8C547", glow: "rgba(232, 197, 71, 0.4)" },
+  growth: { primary: "#9B7ED9", glow: "rgba(155, 126, 217, 0.4)" },
+  home: { primary: "#C4C4C4", glow: "rgba(196, 196, 196, 0.3)" },
+};
+
+/**
+ * Creates a single celestial star SVG element for ratings
+ */
+function createStarSVG(
+  state: "full" | "half" | "empty",
+  color: string,
+  size: number = 12,
+  index: number = 0
+): SVGSVGElement {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("width", size.toString());
+  svg.setAttribute("height", size.toString());
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.style.cssText = state !== "empty" ? `filter: drop-shadow(0 0 2px ${color}80);` : "";
+
+  // Add gradient definition for half stars
+  if (state === "half") {
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    const gradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+    gradient.setAttribute("id", `popupHalfGrad-${index}`);
+    gradient.setAttribute("x1", "0%");
+    gradient.setAttribute("y1", "0%");
+    gradient.setAttribute("x2", "100%");
+    gradient.setAttribute("y2", "0%");
+
+    const stop1 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+    stop1.setAttribute("offset", "50%");
+    stop1.setAttribute("stop-color", color);
+
+    const stop2 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+    stop2.setAttribute("offset", "50%");
+    stop2.setAttribute("stop-color", "transparent");
+
+    gradient.appendChild(stop1);
+    gradient.appendChild(stop2);
+    defs.appendChild(gradient);
+    svg.appendChild(defs);
+  }
+
+  // 4-pointed celestial star path
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", "M8 1L9.2 5.8L14 7L9.2 8.2L8 13L6.8 8.2L2 7L6.8 5.8L8 1Z");
+  path.setAttribute(
+    "fill",
+    state === "full"
+      ? color
+      : state === "half"
+      ? `url(#popupHalfGrad-${index})`
+      : "transparent"
+  );
+  path.setAttribute("stroke", state === "empty" ? "rgba(255,255,255,0.2)" : color);
+  path.setAttribute("stroke-width", state === "empty" ? "0.8" : "0.5");
+  path.setAttribute("stroke-linejoin", "round");
+  svg.appendChild(path);
+
+  // Center sparkle for filled stars
+  if (state !== "empty") {
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", "8");
+    circle.setAttribute("cy", "7");
+    circle.setAttribute("r", "0.6");
+    circle.setAttribute("fill", "rgba(255,255,255,0.9)");
+    svg.appendChild(circle);
+  }
+
+  return svg;
+}
+
+/**
+ * Creates city popup content with celestial dark theme
  */
 function createCityPopupContent(
   cityName: string,
+  flag: string,
   category: string,
-  interpretation: string
+  planetSymbol: string,
+  lineType: string,
+  distance: number,
+  interpretation: string,
+  stars: number
 ): HTMLDivElement {
+  const colors = POPUP_CATEGORY_COLORS[category] || POPUP_CATEGORY_COLORS.career;
+
+  // Main container
   const container = document.createElement("div");
-  container.className = "city-popup";
+  container.className = "city-popup-celestial";
   container.style.cssText = `
-    color: #050510;
-    padding: 4px 0;
-    font-size: 13px;
-    line-height: 1.4;
-    max-width: 200px;
+    padding: 0;
+    max-width: 220px;
+    font-family: system-ui, -apple-system, sans-serif;
   `;
 
+  // Accent line at top (category colored)
+  const accentLine = document.createElement("div");
+  accentLine.style.cssText = `
+    height: 2px;
+    background: linear-gradient(90deg, transparent, ${colors.primary}, transparent);
+    margin-bottom: 12px;
+    border-radius: 1px;
+  `;
+  container.appendChild(accentLine);
+
+  // Header: Flag + City Name
   const header = document.createElement("div");
   header.style.cssText = `
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 4px;
+    gap: 8px;
+    margin-bottom: 8px;
   `;
 
-  const strong = document.createElement("strong");
-  strong.textContent = cityName;
-  strong.style.cssText = `
-    color: #0a0a1e;
-    font-size: 14px;
+  const flagEl = document.createElement("span");
+  flagEl.textContent = flag;
+  flagEl.style.cssText = `
+    font-size: 20px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
   `;
 
-  const badge = document.createElement("span");
-  badge.textContent = category;
-  badge.style.cssText = `
-    background: rgba(201, 162, 39, 0.15);
-    color: #8b6914;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 4px;
+  const cityNameEl = document.createElement("span");
+  cityNameEl.textContent = cityName;
+  cityNameEl.style.cssText = `
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 15px;
     font-weight: 600;
+    letter-spacing: 0.02em;
+    flex: 1;
   `;
 
-  header.appendChild(strong);
-  header.appendChild(badge);
+  header.appendChild(flagEl);
+  header.appendChild(cityNameEl);
+  container.appendChild(header);
 
+  // Star Rating Row
+  const ratingRow = document.createElement("div");
+  ratingRow.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-bottom: 10px;
+  `;
+
+  // Create 5 stars
+  for (let i = 0; i < 5; i++) {
+    const position = i + 1;
+    let state: "full" | "half" | "empty";
+    if (stars >= position) state = "full";
+    else if (stars >= position - 0.5) state = "half";
+    else state = "empty";
+
+    const starSvg = createStarSVG(state, colors.primary, 14, i);
+    ratingRow.appendChild(starSvg);
+  }
+
+  // Star value text
+  const starValue = document.createElement("span");
+  starValue.textContent = stars.toFixed(1);
+  starValue.style.cssText = `
+    margin-left: 6px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+    font-weight: 500;
+  `;
+  ratingRow.appendChild(starValue);
+
+  container.appendChild(ratingRow);
+
+  // Info badges row: Planet badge + Distance
+  const badgeRow = document.createElement("div");
+  badgeRow.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  `;
+
+  // Planet + Line Type badge
+  const planetBadge = document.createElement("span");
+  planetBadge.textContent = `${planetSymbol} ${lineType}`;
+  planetBadge.style.cssText = `
+    background: ${colors.primary}20;
+    color: ${colors.primary};
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    border: 1px solid ${colors.primary}30;
+    letter-spacing: 0.03em;
+  `;
+
+  // Distance indicator
+  const distanceEl = document.createElement("span");
+  distanceEl.textContent = `${distance} km`;
+  distanceEl.style.cssText = `
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 11px;
+    font-weight: 500;
+  `;
+
+  badgeRow.appendChild(planetBadge);
+  badgeRow.appendChild(distanceEl);
+  container.appendChild(badgeRow);
+
+  // Divider
+  const divider = document.createElement("div");
+  divider.style.cssText = `
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    margin-bottom: 10px;
+  `;
+  container.appendChild(divider);
+
+  // Interpretation text
   const desc = document.createElement("p");
   desc.textContent = interpretation;
   desc.style.cssText = `
-    color: #444;
+    color: rgba(255, 255, 255, 0.6);
     font-size: 12px;
+    line-height: 1.5;
     margin: 0;
+    font-style: italic;
   `;
-
-  container.appendChild(header);
   container.appendChild(desc);
 
   return container;
@@ -241,6 +417,8 @@ export default function AstroMap({
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [showTutorial, setShowTutorial] = useState(false);
   const [powerPlacesExpanded, setPowerPlacesExpanded] = useState(false);
+  const [legendExpanded, setLegendExpanded] = useState(false);
+  const [reportExpanded, setReportExpanded] = useState(true);
 
   // Forecast state
   const [forecastData, setForecastData] = useState<YearForecast | null>(null);
@@ -385,8 +563,8 @@ export default function AstroMap({
     // This creates the "holy shit, this is everywhere" moment
     const zoomOutTimer = setTimeout(() => {
       currentMap.easeTo({
-        center: [birthLng, birthLat + 10], // Slight pan up for better global view
-        zoom: 1.5, // Zoomed out to show more of the globe
+        center: [birthLng, birthLat + 15], // Pan up more for better global view
+        zoom: 1.0, // Zoomed out further to show entire world map
         duration: 2500,
         easing: (t) => t * (2 - t), // Ease-out for smooth deceleration
       });
@@ -548,7 +726,7 @@ export default function AstroMap({
     // Zoom animation: starts at 800ms, duration 2500ms, finishes at ~3300ms
     const isRevealMode = autoAnimation === "reveal";
     const startDelay = isRevealMode ? 3400 : 0; // Start AFTER zoom out completes
-    const staggerDelay = isRevealMode ? 150 : 0; // 150ms between each pin
+    const staggerDelay = isRevealMode ? 60 : 0; // 60ms between each pin - fast cascade for overwhelming effect
 
     // Shuffle array for random appearance in reveal mode
     if (isRevealMode) {
@@ -571,11 +749,16 @@ export default function AstroMap({
           isRevealMode // Enable pop-in animation
         );
 
-        // Create popup
+        // Create popup with celestial design
         const popupContent = createCityPopupContent(
           item.place.city.name,
-          item.label,
-          item.place.interpretation
+          item.place.flag,
+          item.category, // category id for color lookup
+          planetSymbol,
+          item.place.lineType,
+          item.place.distance,
+          item.place.interpretation,
+          item.place.stars
         );
 
         const popup = new mapboxgl.Popup({
@@ -822,14 +1005,37 @@ export default function AstroMap({
     (lat: number, lng: number, cityName: string) => {
       if (!map.current) return;
 
+      // Close any open tooltip
+      setTooltip(null);
+
+      // Fly to the city
       map.current.flyTo({
         center: [lng, lat],
         zoom: 5,
         duration: 2000,
       });
 
-      // Close any open tooltip
-      setTooltip(null);
+      // After fly animation completes, find and open the city marker popup
+      setTimeout(() => {
+        // Find the marker for this city
+        const marker = cityMarkersRef.current.find(
+          (m) => m.getElement().getAttribute("data-city") === cityName
+        );
+
+        if (marker) {
+          // Open the popup
+          marker.togglePopup();
+
+          // Add a pulse effect to draw attention
+          const element = marker.getElement();
+          element.classList.add("city-marker-pulse");
+
+          // Remove pulse after animation
+          setTimeout(() => {
+            element.classList.remove("city-marker-pulse");
+          }, 3000);
+        }
+      }, 2200); // Wait for fly animation to complete
     },
     []
   );
@@ -890,7 +1096,7 @@ export default function AstroMap({
         />
       )}
 
-      {/* Map Controls - Desktop only (full mode + showControls) */}
+      {/* Map Controls / Legend - Desktop only (full mode + showControls) */}
       {mapLoaded && !isMobile && showControls && !isBackgroundMode && (
         <MapControls
           planets={data.planets}
@@ -899,6 +1105,14 @@ export default function AstroMap({
           onShowAll={showAllPlanets}
           onHideAll={hideAllPlanets}
           onReset={onReset}
+          isExpanded={legendExpanded}
+          onExpandedChange={(expanded) => {
+            setLegendExpanded(expanded);
+            // Collapse report when legend is expanded
+            if (expanded) {
+              setReportExpanded(false);
+            }
+          }}
         />
       )}
 
@@ -913,11 +1127,21 @@ export default function AstroMap({
         />
       )}
 
-      {/* Power Months Panel - Desktop only (left side, full mode + showPanels) */}
+      {/* 2026 Report Panel - Desktop only (left side, full mode + showPanels) */}
       {mapLoaded && !isMobile && showPanels && !isBackgroundMode && forecastData && (
-        <PowerMonthsPanel
+        <Report2026DesktopPanel
           forecast={forecastData}
+          lines={data.lines}
+          onFlyToCity={handleFlyToCity}
           loading={forecastLoading}
+          isExpanded={reportExpanded}
+          onExpandedChange={(expanded) => {
+            setReportExpanded(expanded);
+            // Collapse legend when report is expanded
+            if (expanded) {
+              setLegendExpanded(false);
+            }
+          }}
         />
       )}
 
@@ -937,7 +1161,6 @@ export default function AstroMap({
           planets={data.planets}
           visiblePlanets={visiblePlanets}
           forecastData={forecastData}
-          forecastLoading={forecastLoading}
           onTogglePlanet={togglePlanet}
           onShowAllPlanets={showAllPlanets}
           onHideAllPlanets={hideAllPlanets}
@@ -953,6 +1176,7 @@ export default function AstroMap({
           onDontShowAgain={handleDontShowAgain}
         />
       )}
+
 
       {/* Custom marker styles */}
       <style jsx global>{`
@@ -1037,14 +1261,33 @@ export default function AstroMap({
         }
 
         .mapboxgl-popup-content {
-          padding: 12px 16px;
-          border-radius: 8px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+          padding: 14px 16px 16px;
+          border-radius: 16px;
+          background: linear-gradient(135deg, rgba(15, 15, 35, 0.95) 0%, rgba(5, 5, 16, 0.98) 100%);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          box-shadow:
+            0 8px 32px rgba(0, 0, 0, 0.5),
+            0 0 60px rgba(0, 0, 0, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .mapboxgl-popup-tip {
+          border-top-color: rgba(15, 15, 35, 0.95) !important;
+          border-bottom-color: rgba(15, 15, 35, 0.95) !important;
         }
 
         .mapboxgl-popup-close-button {
           font-size: 18px;
-          padding: 4px 8px;
+          padding: 4px 10px;
+          color: rgba(255, 255, 255, 0.4);
+          transition: color 0.2s ease;
+        }
+
+        .mapboxgl-popup-close-button:hover {
+          color: rgba(255, 255, 255, 0.8);
+          background: transparent;
         }
 
         .mapboxgl-ctrl-group {

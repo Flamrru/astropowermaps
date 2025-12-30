@@ -1,7 +1,7 @@
 "use client";
 
-import { ReactNode, useCallback } from "react";
-import { motion, AnimatePresence, PanInfo } from "framer-motion";
+import { ReactNode, useCallback, useRef, useState } from "react";
+import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform, animate } from "framer-motion";
 import { X } from "lucide-react";
 
 interface MobileSheetProps {
@@ -12,6 +12,7 @@ interface MobileSheetProps {
   icon: ReactNode;
   accentColor?: string;
   glowColor?: string;
+  stickyHeader?: ReactNode; // Content that stays fixed below title, above scroll
   children: ReactNode;
 }
 
@@ -23,17 +24,31 @@ export default function MobileSheet({
   icon,
   accentColor = "#E8C547",
   glowColor = "rgba(232, 197, 71, 0.25)",
+  stickyHeader,
   children,
 }: MobileSheetProps) {
+  const sheetY = useMotionValue(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Handle drag from the handle area only
   const handleDragEnd = useCallback(
     (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      setIsDragging(false);
       // Close if dragged down more than 100px or with velocity
       if (info.offset.y > 100 || info.velocity.y > 400) {
         onClose();
+      } else {
+        // Snap back to position
+        animate(sheetY, 0, { type: "spring", stiffness: 400, damping: 30 });
       }
     },
-    [onClose]
+    [onClose, sheetY]
   );
+
+  const handleDragStart = useCallback(() => {
+    setIsDragging(true);
+  }, []);
 
   return (
     <AnimatePresence>
@@ -66,7 +81,7 @@ export default function MobileSheet({
             />
           </motion.div>
 
-          {/* Sheet */}
+          {/* Sheet - no drag on the whole container anymore */}
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
@@ -77,15 +92,12 @@ export default function MobileSheet({
               stiffness: 400,
               mass: 0.8,
             }}
-            drag="y"
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.6 }}
-            onDragEnd={handleDragEnd}
-            className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-hidden touch-pan-y"
+            style={{ y: sheetY }}
+            className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-hidden"
           >
             {/* Sheet container with layered effects */}
             <div
-              className="relative rounded-t-[28px] overflow-hidden"
+              className="relative rounded-t-[28px] overflow-hidden flex flex-col"
               style={{
                 background: "linear-gradient(180deg, rgba(18, 18, 38, 0.97) 0%, rgba(8, 8, 20, 0.99) 100%)",
                 boxShadow: `
@@ -104,8 +116,21 @@ export default function MobileSheet({
                 }}
               />
 
-              {/* Drag Handle area */}
-              <div className="relative flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing">
+              {/* Drag Handle area - THIS is where drag-to-dismiss works */}
+              <motion.div
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0, bottom: 0.6 }}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDrag={(_, info) => {
+                  // Only allow dragging down, update sheet position
+                  if (info.offset.y > 0) {
+                    sheetY.set(info.offset.y);
+                  }
+                }}
+                className="relative flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing touch-none"
+              >
                 {/* Handle pill */}
                 <motion.div
                   whileHover={{ width: 52 }}
@@ -115,7 +140,9 @@ export default function MobileSheet({
                     boxShadow: `0 0 12px ${glowColor}`,
                   }}
                 />
-              </div>
+                {/* Invisible larger touch target */}
+                <div className="absolute inset-x-0 -top-2 -bottom-2" />
+              </motion.div>
 
               {/* Header */}
               <div className="flex items-center justify-between px-5 pt-1 pb-4">
@@ -192,13 +219,29 @@ export default function MobileSheet({
                 }}
               />
 
-              {/* Scrollable content */}
+              {/* Sticky header content - stays fixed below title */}
+              {stickyHeader && (
+                <div
+                  className="flex-shrink-0"
+                  style={{
+                    background: "rgba(18, 18, 38, 0.98)",
+                    borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                  }}
+                >
+                  {stickyHeader}
+                </div>
+              )}
+
+              {/* Scrollable content - isolated from drag gestures */}
               <div
-                className="overflow-y-auto overscroll-contain"
+                ref={scrollRef}
+                className="flex-1 overflow-y-auto overscroll-contain"
                 style={{
-                  maxHeight: "calc(85vh - 100px)",
+                  maxHeight: stickyHeader ? "calc(85vh - 180px)" : "calc(85vh - 120px)",
                   scrollbarWidth: "none",
                   msOverflowStyle: "none",
+                  WebkitOverflowScrolling: "touch",
+                  touchAction: "pan-y",
                 }}
               >
                 <style jsx>{`

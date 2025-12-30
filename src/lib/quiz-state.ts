@@ -2,6 +2,10 @@
 
 import { createContext, useContext } from "react";
 import { v4 as uuidv4 } from "uuid";
+import type { BirthData, AstrocartographyResult } from "./astro/types";
+
+// Re-export for consumers
+export type { BirthData, AstrocartographyResult };
 
 export interface UTMParams {
   utm_source?: string;
@@ -18,6 +22,10 @@ export interface QuizState {
   email: string;
   utm: UTMParams;
   session_id: string;
+  // PRD V4: Birth data captured in combined form (Screen 8)
+  birthData: BirthData | null;
+  // PRD V4: Astro calculation result (Screen 9)
+  astroData: AstrocartographyResult | null;
 }
 
 export type QuizAction =
@@ -27,7 +35,9 @@ export type QuizAction =
   | { type: "SET_ANSWER_Q1"; payload: string }
   | { type: "TOGGLE_ANSWER_Q2"; payload: string } // Toggle for multi-select
   | { type: "SET_EMAIL"; payload: string }
-  | { type: "SET_UTM"; payload: UTMParams };
+  | { type: "SET_UTM"; payload: UTMParams }
+  | { type: "SET_BIRTH_DATA"; payload: BirthData }
+  | { type: "SET_ASTRO_DATA"; payload: AstrocartographyResult };
 
 export const initialQuizState: QuizState = {
   stepIndex: 1,
@@ -36,6 +46,8 @@ export const initialQuizState: QuizState = {
   email: "",
   utm: {},
   session_id: typeof window !== "undefined" ? uuidv4() : "",
+  birthData: null,
+  astroData: null,
 };
 
 export function quizReducer(state: QuizState, action: QuizAction): QuizState {
@@ -61,6 +73,10 @@ export function quizReducer(state: QuizState, action: QuizAction): QuizState {
       return { ...state, email: action.payload };
     case "SET_UTM":
       return { ...state, utm: action.payload };
+    case "SET_BIRTH_DATA":
+      return { ...state, birthData: action.payload };
+    case "SET_ASTRO_DATA":
+      return { ...state, astroData: action.payload };
     default:
       return state;
   }

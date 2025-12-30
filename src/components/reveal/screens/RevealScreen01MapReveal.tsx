@@ -23,7 +23,7 @@ export default function RevealScreen03MapReveal() {
     <div className="flex-1 flex flex-col relative overflow-hidden">
       {/* Map is rendered via AstroMap in RevealShell - full screen, no panel */}
 
-      {/* Floating Continue button at bottom */}
+      {/* Floating Continue button at bottom - fixed to viewport with safe area */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{
@@ -31,7 +31,10 @@ export default function RevealScreen03MapReveal() {
           y: showButton ? 0 : 30
         }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="absolute bottom-8 left-0 right-0 px-5 z-20"
+        className="fixed left-0 right-0 px-5 z-50"
+        style={{
+          bottom: "calc(2rem + env(safe-area-inset-bottom, 0px))",
+        }}
       >
         <div className="max-w-md mx-auto">
           <GoldButton onClick={handleContinue}>

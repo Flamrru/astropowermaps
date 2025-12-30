@@ -11,9 +11,10 @@ import Screen04Proof from "@/components/screens/Screen04Proof";
 import Screen05Question from "@/components/screens/Screen05Question";
 import Screen06Insight from "@/components/screens/Screen06Insight";
 import Screen07Testimonial from "@/components/screens/Screen07Testimonial";
-import Screen08Loading from "@/components/screens/Screen08Loading";
-import Screen09EmailCapture from "@/components/screens/Screen09EmailCapture";
-import Screen10Confirmation from "@/components/screens/Screen10Confirmation";
+// PRD V4: New combined capture flow
+import Screen08CombinedCapture from "@/components/screens/Screen08CombinedCapture";
+import Screen09RealLoading from "@/components/screens/Screen09RealLoading";
+import Screen10AutoConfirmation from "@/components/screens/Screen10AutoConfirmation";
 
 function QuizContent() {
   const { state } = useQuiz();
@@ -26,9 +27,12 @@ function QuizContent() {
     5: Screen05Question,
     6: Screen06Insight,
     7: Screen07Testimonial,
-    8: Screen08Loading,
-    9: Screen09EmailCapture,
-    10: Screen10Confirmation,
+    // PRD V4: Combined email + birth data capture
+    8: Screen08CombinedCapture,
+    // PRD V4: Real astro calculation (5-6 sec)
+    9: Screen09RealLoading,
+    // PRD V4: Auto-advance confirmation (2.5 sec)
+    10: Screen10AutoConfirmation,
   };
 
   const CurrentScreen = screens[state.stepIndex] || Screen01Entry;

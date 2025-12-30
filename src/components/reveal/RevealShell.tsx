@@ -25,20 +25,18 @@ const DEV_BIRTH_DATA = {
   },
 };
 
-// Reveal flow events for analytics
+// PRD V4: Reveal flow events for analytics (10 steps, starting at map reveal)
 const REVEAL_EVENTS: Record<number, string> = {
-  1: "reveal_birth_data",
-  2: "reveal_generating",
-  3: "reveal_map_shown",
-  4: "reveal_recognition",      // Screen A: Recognition
-  5: "reveal_legitimacy",       // Screen B: Legitimacy + Lines
-  6: "reveal_social_proof",     // Screen C: Tribe + Gap
-  7: "reveal_timing",           // Screen D: Timing
-  8: "reveal_pivot",            // Screen E: Pivot
-  9: "reveal_urgency",          // Screen F: Urgency
-  10: "reveal_2026_gen",
-  11: "reveal_paywall",
-  12: "reveal_purchase",
+  1: "reveal_map_shown",        // Map reveal (was step 3)
+  2: "reveal_recognition",      // Screen A: Recognition
+  3: "reveal_legitimacy",       // Screen B: Legitimacy + Lines
+  4: "reveal_social_proof",     // Screen C: Tribe + Gap
+  5: "reveal_timing",           // Screen D: Timing
+  6: "reveal_pivot",            // Screen E: Pivot
+  7: "reveal_urgency",          // Screen F: Urgency
+  8: "reveal_2026_gen",         // 2026 forecast generation
+  9: "reveal_paywall",          // Paywall
+  10: "reveal_purchase",        // Purchase confirmation
 };
 
 // Track funnel event
@@ -122,8 +120,33 @@ export default function RevealShell({ children }: RevealShellProps) {
             if (response.success && response.data) {
               dispatch({ type: "SET_ASTRO_DATA", payload: response.data });
               saveAstroData(response.data);
-              // Jump to specified step (default: 3 = map reveal)
-              dispatch({ type: "SET_STEP", payload: startStep });
+
+              // Generate mock forecast data for dev mode (needed for 2026 Report)
+              const mockForecast = {
+                year: 2026,
+                months: Array.from({ length: 12 }, (_, i) => ({
+                  month: i + 1,
+                  scores: {
+                    love: 40 + Math.floor(Math.random() * 50),
+                    career: 40 + Math.floor(Math.random() * 50),
+                    growth: 40 + Math.floor(Math.random() * 50),
+                    home: 40 + Math.floor(Math.random() * 50),
+                  },
+                  overall: 50 + Math.floor(Math.random() * 40),
+                  isPowerMonth: false,
+                })),
+                powerMonths: [3, 7, 10],
+                avoidMonths: [2, 6, 11],
+              };
+              // Mark power months
+              mockForecast.powerMonths.forEach((m) => {
+                mockForecast.months[m - 1].isPowerMonth = true;
+              });
+              dispatch({ type: "SET_FORECAST_DATA", payload: mockForecast });
+              console.log("🔧 Dev mode: Forecast data generated for 2026 Report");
+
+              // PRD V4: Jump to specified step (default: 1 = map reveal)
+              dispatch({ type: "SET_STEP", payload: Math.min(startStep, 10) });
             }
           }
         } catch (error) {
@@ -135,8 +158,67 @@ export default function RevealShell({ children }: RevealShellProps) {
         return;
       }
 
-      if (sid) {
-        // Fetch lead from Supabase
+      // PRD V4: Check for pre-calculated astro data from quiz flow
+      let astroFromQuiz = null;
+      try {
+        const storedAstro = localStorage.getItem("astro_quiz_result");
+        if (storedAstro) {
+          astroFromQuiz = JSON.parse(storedAstro);
+          console.log("✅ Loaded pre-calculated astro data from quiz");
+          // Clear after reading
+          localStorage.removeItem("astro_quiz_result");
+        }
+      } catch {
+        // Ignore localStorage errors
+      }
+
+      // Try localStorage first for complete quiz data (includes birth data)
+      let sessionData = null;
+      try {
+        const stored = localStorage.getItem("astro_quiz_session");
+        if (stored) {
+          sessionData = JSON.parse(stored);
+          // Clear after reading
+          localStorage.removeItem("astro_quiz_session");
+        }
+      } catch {
+        // Ignore localStorage errors
+      }
+
+      // PRD V4: If we have both session data with birth data AND pre-calculated astro data, use HYDRATE_WITH_ASTRO
+      if (sessionData?.birthData && astroFromQuiz) {
+        console.log("✅ Using HYDRATE_WITH_ASTRO with pre-calculated data");
+        dispatch({
+          type: "HYDRATE_WITH_ASTRO",
+          payload: {
+            email: sessionData.email,
+            session_id: sessionData.session_id || sid || "",
+            utm: sessionData.utm || {},
+            quizAnswers: sessionData.quizAnswers || { q1: null, q2: [] },
+            birthData: sessionData.birthData,
+            astroData: astroFromQuiz,
+          },
+        });
+        // Also save to astro-storage for map page
+        saveAstroData(astroFromQuiz);
+      } else if (sessionData) {
+        // Have session data but no astro data - fallback (shouldn't happen in normal flow)
+        dispatch({
+          type: "HYDRATE",
+          payload: {
+            email: sessionData.email,
+            session_id: sessionData.session_id,
+            utm: sessionData.utm || {},
+            quizAnswers: sessionData.quizAnswers || { q1: null, q2: [] },
+          },
+        });
+        // If we have astro data but birth data is missing, still set it
+        if (astroFromQuiz) {
+          dispatch({ type: "SET_ASTRO_DATA", payload: astroFromQuiz });
+          saveAstroData(astroFromQuiz);
+        }
+      } else if (sid) {
+        // Fallback: Fetch lead from Supabase (for older links without localStorage data)
         const lead = await fetchLead(sid);
         if (lead?.email) {
           dispatch({
@@ -152,26 +234,10 @@ export default function RevealShell({ children }: RevealShellProps) {
             },
           });
         }
-      } else {
-        // Try localStorage as fallback
-        try {
-          const stored = localStorage.getItem("astro_quiz_session");
-          if (stored) {
-            const data = JSON.parse(stored);
-            dispatch({
-              type: "HYDRATE",
-              payload: {
-                email: data.email,
-                session_id: data.session_id,
-                utm: data.utm || {},
-                quizAnswers: data.quizAnswers || { q1: null, q2: [] },
-              },
-            });
-            // Clear after reading
-            localStorage.removeItem("astro_quiz_session");
-          }
-        } catch {
-          // Ignore localStorage errors
+        // If we have astro data, set it
+        if (astroFromQuiz) {
+          dispatch({ type: "SET_ASTRO_DATA", payload: astroFromQuiz });
+          saveAstroData(astroFromQuiz);
         }
       }
 
@@ -195,29 +261,27 @@ export default function RevealShell({ children }: RevealShellProps) {
   // Calculate map opacity based on current step
   const mapOpacity = getMapOpacity(state.stepIndex);
 
-  // Back navigation handler
+  // PRD V4: Back navigation handler (10 steps starting at map reveal)
   const handleBack = useCallback(() => {
     if (state.stepIndex > 1) {
       // Skip loading screens when going back
-      if (state.stepIndex === 3) {
-        dispatch({ type: "SET_STEP", payload: 1 }); // Map reveal → back to birth data (skip loading)
-      } else if (state.stepIndex === 4) {
-        dispatch({ type: "SET_STEP", payload: 3 }); // Screen A → back to map reveal
-      } else if (state.stepIndex === 11) {
-        dispatch({ type: "SET_STEP", payload: 9 }); // Paywall → back to Screen F (skip generation)
+      if (state.stepIndex === 2) {
+        dispatch({ type: "SET_STEP", payload: 1 }); // Onboard A → back to map reveal
+      } else if (state.stepIndex === 9) {
+        dispatch({ type: "SET_STEP", payload: 7 }); // Paywall → back to Onboard F (skip generation)
       } else {
         dispatch({ type: "PREV_STEP" });
       }
     }
   }, [state.stepIndex]);
 
-  // Progress indicator for onboarding (steps 4-9, 6 screens)
-  const onboardingProgress = state.stepIndex >= 4 && state.stepIndex <= 9
-    ? ((state.stepIndex - 4) / 5) * 100
+  // PRD V4: Progress indicator for onboarding (steps 2-7, 6 screens)
+  const onboardingProgress = state.stepIndex >= 2 && state.stepIndex <= 7
+    ? ((state.stepIndex - 2) / 5) * 100
     : null;
 
-  // Prevent scroll/bounce on map reveal screen (step 3)
-  const isMapRevealScreen = state.stepIndex === 3;
+  // PRD V4: Prevent scroll/bounce on map reveal screen (now step 1)
+  const isMapRevealScreen = state.stepIndex === 1;
 
   return (
     <RevealContext.Provider value={{ state, dispatch }}>
@@ -279,11 +343,12 @@ export default function RevealShell({ children }: RevealShellProps) {
                 mode="background"
                 opacity={mapOpacity}
                 highlight={state.mapHighlight}
-                interactive={state.stepIndex === 3}
+                interactive={state.stepIndex === 1}
                 showPanels={false}
                 showControls={false}
-                showCityMarkers={state.stepIndex === 3 ? true : 1} // All cities during reveal, 1 teaser otherwise
-                autoAnimation={state.stepIndex === 3 ? "reveal" : "none"}
+                // PRD V4: Step 1 is now map reveal
+                showCityMarkers={state.stepIndex === 1 ? true : 1} // All cities during reveal, 1 teaser otherwise
+                autoAnimation={state.stepIndex === 1 ? "reveal" : "none"}
                 onAnimationComplete={() => {}} // Animation callback - no longer auto-advances, button handles navigation
               />
             ) : (
@@ -308,9 +373,9 @@ export default function RevealShell({ children }: RevealShellProps) {
           <main className="flex-1 flex flex-col relative z-10 safe-area-padding">
             {/* Header with back button and progress */}
             <header className="flex items-center justify-between px-4 py-4 relative z-20">
-              {/* Back button - hidden on step 3 (map reveal) since there's nowhere logical to go back to */}
+              {/* Back button - hidden on step 1 (map reveal) since there's nowhere logical to go back to */}
               <AnimatePresence>
-                {state.stepIndex > 1 && state.stepIndex !== 3 && (
+                {state.stepIndex > 1 && (
                   <motion.button
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}

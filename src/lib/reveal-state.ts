@@ -102,6 +102,18 @@ export type RevealAction =
         utm?: UTMParams;
         quizAnswers?: { q1: string | null; q2: string[] };
       };
+    }
+  // PRD V4: Hydrate with pre-calculated astro data from quiz flow
+  | {
+      type: "HYDRATE_WITH_ASTRO";
+      payload: {
+        email: string;
+        session_id: string;
+        utm?: UTMParams;
+        quizAnswers?: { q1: string | null; q2: string[] };
+        birthData: BirthData;
+        astroData: AstrocartographyResult;
+      };
     };
 
 export const initialRevealState: RevealState = {
@@ -129,7 +141,8 @@ export function revealReducer(
       return { ...state, stepIndex: action.payload };
 
     case "NEXT_STEP":
-      return { ...state, stepIndex: Math.min(state.stepIndex + 1, 12) };
+      // PRD V4: Reveal flow now has 10 steps (was 12)
+      return { ...state, stepIndex: Math.min(state.stepIndex + 1, 10) };
 
     case "PREV_STEP":
       return { ...state, stepIndex: Math.max(state.stepIndex - 1, 1) };
@@ -171,6 +184,19 @@ export function revealReducer(
         hasEmail: true,
       };
 
+    // PRD V4: Hydrate with pre-calculated astro data from quiz flow
+    case "HYDRATE_WITH_ASTRO":
+      return {
+        ...state,
+        email: action.payload.email,
+        session_id: action.payload.session_id,
+        utm: action.payload.utm || {},
+        quizAnswers: action.payload.quizAnswers || { q1: null, q2: [] },
+        birthData: action.payload.birthData,
+        astroData: action.payload.astroData,
+        hasEmail: true,
+      };
+
     default:
       return state;
   }
@@ -193,11 +219,10 @@ export function useReveal() {
 }
 
 // Helper to calculate map opacity based on step
+// PRD V4: Reveal flow now starts at Map Reveal (step 1)
 export function getMapOpacity(step: number): number {
-  if (step === 1) return 0.3; // Subtle background during birth data entry
-  if (step === 2) return 0.4; // Slightly more visible during generation
-  if (step === 3) return 1; // Full opacity during reveal
-  if (step >= 4 && step <= 9) return 0.45; // Visible during onboarding (panels are transparent)
-  if (step >= 10) return 0.2; // Dimmed during generation2/paywall/confirmation
+  if (step === 1) return 1; // Full opacity during map reveal
+  if (step >= 2 && step <= 7) return 0.45; // Visible during onboarding (panels are transparent)
+  if (step >= 8) return 0.2; // Dimmed during generation2/paywall/confirmation
   return 0.3;
 }

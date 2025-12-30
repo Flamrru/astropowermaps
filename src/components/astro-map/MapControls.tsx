@@ -13,6 +13,9 @@ interface MapControlsProps {
   onShowAll: () => void;
   onHideAll: () => void;
   onReset: () => void;
+  // External control for expanded state
+  isExpanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
 export default function MapControls({
@@ -22,8 +25,19 @@ export default function MapControls({
   onShowAll,
   onHideAll,
   onReset,
+  isExpanded: externalExpanded,
+  onExpandedChange,
 }: MapControlsProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  // Use external state if provided, otherwise internal
+  const [internalExpanded, setInternalExpanded] = useState(false); // Default collapsed
+  const isExpanded = externalExpanded !== undefined ? externalExpanded : internalExpanded;
+  const setIsExpanded = (value: boolean) => {
+    if (onExpandedChange) {
+      onExpandedChange(value);
+    } else {
+      setInternalExpanded(value);
+    }
+  };
   const [showLegend, setShowLegend] = useState(false);
 
   return (

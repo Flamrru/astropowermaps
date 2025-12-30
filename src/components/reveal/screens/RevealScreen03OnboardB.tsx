@@ -13,19 +13,22 @@ const PLANET_LINES = [
     name: "Venus",
     symbol: "♀",
     color: "#E8A4C9", // pink accent
-    description: "Where connection, creativity, and attraction come easier. Relationships tend to spark here.",
+    description: "Where connection, creativity, and attraction come easier.",
+    highlight: "Relationships tend to spark here.",
   },
   {
     name: "Jupiter",
     symbol: "♃",
     color: "#9B7ED9", // purple accent
-    description: "Where doors open. Expansion, opportunity, and luck concentrate along this line.",
+    description: "Where doors open. Expansion, opportunity, and luck concentrate.",
+    highlight: "The line of abundance.",
   },
   {
     name: "Sun",
     symbol: "☉",
     color: "#FFD700", // gold accent
-    description: "Where you feel most like yourself. Confidence, visibility, and energy peak here.",
+    description: "Where you feel most like yourself. Confidence and visibility peak.",
+    highlight: "Your power line.",
   },
 ];
 
@@ -92,43 +95,57 @@ export default function RevealScreen05OnboardB() {
               </div>
             </div>
 
-            {/* Lines Explanation */}
-            <p className="text-white/50 text-xs uppercase tracking-wider mb-3">
+            {/* Lines Explanation - Made brighter */}
+            <p className="text-gold text-sm uppercase tracking-wider mb-4 font-medium">
               Three lines matter most
             </p>
 
-            {/* Planet Cards */}
-            <div className="space-y-2.5 mb-4">
+            {/* Planet Cards - Restructured with name above, icon left, bigger */}
+            <div className="space-y-3 mb-5">
               {PLANET_LINES.map((line, index) => (
                 <motion.div
                   key={line.name}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 + index * 0.1 }}
-                  className="p-3 rounded-xl"
+                  className="p-4 rounded-xl"
                   style={{
-                    background: "rgba(255, 255, 255, 0.04)",
-                    border: `1px solid ${line.color}30`,
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: `1px solid ${line.color}40`,
+                    boxShadow: `0 0 20px ${line.color}10`,
                   }}
                 >
+                  {/* Planet name at top */}
+                  <h3
+                    className="font-bold text-[16px] mb-3"
+                    style={{ color: line.color }}
+                  >
+                    {line.name}
+                  </h3>
+
+                  {/* Icon and description row */}
                   <div className="flex items-start gap-3">
                     <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{
-                        background: `linear-gradient(135deg, ${line.color}25, ${line.color}10)`,
-                        border: `1px solid ${line.color}40`,
+                        background: `linear-gradient(135deg, ${line.color}30, ${line.color}15)`,
+                        border: `1px solid ${line.color}50`,
+                        boxShadow: `0 0 15px ${line.color}20`,
                       }}
                     >
-                      <span className="text-lg" style={{ color: line.color }}>
+                      <span className="text-xl" style={{ color: line.color }}>
                         {line.symbol}
                       </span>
                     </div>
-                    <div>
-                      <h3 className="text-white font-semibold text-[15px] mb-0.5">
-                        {line.name}
-                      </h3>
-                      <p className="text-white/60 text-[13px] leading-snug">
+                    <div className="flex-1">
+                      <p className="text-white/70 text-[14px] leading-relaxed mb-1">
                         {line.description}
+                      </p>
+                      <p
+                        className="text-[13px] font-medium"
+                        style={{ color: line.color }}
+                      >
+                        {line.highlight}
                       </p>
                     </div>
                   </div>
@@ -136,9 +153,9 @@ export default function RevealScreen05OnboardB() {
               ))}
             </div>
 
-            {/* Footer Note */}
-            <p className="text-white/40 text-[13px] text-center italic">
-              You have 40 lines total. Some places amplify you. Others quietly drain you.
+            {/* Footer Note - with green/red colors */}
+            <p className="text-white/50 text-[13px] text-center">
+              You have 40 lines total. Some places <span className="text-green-400 font-medium">amplify you</span>. Others quietly <span className="text-red-400/80 font-medium">drain you</span>.
             </p>
           </div>
 

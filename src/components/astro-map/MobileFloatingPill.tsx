@@ -2,22 +2,25 @@
 
 import { useState, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Calendar, Layers, Eye, EyeOff, Sparkles } from "lucide-react";
+import { MapPin, Layers, Eye, EyeOff, Sparkles } from "lucide-react";
 import { PlanetaryLine, PlanetId } from "@/lib/astro/types";
 import { YearForecast } from "@/lib/astro/transit-types";
 import { calculateAllPowerPlaces } from "@/lib/astro/power-places";
-import { PowerPlacesContent } from "./PowerPlacesPanel";
-import { PowerMonthsContent } from "./PowerMonthsPanel";
+import {
+  usePowerPlacesState,
+  PowerPlacesTabs,
+  PowerPlacesScrollContent,
+} from "./PowerPlacesPanel";
+import { Report2026Panel } from "./report";
 import MobileSheet from "./MobileSheet";
 
-type ActiveSheet = "places" | "forecast" | "lines" | null;
+type ActiveSheet = "places" | "forecast" | "lines" | "report" | null;
 
 interface MobileFloatingPillProps {
   lines: PlanetaryLine[];
   planets: { id: PlanetId; name: string; symbol: string; color: string }[];
   visiblePlanets: Set<PlanetId>;
   forecastData: YearForecast | null;
-  forecastLoading: boolean;
   onTogglePlanet: (planetId: PlanetId) => void;
   onShowAllPlanets: () => void;
   onHideAllPlanets: () => void;
@@ -37,7 +40,6 @@ export default function MobileFloatingPill({
   planets,
   visiblePlanets,
   forecastData,
-  forecastLoading,
   onTogglePlanet,
   onShowAllPlanets,
   onHideAllPlanets,
@@ -47,8 +49,16 @@ export default function MobileFloatingPill({
   const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
   const hasShownOnce = useRef(false);
 
+  // Power places state - shared between tabs (stickyHeader) and content
+  const {
+    activeTab,
+    setActiveTab,
+    powerPlaces,
+    activeCategory,
+    activeColors,
+  } = usePowerPlacesState(lines);
+
   // Calculate places count
-  const powerPlaces = useMemo(() => calculateAllPowerPlaces(lines), [lines]);
   const placesCount = useMemo(() => {
     return Object.values(powerPlaces).reduce((sum, cat) => sum + cat.places.length, 0);
   }, [powerPlaces]);
@@ -132,13 +142,13 @@ export default function MobileFloatingPill({
                   flex={1}
                 />
 
-                {/* Forecast Button - only show if data exists */}
+                {/* Report Button - only show if forecast data exists */}
                 {forecastData && (
                   <PillButton
-                    onClick={() => setActiveSheet("forecast")}
-                    icon={<Calendar size={18} />}
+                    onClick={() => setActiveSheet("report")}
+                    icon={<Sparkles size={18} />}
                     label="2026"
-                    sublabel="Forecast"
+                    sublabel="Report"
                     color={COLORS.purple}
                     flex={1}
                   />
@@ -166,22 +176,38 @@ export default function MobileFloatingPill({
         icon={<MapPin size={22} />}
         accentColor={COLORS.gold.accent}
         glowColor={COLORS.gold.glow}
+        stickyHeader={
+          <PowerPlacesTabs
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            powerPlaces={powerPlaces}
+            activeColors={activeColors}
+          />
+        }
       >
-        <PowerPlacesContent lines={lines} onFlyToCity={handleFlyToCity} />
+        <PowerPlacesScrollContent
+          activeCategory={activeCategory}
+          activeColors={activeColors}
+          onFlyToCity={handleFlyToCity}
+        />
       </MobileSheet>
 
-      {/* Forecast Sheet */}
+      {/* Report Sheet - The premium 2026 forecast report */}
       {forecastData && (
         <MobileSheet
-          isOpen={activeSheet === "forecast"}
+          isOpen={activeSheet === "report"}
           onClose={closeSheet}
-          title="2026 Forecast"
-          subtitle="Your power months"
-          icon={<Calendar size={22} />}
+          title="Your 2026 Report"
+          subtitle="Personal forecast & insights"
+          icon={<Sparkles size={22} />}
           accentColor={COLORS.purple.accent}
           glowColor={COLORS.purple.glow}
         >
-          <PowerMonthsContent forecast={forecastData} loading={forecastLoading} />
+          <Report2026Panel
+            forecast={forecastData}
+            lines={lines}
+            onFlyToCity={handleFlyToCity}
+          />
         </MobileSheet>
       )}
 

@@ -1,10 +1,54 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { useReveal } from "@/lib/reveal-state";
 import { SlideUpPanel } from "@/components/reveal";
 import GoldButton from "@/components/GoldButton";
 import { Quote } from "lucide-react";
+
+// Golden Star Grid Component - represents 73% visually
+function GoldenStarGrid() {
+  const totalStars = 100;
+  const litStars = 73;
+
+  return (
+    <div
+      className="mx-auto rounded-xl px-4 py-3"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(20, 10px)",
+        gap: "4px",
+        width: "fit-content",
+        background: "linear-gradient(135deg, rgba(232, 197, 71, 0.08), rgba(201, 162, 39, 0.04))",
+        border: "1px solid rgba(232, 197, 71, 0.2)",
+      }}
+    >
+      {Array.from({ length: totalStars }, (_, i) => {
+        const isLit = i < litStars; // Sequential fill: first 73 dots are lit
+        return (
+          <motion.div
+            key={i}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.3 + i * 0.01, duration: 0.15 }}
+            style={{
+              width: "10px",
+              height: "10px",
+              borderRadius: "50%",
+              background: isLit
+                ? "linear-gradient(135deg, #E8C547 0%, #C9A227 100%)"
+                : "rgba(255, 255, 255, 0.15)",
+              boxShadow: isLit
+                ? "0 0 6px rgba(232, 197, 71, 0.5)"
+                : "none",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 export default function RevealScreen06OnboardC() {
   const { dispatch } = useReveal();
@@ -27,24 +71,16 @@ export default function RevealScreen06OnboardC() {
               You&apos;re not imagining it.
             </h2>
 
-            {/* Large Stat Callout */}
+            {/* Golden Star Grid - Visual representation of 73% */}
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.3, type: "spring", damping: 15 }}
-              className="text-center mb-5"
+              className="mb-5"
             >
-              <div
-                className="inline-flex flex-col items-center px-8 py-5 rounded-2xl"
-                style={{
-                  background: "linear-gradient(135deg, rgba(232, 197, 71, 0.15), rgba(201, 162, 39, 0.08))",
-                  border: "1px solid rgba(232, 197, 71, 0.25)",
-                  boxShadow: "0 0 40px rgba(201, 162, 39, 0.1)",
-                }}
-              >
-                <span className="text-gold text-[56px] font-bold leading-none">73%</span>
-                <span className="text-white/60 text-sm mt-1">of 2,400 people</span>
-              </div>
+              <GoldenStarGrid />
+              <p className="text-center text-gold-glow text-[42px] font-bold mt-3">73%</p>
+              <p className="text-center text-white/50 text-sm">of 2,400 people</p>
             </motion.div>
 
             {/* Social Proof Text */}
@@ -81,7 +117,7 @@ export default function RevealScreen06OnboardC() {
               </div>
             </div>
 
-            {/* Testimonial */}
+            {/* Testimonial with Profile Photo */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -93,12 +129,22 @@ export default function RevealScreen06OnboardC() {
               }}
             >
               <Quote className="w-5 h-5 text-gold/50 mb-2" />
-              <p className="text-white/80 text-[14px] leading-relaxed italic mb-3">
+              <p className="text-white/80 text-[14px] leading-relaxed italic mb-4">
                 &ldquo;I&apos;d been to 30 countries and never understood why Tokyo felt like home and Paris felt like static. Then I saw my Jupiter line.&rdquo;
               </p>
-              <p className="text-white/40 text-[13px]">
-                — M.K., Berlin
-              </p>
+              <div className="flex items-center gap-3">
+                <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-gold/30">
+                  <Image
+                    src="/testimonial-mk.png"
+                    alt="M.K."
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <p className="text-white/50 text-[13px]">
+                  — M.K., Vancouver
+                </p>
+              </div>
             </motion.div>
           </div>
 

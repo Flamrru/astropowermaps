@@ -52,7 +52,7 @@ export default function RevealScreen08OnboardE() {
 
             {/* Headline */}
             <h2 className="text-[24px] font-bold text-white text-center mb-5">
-              But here&apos;s what you don&apos;t have yet.
+              <span className="text-gold-glow">This</span> is what&apos;s missing.
             </h2>
 
             {/* Body */}
@@ -94,7 +94,7 @@ export default function RevealScreen08OnboardE() {
 
               {/* Bridge */}
               <p className="text-white/80">
-                For that, you need your <span className="text-gold font-medium">2026 transits</span> — how the moving sky interacts with YOUR chart, month by month, location by location.
+                For that, you need your <span className="text-gold-glow font-medium">2026 transits</span> — how the moving sky interacts with YOUR chart, month by month, location by location.
               </p>
 
               {/* Personalized Hook */}

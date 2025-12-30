@@ -348,7 +348,7 @@ function ScanningBeam() {
       }}
       animate={{ rotate: 360 }}
       transition={{
-        duration: 3,
+        duration: 6,
         repeat: Infinity,
         ease: "linear",
       }}
@@ -525,7 +525,7 @@ export default function RevealScreen10Generation2() {
     return order;
   }, []);
 
-  // Random month scanning effect
+  // Random month scanning effect - slowed down (~2.5x) to match 10s duration
   useEffect(() => {
     let scanIndex = 0;
     const scanInterval = setInterval(() => {
@@ -537,36 +537,36 @@ export default function RevealScreen10Generation2() {
         if (POWER_MONTHS.includes(monthToScan)) {
           setTimeout(() => {
             setPowerMonthsFound(prev => new Set([...prev, monthToScan]));
-          }, 200);
+          }, 400);
         }
 
         scanIndex++;
       }
-    }, 280);
+    }, 700);
 
     return () => clearInterval(scanInterval);
   }, [scanOrder]);
 
-  // Cycle transit readouts
+  // Cycle transit readouts - slowed down (~2.5x) to match 10s duration
   useEffect(() => {
     const interval = setInterval(() => {
       setTransitIndex(prev => (prev + 1) % TRANSIT_READOUTS.length);
-    }, 700);
+    }, 1750);
     return () => clearInterval(interval);
   }, []);
 
-  // Rotate text every 0.8s
+  // Rotate text every 2s (slowed down for anticipation before paywall)
   useEffect(() => {
     const interval = setInterval(() => {
       setTextIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
-    }, 800);
+    }, 2000);
     return () => clearInterval(interval);
   }, []);
 
-  // Progress animation
+  // Progress animation - 10s total for anticipation build
   useEffect(() => {
     const startTime = Date.now();
-    const duration = 4000;
+    const duration = 10000;
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime;

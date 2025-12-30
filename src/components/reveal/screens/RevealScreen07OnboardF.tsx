@@ -52,7 +52,7 @@ export default function RevealScreen09OnboardF() {
                   boxShadow: "0 0 50px rgba(201, 162, 39, 0.15)",
                 }}
               >
-                <span className="text-gold text-[64px] font-bold leading-none">
+                <span className="text-gold-glow text-[64px] font-bold leading-none">
                   {countdown.days}
                 </span>
                 <span className="text-white/60 text-sm mt-2">
@@ -101,7 +101,7 @@ export default function RevealScreen09OnboardF() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
-              className="text-gold text-[17px] font-medium text-center mt-6"
+              className="text-gold-glow text-[17px] font-medium text-center mt-6"
             >
               See which months are yours.
             </motion.p>

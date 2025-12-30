@@ -1,10 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { useReveal } from "@/lib/reveal-state";
 import { SlideUpPanel } from "@/components/reveal";
 import GoldButton from "@/components/GoldButton";
-import { Calendar } from "lucide-react";
 
 export default function RevealScreen07OnboardD() {
   const { dispatch } = useReveal();
@@ -22,23 +22,24 @@ export default function RevealScreen07OnboardD() {
         >
           {/* Scrollable content area */}
           <div className="flex-1 overflow-y-auto min-h-0 pb-4">
-            {/* Icon */}
+            {/* Golden Calendar Icon */}
             <div className="flex justify-center mb-4">
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                style={{
-                  background: "linear-gradient(135deg, rgba(232, 197, 71, 0.2), rgba(201, 162, 39, 0.1))",
-                  border: "1px solid rgba(232, 197, 71, 0.3)",
-                  boxShadow: "0 0 30px rgba(201, 162, 39, 0.15)",
-                }}
-              >
-                <Calendar className="w-6 h-6 text-gold" />
+              <div className="relative w-16 h-16">
+                <Image
+                  src="/calendar-icon.png"
+                  alt="Calendar"
+                  fill
+                  className="object-contain"
+                  style={{
+                    filter: "drop-shadow(0 0 20px rgba(201, 162, 39, 0.5))",
+                  }}
+                />
               </div>
             </div>
 
             {/* Headline */}
             <h2 className="text-[24px] font-bold text-white text-center mb-5">
-              Location is half the equation.
+              Location is <span className="text-gold-glow">half</span> the equation.
             </h2>
 
             {/* Body */}
@@ -77,7 +78,7 @@ export default function RevealScreen07OnboardD() {
               </div>
 
               <p className="text-white/90 font-medium mt-4">
-                You have <span className="text-gold">power windows</span>. Stretches where momentum compounds.
+                You have <span className="text-gold-glow">power windows</span>. Stretches where momentum compounds.
               </p>
 
               <p className="text-white/60 italic">

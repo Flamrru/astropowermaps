@@ -13,18 +13,27 @@ import FAQAccordion from "../paywall/FAQAccordion";
 import TestimonialCards from "../paywall/TestimonialCards";
 import { calculateDaysUntil2026 } from "@/lib/astro/paywall-derivations";
 
-// PRD-specified "What you get" list
-const WHAT_YOU_GET = [
+// Section 1: 2026 Forecast features
+const FORECAST_FEATURES = [
   { text: "Your 3 Power Months", sub: "Know exactly when to launch, decide, and move" },
   { text: "Your 3 Power Cities", sub: "Where to travel for breakthroughs and clarity" },
   { text: "Best Month for Money Moves", sub: "Time your financial decisions with precision" },
-  { text: "Best Month for Love & Relationships", sub: "When connection comes easier" },
-  { text: "Best Month for Major Decisions", sub: "When your clarity peaks — decide here" },
+  { text: "Best Month for Love", sub: "When connection comes easier" },
+  { text: "Best Month for Major Decisions", sub: "When your clarity peaks" },
   { text: "Months to Avoid", sub: "Stop wasting energy fighting the current" },
   { text: "All 12 Months Ranked", sub: "See your entire year at a glance" },
-  { text: "Full Location Analysis", sub: "338 cities matched to your chart" },
   { text: "2026 Calendar Overview", sub: "Color-coded month-by-month energy map" },
+];
+
+// Section 2: Birth Chart features
+const BIRTH_CHART_FEATURES = [
+  { text: "All 40 Planetary Lines", sub: "Your complete cosmic blueprint" },
+  { text: "338 Cities Matched", sub: "Power places around the world" },
+  { text: "Interactive World Map", sub: "Explore your lines visually" },
+  { text: "4 Life Categories", sub: "Love, Career, Growth, Home" },
+  { text: "Line-by-Line Interpretations", sub: "What each line means for you" },
   { text: "Locations That Drain You", sub: "Know where NOT to go" },
+  { text: "Yours Forever", sub: "Access anytime, no expiration" },
 ];
 
 export default function RevealScreen11Paywall() {
@@ -45,36 +54,93 @@ export default function RevealScreen11Paywall() {
           viewport={{ once: true }}
           className="text-center"
         >
-          <h2 className="text-white text-2xl font-bold mb-6">
-            Unlock Your <span className="text-gold">2026 Map</span>
+          <h2 className="text-white text-2xl font-bold mb-2">
+            Unlock Your <span className="text-gold-glow">Complete Map</span>
           </h2>
+          <p className="text-white/60 text-[15px] mb-6">
+            Your 2026 forecast + your full birth chart — yours forever.
+          </p>
 
           {/* Price display */}
           <div className="mb-6">
             <div className="flex items-center justify-center gap-3 mb-2">
               <span className="text-white/40 text-xl line-through">$49</span>
-              <span className="text-gold text-4xl font-bold">$19</span>
+              <span className="text-gold-glow text-4xl font-bold">$19</span>
             </div>
             <p className="text-white/60 text-sm uppercase tracking-wider">One-time payment</p>
             <p className="text-white/40 text-xs mt-1">No subscription. Instant access. Yours forever.</p>
           </div>
 
-          {/* What you get list */}
+          {/* Positioning Copy Block */}
           <div
-            className="rounded-2xl p-5 mb-6 text-left"
+            className="rounded-xl p-4 mb-6 text-center"
+            style={{
+              background: "linear-gradient(135deg, rgba(232, 197, 71, 0.1), rgba(201, 162, 39, 0.05))",
+              border: "1px solid rgba(232, 197, 71, 0.2)",
+            }}
+          >
+            <p className="text-gold font-semibold text-[15px] mb-2">Two maps. One purchase.</p>
+            <p className="text-white/70 text-[13px] leading-relaxed">
+              Your <span className="text-gold">2026 Forecast</span> tells you <strong>WHEN</strong>.
+              <br />
+              Your <span className="text-gold">Birth Chart</span> tells you <strong>WHERE</strong>.
+              <br />
+              <span className="text-white/50">Together, they show you exactly how to plan your year.</span>
+            </p>
+          </div>
+
+          {/* SECTION 1: 2026 Forecast */}
+          <div
+            className="rounded-2xl p-5 mb-4 text-left"
             style={{
               background: "rgba(255, 255, 255, 0.03)",
               border: "1px solid rgba(255, 255, 255, 0.08)",
             }}
           >
-            <p className="text-white/60 text-xs uppercase tracking-wider mb-4">What you get</p>
-            <ul className="space-y-3">
-              {WHAT_YOU_GET.map((item, i) => (
+            <p className="text-gold text-xs uppercase tracking-wider mb-4 font-medium flex items-center gap-2">
+              📅 Your 2026 Forecast
+            </p>
+            <ul className="space-y-2.5">
+              {FORECAST_FEATURES.map((item, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <Check className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="text-white/80 text-[14px] font-medium">{item.text}</p>
                     <p className="text-white/50 text-[12px]">{item.sub}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* SECTION 2: Birth Chart */}
+          <div
+            className="rounded-2xl p-5 mb-6 text-left relative"
+            style={{
+              background: "linear-gradient(135deg, rgba(100, 100, 150, 0.08), rgba(60, 60, 100, 0.05))",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+            }}
+          >
+            {/* INCLUDED badge */}
+            <div
+              className="absolute -top-2 right-4 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
+              style={{
+                background: "linear-gradient(135deg, #E8C547, #C9A227)",
+                color: "#000",
+              }}
+            >
+              Included
+            </div>
+            <p className="text-white/70 text-xs uppercase tracking-wider mb-4 font-medium flex items-center gap-2">
+              🗺️ Your Complete Birth Chart
+            </p>
+            <ul className="space-y-2.5">
+              {BIRTH_CHART_FEATURES.map((item, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <Check className="w-4 h-4 text-white/50 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-white/70 text-[14px] font-medium">{item.text}</p>
+                    <p className="text-white/40 text-[12px]">{item.sub}</p>
                   </div>
                 </li>
               ))}
@@ -96,7 +162,7 @@ export default function RevealScreen11Paywall() {
                 }}
               >
                 <Lock className="w-5 h-5" />
-                Unlock My 2026 Map — $19
+                Unlock Everything — $19
               </motion.button>
 
               {/* Trust indicators */}
@@ -185,7 +251,7 @@ export default function RevealScreen11Paywall() {
               }}
             >
               <Lock className="w-5 h-5" />
-              Unlock My 2026 Map — $19
+              Unlock Everything — $19
             </motion.button>
           )}
 
