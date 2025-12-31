@@ -16,6 +16,8 @@ function get2026Countdown() {
 
   if (days > 0) {
     return { type: "until" as const, days };
+  } else if (days === 0) {
+    return { type: "here" as const, days: 0 };
   } else {
     return { type: "into" as const, days: Math.abs(days) };
   }
@@ -52,14 +54,27 @@ export default function RevealScreen09OnboardF() {
                   boxShadow: "0 0 50px rgba(201, 162, 39, 0.15)",
                 }}
               >
-                <span className="text-gold-glow text-[64px] font-bold leading-none">
-                  {countdown.days}
-                </span>
-                <span className="text-white/60 text-sm mt-2">
-                  {countdown.type === "until"
-                    ? `day${countdown.days === 1 ? "" : "s"} until 2026`
-                    : `day${countdown.days === 1 ? "" : "s"} into 2026`}
-                </span>
+                {countdown.type === "here" ? (
+                  <>
+                    <span className="text-gold-glow text-[48px] font-bold leading-none">
+                      2026
+                    </span>
+                    <span className="text-white/60 text-sm mt-2">
+                      is here
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-gold-glow text-[64px] font-bold leading-none">
+                      {countdown.days}
+                    </span>
+                    <span className="text-white/60 text-sm mt-2">
+                      {countdown.type === "until"
+                        ? `day${countdown.days === 1 ? "" : "s"} until 2026`
+                        : `day${countdown.days === 1 ? "" : "s"} into 2026`}
+                    </span>
+                  </>
+                )}
               </div>
             </motion.div>
 
@@ -67,6 +82,8 @@ export default function RevealScreen09OnboardF() {
             <h2 className="text-[22px] font-bold text-white text-center mb-5">
               {countdown.type === "until"
                 ? `2026 is ${countdown.days} day${countdown.days === 1 ? "" : "s"} away.`
+                : countdown.type === "here"
+                ? "2026 has arrived."
                 : `We're ${countdown.days} day${countdown.days === 1 ? "" : "s"} into 2026.`
               }
             </h2>
