@@ -358,13 +358,16 @@ export default function PowerPlacesPanel({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [activeTab, setActiveTab] = useState<LifeCategory>("love");
   const [isMobile, setIsMobile] = useState(false);
+  // Track previous defaultExpanded to detect changes
+  const [prevDefaultExpanded, setPrevDefaultExpanded] = useState(defaultExpanded);
 
-  // Update expanded state when defaultExpanded changes
-  useEffect(() => {
+  // Sync expanded state when defaultExpanded changes (derived state pattern)
+  if (defaultExpanded !== prevDefaultExpanded) {
+    setPrevDefaultExpanded(defaultExpanded);
     if (defaultExpanded) {
       setIsExpanded(true);
     }
-  }, [defaultExpanded]);
+  }
 
   // Detect mobile
   useEffect(() => {
@@ -851,11 +854,14 @@ const MAX_DISPLAY_COUNT = 20;
 
 function CategoryContent({ category, onFlyToCity, colors, compact }: CategoryContentProps) {
   const [showAll, setShowAll] = useState(false);
+  // Track previous category to reset showAll (derived state pattern)
+  const [prevCategory, setPrevCategory] = useState(category.category);
 
   // Reset showAll when category changes
-  useEffect(() => {
+  if (category.category !== prevCategory) {
+    setPrevCategory(category.category);
     setShowAll(false);
-  }, [category.category]);
+  }
 
   if (category.places.length === 0) {
     return (

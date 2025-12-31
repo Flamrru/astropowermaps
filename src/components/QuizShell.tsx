@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useEffect, useRef, useState, ReactNode } from "react";
+import { useReducer, useEffect, useRef, useState, ReactNode, startTransition } from "react";
 import { motion } from "framer-motion";
 import { QuizContext, quizReducer, initialQuizState } from "@/lib/quiz-state";
 import { parseUTMParams } from "@/lib/utm";
@@ -161,7 +161,9 @@ export default function QuizShell({ children }: QuizShellProps) {
 
   // Wait for client-side mount to prevent hydration flash
   useEffect(() => {
-    setMounted(true);
+    startTransition(() => {
+      setMounted(true);
+    });
   }, []);
 
   // Force play videos on mobile (iOS autoplay workaround)

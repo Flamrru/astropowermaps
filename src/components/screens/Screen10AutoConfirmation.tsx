@@ -1,19 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { useQuiz } from "@/lib/quiz-state";
 
+// Seeded pseudo-random number generator for deterministic particles
+function seededRandom(seed: number) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
 // Celebration particles that burst outward
 function CelebrationBurst() {
-  const particles = Array.from({ length: 16 }, (_, i) => ({
+  // Use useMemo with deterministic values to avoid hydration mismatch
+  const particles = useMemo(() => Array.from({ length: 16 }, (_, i) => ({
     angle: (i * 22.5) * (Math.PI / 180),
     delay: i * 0.02,
     size: i % 3 === 0 ? 3 : 2,
     distance: i % 2 === 0 ? 100 : 70,
-    duration: 0.8 + Math.random() * 0.3,
-  }));
+    duration: 0.8 + seededRandom(i + 100) * 0.3,
+  })), []);
 
   return (
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -54,13 +61,15 @@ function CelebrationBurst() {
 
 // Floating ambient particles
 function AmbientParticles() {
-  const particles = Array.from({ length: 30 }, (_, i) => ({
-    left: `${Math.random() * 100}%`,
-    top: `${Math.random() * 100}%`,
-    size: 1 + Math.random() * 2,
-    delay: Math.random() * 2,
-    duration: 2 + Math.random() * 2,
-  }));
+  // Use useMemo with deterministic seeded values to avoid hydration mismatch
+  const particles = useMemo(() => Array.from({ length: 30 }, (_, i) => ({
+    left: `${seededRandom(i * 3) * 100}%`,
+    top: `${seededRandom(i * 3 + 1) * 100}%`,
+    size: 1 + seededRandom(i * 3 + 2) * 2,
+    delay: seededRandom(i + 50) * 2,
+    duration: 2 + seededRandom(i + 80) * 2,
+    repeatDelay: seededRandom(i + 200) * 2,
+  })), []);
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -76,7 +85,7 @@ function AmbientParticles() {
             duration: p.duration,
             delay: p.delay,
             repeat: Infinity,
-            repeatDelay: Math.random() * 2,
+            repeatDelay: p.repeatDelay,
           }}
           className="absolute"
           style={{

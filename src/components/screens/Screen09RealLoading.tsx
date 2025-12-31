@@ -4,6 +4,12 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuiz } from "@/lib/quiz-state";
 
+// Seeded pseudo-random for deterministic particles (avoids hydration mismatch)
+function seededRandom(seed: number) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
+
 // PRD V4 loading messages (every 0.8 seconds)
 const LOADING_MESSAGES = [
   "Converting birth time to UTC...",
@@ -313,11 +319,11 @@ function StarField() {
     () =>
       Array.from({ length: 40 }).map((_, i) => ({
         id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        size: Math.random() * 1.5 + 0.5,
-        delay: Math.random() * 2,
-        duration: Math.random() * 1.5 + 1.5,
+        x: seededRandom(i * 5) * 100,
+        y: seededRandom(i * 5 + 1) * 100,
+        size: seededRandom(i * 5 + 2) * 1.5 + 0.5,
+        delay: seededRandom(i * 5 + 3) * 2,
+        duration: seededRandom(i * 5 + 4) * 1.5 + 1.5,
       })),
     []
   );

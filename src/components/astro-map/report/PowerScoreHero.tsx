@@ -1,23 +1,29 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, startTransition } from "react";
 import { motion } from "framer-motion";
+
+// Seeded pseudo-random for deterministic particles (avoids hydration mismatch)
+function seededRandom(seed: number) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
 
 interface PowerScoreHeroProps {
   score: number;
   label: string;
 }
 
-// Generate constellation points with varying sizes
+// Generate constellation points with varying sizes (deterministic)
 function generateConstellationPoints(count: number) {
   return Array.from({ length: count }, (_, i) => ({
     id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 2.5 + 0.5,
-    delay: Math.random() * 3,
-    duration: 2 + Math.random() * 4,
-    brightness: Math.random() * 0.4 + 0.3,
+    x: seededRandom(i * 6) * 100,
+    y: seededRandom(i * 6 + 1) * 100,
+    size: seededRandom(i * 6 + 2) * 2.5 + 0.5,
+    delay: seededRandom(i * 6 + 3) * 3,
+    duration: 2 + seededRandom(i * 6 + 4) * 4,
+    brightness: seededRandom(i * 6 + 5) * 0.4 + 0.3,
   }));
 }
 
@@ -28,7 +34,9 @@ export default function PowerScoreHero({ score, label }: PowerScoreHeroProps) {
 
   // Mount trigger for animations
   useEffect(() => {
-    setMounted(true);
+    startTransition(() => {
+      setMounted(true);
+    });
   }, []);
 
   // Animate score counting up

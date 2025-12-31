@@ -77,7 +77,7 @@ export async function GET(
   try {
     // Call GeoNames timezone API
     const response = await fetch(
-      `http://api.geonames.org/timezoneJSON?lat=${latitude}&lng=${longitude}&username=${username}`,
+      `https://api.geonames.org/timezoneJSON?lat=${latitude}&lng=${longitude}&username=${username}`,
       {
         // Cache for 24 hours (timezones don't change often!)
         next: { revalidate: 86400 }

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Layers, Eye, EyeOff, Sparkles } from "lucide-react";
 import { PlanetaryLine, PlanetId } from "@/lib/astro/types";
 import { YearForecast } from "@/lib/astro/transit-types";
-import { calculateAllPowerPlaces } from "@/lib/astro/power-places";
+// calculateAllPowerPlaces import removed - not currently used
 import {
   usePowerPlacesState,
   PowerPlacesTabs,
@@ -47,7 +47,7 @@ export default function MobileFloatingPill({
   onReset,
 }: MobileFloatingPillProps) {
   const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
-  const hasShownOnce = useRef(false);
+  const [hasShownOnce, setHasShownOnce] = useState(false);
 
   // Power places state - shared between tabs (stickyHeader) and content
   const {
@@ -87,10 +87,10 @@ export default function MobileFloatingPill({
               type: "spring",
               damping: 25,
               stiffness: 400,
-              delay: hasShownOnce.current ? 0 : 0.4,
+              delay: hasShownOnce ? 0 : 0.4,
             }}
             onAnimationComplete={() => {
-              hasShownOnce.current = true;
+              setHasShownOnce(true);
             }}
             className="fixed bottom-5 left-3 right-3 z-30 md:hidden"
           >

@@ -9,7 +9,8 @@ import { PlanetaryLine, PlanetId } from "./types";
 import { YearForecast, MonthScore, PlanetaryAspect, getMonthName, ASPECTS } from "./transit-types";
 import { PowerPlace, calculateAllPowerPlaces, LifeCategory } from "./power-places";
 import { WorldCity } from "./cities";
-import { getPlainSummary, getInterpretation } from "./interpretations";
+import { getInterpretation } from "./interpretations";
+import { MAJOR_CITIES, getCountryFlag } from "./cities";
 
 // ============================================
 // Types
@@ -414,8 +415,7 @@ export function calculateReport2026Data(
  * Returns up to 3 draining locations
  */
 export function getDrainingLocations(lines: PlanetaryLine[], maxDistance: number = 400): CityInsight[] {
-  // Import here to avoid circular dependency
-  const { MAJOR_CITIES, getCountryFlag } = require("./cities");
+  // Using MAJOR_CITIES and getCountryFlag imported at top of file
 
   // Filter to Saturn and Pluto lines only
   const drainingLines = lines.filter(
@@ -442,7 +442,6 @@ export function getDrainingLocations(lines: PlanetaryLine[], maxDistance: number
         seenCities.add(city.name);
 
         // Generate warning text
-        const interp = getInterpretation(line.planet, line.lineType);
         let warning: string;
 
         if (line.planet === "saturn") {

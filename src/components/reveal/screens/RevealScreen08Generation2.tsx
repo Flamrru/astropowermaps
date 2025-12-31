@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReveal } from "@/lib/reveal-state";
+
+// Seeded pseudo-random for deterministic particles (avoids hydration mismatch)
+function seededRandom(seed: number) {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+}
 
 // PRD-specified loading messages for 2026 forecast generation
 const LOADING_MESSAGES = [
@@ -40,11 +46,11 @@ function StarField() {
   const stars = useMemo(() =>
     Array.from({ length: 50 }).map((_, i) => ({
       id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 1.5 + 0.5,
-      delay: Math.random() * 3,
-      duration: Math.random() * 2 + 2,
+      x: seededRandom(i * 5) * 100,
+      y: seededRandom(i * 5 + 1) * 100,
+      size: seededRandom(i * 5 + 2) * 1.5 + 0.5,
+      delay: seededRandom(i * 5 + 3) * 3,
+      duration: seededRandom(i * 5 + 4) * 2 + 2,
     })),
     []
   );

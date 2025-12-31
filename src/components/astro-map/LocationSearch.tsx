@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useLayoutEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { MapPin, Search, X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { BirthLocation } from "@/lib/astro/types";
