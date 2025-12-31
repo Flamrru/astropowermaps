@@ -91,6 +91,75 @@ Actions: `NEXT_STEP`, `PREV_STEP`, `SET_ANSWER_Q1`, `TOGGLE_ANSWER_Q2`, `SET_EMA
 - **Decision**: `scale(1.15)` on entry/nebula videos
 - **Rationale**: Prevents black edge strips on various aspect ratios
 
+### City Star Rating System
+- **Decision**: 3-5 star range (no cities below 3 stars)
+- **Rationale**: All shown cities are on beneficial planetary lines, so none are "bad"
+- **Scoring Formula**:
+  ```
+  CityScore = (ProximityScore × LineTypeMultiplier × PlanetRelevance) + MultiLineBonus
+
+  ProximityScore (distance-based):
+    < 30km = 100 (exceptionally close)
+    30-75km = 90 (very close)
+    75-150km = 70 (close)
+    150-250km = 50 (moderate)
+    250-350km = 30 (far)
+    350-400km = 20 (very far)
+
+  LineTypeMultiplier:
+    MC (Midheaven) = 1.2
+    AC (Ascendant) = 1.1
+    DC (Descendant) = 1.0
+    IC (Imum Coeli) = 0.9
+
+  PlanetRelevance (category-specific):
+    Venus for Love = 1.3
+    Jupiter for Career = 1.3
+    etc.
+
+  Star Conversion: Linear scale from score 22-200 → 3.0-5.0 stars
+  ```
+- **File**: `src/lib/astro/power-places.ts`
+
+### Yearly Power Score (2026 Report)
+- **Decision**: Optimistic benefic-focused scoring (range 50-100)
+- **Rationale**: Everyone starts with cosmic potential; no one gets a "bad" year
+- **Scoring Formula**:
+  ```
+  Score = Base (50) + YearlyBonus + PeakBonus + BeneficBonus
+
+  YearlyBonus = yearlyAverage × 0.5
+    (yearlyAverage = average of all 12 monthly scores)
+
+  PeakBonus = +5 if top 3 months average > yearlyAverage + 10
+    (rewards users with standout power months)
+
+  BeneficBonus = 0-10 points
+    Jupiter/Venus harmonious aspects (trine/sextile/conjunction)
+    Capped at 10 points
+
+  Labels:
+    85-100 = "Exceptional Year"
+    70-84  = "Powerful Year"
+    55-69  = "Strong Year"
+    50-54  = "Foundation Year" (frames low support as building time)
+  ```
+- **File**: `src/lib/astro/report-derivations.ts` (calculatePowerScore function)
+
+### Astronomical Calculations (astronomia library)
+- **Decision**: Use `astronomia` library instead of Swiss Ephemeris
+- **Algorithms used**:
+  - Mercury–Neptune: VSOP87 theory (~1 arcsecond accuracy)
+  - Moon: ELP2000 lunar theory (dedicated geocentric algorithm)
+  - Sun: Solar position algorithms
+- **Rationale**:
+  - Accuracy sufficient for astrocartography and aspects
+  - Swiss Ephemeris requires GPL compliance or $290 commercial license
+  - `astronomia` is MIT-licensed, free for commercial use
+  - Smaller bundle size (~100KB vs 2-50MB for Swiss Ephemeris)
+- **Limitation**: Simplified Pluto calculation (no precise ephemeris data)
+- **When to reconsider**: If adding asteroids (Chiron, Lilith) or pre-3000 BCE charts
+
 ## Operational Notes
 - **Deploy**: `vercel --prod` or push to main
 - **Logs**: Vercel dashboard or `vercel logs`

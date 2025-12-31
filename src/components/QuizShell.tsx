@@ -1,10 +1,11 @@
 "use client";
 
-import { useReducer, useEffect, useRef, useState, ReactNode } from "react";
+import { useReducer, useEffect, useRef, useState, ReactNode, startTransition } from "react";
 import { motion } from "framer-motion";
 import { QuizContext, quizReducer, initialQuizState } from "@/lib/quiz-state";
 import { parseUTMParams } from "@/lib/utm";
 import ProgressHeader from "@/components/ProgressHeader";
+import CookieConsent from "@/components/CookieConsent";
 
 // Funnel events to track
 const FUNNEL_EVENTS: Record<number, string> = {
@@ -33,7 +34,7 @@ async function trackFunnelEvent(sessionId: string, eventName: string, stepNumber
 }
 
 // Crossfade video loop component for smooth looping (60fps)
-function CrossfadeOrbVideo({ isActive }: { isActive: boolean }) {
+function CrossfadeOrbVideo({ isActive, autoplayBlocked }: { isActive: boolean; autoplayBlocked: boolean }) {
   const videoARef = useRef<HTMLVideoElement>(null);
   const videoBRef = useRef<HTMLVideoElement>(null);
   const [opacityA, setOpacityA] = useState(1);
@@ -101,6 +102,20 @@ function CrossfadeOrbVideo({ isActive }: { isActive: boolean }) {
     };
   }, [isActive]);
 
+  // Show static image fallback when autoplay is blocked
+  if (autoplayBlocked) {
+    return (
+      <div className="absolute inset-0">
+        <img
+          src="/orb-question-bg-poster.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          style={{ transform: 'scale(0.9)' }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="absolute inset-0">
       <video
@@ -137,10 +152,53 @@ export default function QuizShell({ children }: QuizShellProps) {
   const [state, dispatch] = useReducer(quizReducer, initialQuizState);
   const [mounted, setMounted] = useState(false);
 
+  // Refs for background videos to force autoplay on mobile
+  const entryVideoRef = useRef<HTMLVideoElement>(null);
+  const globeVideoRef = useRef<HTMLVideoElement>(null);
+  const nebulaVideoRef = useRef<HTMLVideoElement>(null);
+
+  // Track if autoplay is blocked (Low Power Mode, etc.)
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+
   // Wait for client-side mount to prevent hydration flash
   useEffect(() => {
-    setMounted(true);
+    startTransition(() => {
+      setMounted(true);
+    });
   }, []);
+
+  // Force play videos on mobile (iOS autoplay workaround)
+  // Check if videos are actually playing after attempting autoplay
+  useEffect(() => {
+    if (!mounted) return;
+
+    const checkAutoplay = async () => {
+      const video = entryVideoRef.current;
+      if (!video) return;
+
+      try {
+        // Try to play
+        await video.play();
+
+        // Even if promise resolves, check if video is actually playing
+        // iOS sometimes resolves the promise but video is still paused
+        setTimeout(() => {
+          if (video.paused || video.currentTime === 0) {
+            setAutoplayBlocked(true);
+          }
+        }, 100);
+      } catch {
+        // Autoplay explicitly blocked
+        setAutoplayBlocked(true);
+      }
+    };
+
+    checkAutoplay();
+
+    // Also try to play other videos
+    globeVideoRef.current?.play().catch(() => {});
+    nebulaVideoRef.current?.play().catch(() => {});
+  }, [mounted]);
 
   // Capture UTM parameters on mount
   useEffect(() => {
@@ -235,14 +293,27 @@ export default function QuizShell({ children }: QuizShellProps) {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute inset-0"
           >
+            {/* Static fallback image when autoplay blocked */}
+            {autoplayBlocked && (
+              <img
+                src="/question-bg-poster.jpg"
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover object-center"
+                style={{ transform: 'scale(1.15)' }}
+              />
+            )}
             <video
+              ref={entryVideoRef}
               src="/question-bg.mp4?v=3"
               autoPlay
               loop
               muted
               playsInline
               className="absolute inset-0 w-full h-full object-cover object-center"
-              style={{ transform: 'scale(1.15)' }}
+              style={{
+                transform: 'scale(1.15)',
+                display: autoplayBlocked ? 'none' : 'block',
+              }}
             />
           </motion.div>
 
@@ -253,13 +324,23 @@ export default function QuizShell({ children }: QuizShellProps) {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute inset-0"
           >
+            {/* Static fallback image when autoplay blocked */}
+            {autoplayBlocked && (
+              <img
+                src="/globe-bg-poster.jpg"
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+            )}
             <video
+              ref={globeVideoRef}
               src="/globe-bg.mp4?v=8"
               autoPlay
               loop
               muted
               playsInline
               className="absolute inset-0 w-full h-full object-cover object-center"
+              style={{ display: autoplayBlocked ? 'none' : 'block' }}
             />
           </motion.div>
 
@@ -270,7 +351,7 @@ export default function QuizShell({ children }: QuizShellProps) {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute inset-0 flex items-center justify-center"
           >
-            <CrossfadeOrbVideo isActive={useQuestionOrbBg} />
+            <CrossfadeOrbVideo isActive={useQuestionOrbBg} autoplayBlocked={autoplayBlocked} />
           </motion.div>
 
           {/* Nebula background (all other steps) */}
@@ -280,14 +361,27 @@ export default function QuizShell({ children }: QuizShellProps) {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="absolute inset-0"
           >
+            {/* Static fallback image when autoplay blocked */}
+            {autoplayBlocked && (
+              <img
+                src="/nebula-bg-poster.jpg"
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover object-center"
+                style={{ transform: 'scale(1.15)' }}
+              />
+            )}
             <video
+              ref={nebulaVideoRef}
               src="/nebula-bg.mp4?v=1"
               autoPlay
               loop
               muted
               playsInline
               className="absolute inset-0 w-full h-full object-cover object-center"
-              style={{ transform: 'scale(1.15)' }}
+              style={{
+                transform: 'scale(1.15)',
+                display: autoplayBlocked ? 'none' : 'block',
+              }}
             />
           </motion.div>
 
@@ -308,6 +402,9 @@ export default function QuizShell({ children }: QuizShellProps) {
               {children}
             </div>
           </main>
+
+          {/* Cookie consent banner - inside container for proper stacking */}
+          <CookieConsent />
         </div>
       </div>
     </QuizContext.Provider>

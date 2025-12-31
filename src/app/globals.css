@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "mapbox-gl/dist/mapbox-gl.css";
 
 :root {
   /* Cosmic color palette - matched to mockup */
@@ -523,6 +524,22 @@ body {
   animation: pin-glow-pulse 2s ease-in-out infinite;
 }
 
+/* City pin pop-in animation for reveal flow */
+@keyframes cityPinPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0) translateY(10px);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 /* World map shimmer effect */
 @keyframes map-shimmer {
   0% {
@@ -556,4 +573,15 @@ body {
   background-size: 200% 100%;
   animation: map-shimmer 4s ease-in-out infinite;
   pointer-events: none;
+}
+
+/* ===== SCROLLBAR HIDE UTILITY ===== */
+/* Hide scrollbar while maintaining scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
 }
