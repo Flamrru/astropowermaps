@@ -218,7 +218,7 @@ export default function RevealShell({ children }: RevealShellProps) {
           saveAstroData(astroFromQuiz);
         }
       } else if (sid) {
-        // Fallback: Fetch lead from Supabase (for older links without localStorage data)
+        // Fallback: Fetch lead from Supabase (for refreshes or older links)
         const lead = await fetchLead(sid);
         if (lead?.email) {
           dispatch({
@@ -233,8 +233,34 @@ export default function RevealShell({ children }: RevealShellProps) {
               },
             },
           });
+
+          // If lead has birth data, set it and recalculate astro
+          if (lead.birthData) {
+            console.log("✅ Found birth data from lead, recalculating astro...");
+            dispatch({ type: "SET_BIRTH_DATA", payload: lead.birthData });
+
+            // Recalculate astro data from birth data
+            try {
+              const res = await fetch("/api/astrocartography", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ birthData: lead.birthData }),
+              });
+
+              if (res.ok) {
+                const response = await res.json();
+                if (response.success && response.data) {
+                  dispatch({ type: "SET_ASTRO_DATA", payload: response.data });
+                  saveAstroData(response.data);
+                  console.log("✅ Astro data recalculated from stored birth data");
+                }
+              }
+            } catch (error) {
+              console.error("Failed to recalculate astro data:", error);
+            }
+          }
         }
-        // If we have astro data, set it
+        // If we have astro data from quiz (shouldn't happen on refresh, but just in case)
         if (astroFromQuiz) {
           dispatch({ type: "SET_ASTRO_DATA", payload: astroFromQuiz });
           saveAstroData(astroFromQuiz);

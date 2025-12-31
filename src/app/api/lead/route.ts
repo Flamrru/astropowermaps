@@ -63,33 +63,34 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if user has purchased
-    if (!lead.has_purchased) {
-      return NextResponse.json(
-        { error: "Payment required", needsPayment: true },
-        { status: 403 }
-      );
-    }
+    // Build birth data if available
+    const birthData = lead.birth_date ? {
+      date: lead.birth_date,
+      time: lead.birth_time,
+      timeUnknown: lead.birth_time_unknown,
+      timeWindow: lead.birth_time_window,
+      location: {
+        name: lead.birth_location_name,
+        lat: parseFloat(lead.birth_location_lat),
+        lng: parseFloat(lead.birth_location_lng),
+        timezone: lead.birth_location_timezone,
+      },
+    } : null;
 
-    // Return birth data for map generation
+    // Return lead data (birth data available even pre-purchase for reveal flow)
     return NextResponse.json({
       success: true,
-      data: {
-        email: lead.email,
-        sessionId: lead.session_id,
-        birthData: {
-          date: lead.birth_date,
-          time: lead.birth_time,
-          timeUnknown: lead.birth_time_unknown,
-          timeWindow: lead.birth_time_window,
-          location: {
-            name: lead.birth_location_name,
-            lat: parseFloat(lead.birth_location_lat),
-            lng: parseFloat(lead.birth_location_lng),
-            timezone: lead.birth_location_timezone,
-          },
-        },
+      email: lead.email,
+      session_id: lead.session_id,
+      has_purchased: lead.has_purchased || false,
+      quiz_q1: lead.quiz_q1,
+      quiz_q2: lead.quiz_q2,
+      utm: {
+        utm_source: lead.utm_source,
+        utm_medium: lead.utm_medium,
+        utm_campaign: lead.utm_campaign,
       },
+      birthData,
     });
   } catch (error) {
     console.error("Error fetching lead:", error);
