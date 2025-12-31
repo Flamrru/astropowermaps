@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sendPurchaseEvent } from "@/lib/meta-capi";
 
 // Lazy-initialize Stripe to avoid build-time errors
 function getStripe() {
@@ -110,6 +111,23 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
 
     if (leadError) {
       console.error("Failed to update lead:", leadError);
+    }
+  }
+
+  // Send Purchase event to Meta Conversions API
+  // This fires server-side for reliable tracking (not blocked by ad blockers)
+  if (email) {
+    const amountPaid = session.amount_total ? session.amount_total / 100 : 19.0;
+    const currency = session.currency?.toUpperCase() || "USD";
+
+    const { success, eventId } = await sendPurchaseEvent({
+      email,
+      value: amountPaid,
+      currency,
+    });
+
+    if (success) {
+      console.log(`Meta CAPI: Purchase event sent for ${appSessionId}, eventId: ${eventId}`);
     }
   }
 

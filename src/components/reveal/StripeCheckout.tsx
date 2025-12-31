@@ -8,6 +8,7 @@ import {
 import { getStripe } from "@/lib/stripe";
 import { useReveal } from "@/lib/reveal-state";
 import { v4 as uuidv4 } from "uuid";
+import { trackMetaEvent } from "@/components/MetaPixel";
 
 interface StripeCheckoutProps {
   onComplete?: () => void;
@@ -54,6 +55,14 @@ export default function StripeCheckout({ onComplete }: StripeCheckoutProps) {
 
   // Handle checkout completion
   const handleComplete = useCallback(() => {
+    // Track Purchase event client-side (backup for CAPI)
+    trackMetaEvent("Purchase", {
+      value: 19.0,
+      currency: "USD",
+      content_type: "product",
+      content_name: "2026 Astro Power Map",
+    });
+
     // Mark payment as complete in reveal state
     dispatch({
       type: "SET_PAYMENT_COMPLETE",

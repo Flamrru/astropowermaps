@@ -13,7 +13,7 @@ function getStripe() {
 
 // Product configuration
 const PRODUCT_NAME = "2026 Astro Power Map";
-const PRICE_CENTS = 1900; // $19.00
+const PRICE_CENTS = 10; // $0.10 - TESTING ONLY! Change back to 1900 for production
 const CURRENCY = "usd";
 
 interface CheckoutPayload {
