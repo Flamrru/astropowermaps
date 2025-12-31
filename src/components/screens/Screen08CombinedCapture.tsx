@@ -234,15 +234,16 @@ export default function Screen08CombinedCapture() {
   };
 
   return (
-    <div className="flex-1 flex flex-col relative">
+    <div className="flex-1 flex flex-col relative overflow-hidden">
       <CelestialParticles />
 
-      <div className="flex-1 flex flex-col px-5 pb-4">
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto px-5 pb-4">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="flex-1 flex flex-col max-w-md mx-auto w-full"
+          className="max-w-md mx-auto w-full"
         >
           {/* Headline */}
           <motion.h1
@@ -267,7 +268,7 @@ export default function Screen08CombinedCapture() {
           <motion.form
             variants={itemVariants}
             onSubmit={handleSubmit}
-            className="flex-1 flex flex-col"
+            className="flex flex-col"
           >
             <div
               className="rounded-2xl p-4 mb-3"
@@ -455,7 +456,7 @@ export default function Screen08CombinedCapture() {
             )}
 
             {/* CTA Button */}
-            <div className="mt-auto pt-1">
+            <div className="pt-2 pb-2">
               <GoldButton
                 type="submit"
                 loading={isSubmitting}
@@ -469,7 +470,7 @@ export default function Screen08CombinedCapture() {
             </div>
 
             {/* Legal disclaimer */}
-            <p className="text-center text-white/40 text-[10px] mt-2 leading-relaxed">
+            <p className="text-center text-white/40 text-[10px] mt-2 pb-4 leading-relaxed">
               By continuing, you agree to our{" "}
               <a href="/terms" target="_blank" className="underline hover:text-white/60 transition-colors">
                 Terms of Service
