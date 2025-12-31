@@ -59,8 +59,9 @@ export default function SlideUpPanel({
           onDragEnd={handleDragEnd}
           className={`absolute inset-x-0 bottom-0 z-20 touch-pan-y ${className}`}
           style={{
+            height: height === "100%" ? "100dvh" : "auto",
             maxHeight: maxHeightMap[height],
-            borderRadius: "2rem 2rem 0 0",
+            borderRadius: height === "100%" ? "0" : "2rem 2rem 0 0",
             // Frosted glass - map visible through panel
             background: `
               linear-gradient(180deg,
@@ -115,6 +116,7 @@ export default function SlideUpPanel({
           <div
             className="overflow-y-auto overscroll-contain px-5 pb-12 scrollbar-hide"
             style={{
+              height: height === "100%" ? "calc(100dvh - 60px)" : "auto",
               maxHeight: `calc(${maxHeightMap[height]} - 60px)`,
               scrollbarWidth: "none", /* Firefox */
               msOverflowStyle: "none", /* IE/Edge */
