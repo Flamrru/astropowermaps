@@ -123,16 +123,25 @@ export default function RevealShell({ children }: RevealShellProps) {
   const [state, dispatch] = useReducer(revealReducer, initialRevealState);
   const [mounted, setMounted] = useState(false);
   const [isHydrating, setIsHydrating] = useState(true);
+  const [hasHydrated, setHasHydrated] = useState(false); // Prevent re-hydration
   const searchParams = useSearchParams();
 
-  // Hydrate state from URL param or localStorage on mount
+  // Hydrate state from URL param or localStorage on mount (runs only once)
   useEffect(() => {
+    // Skip if already hydrated (prevents re-hydration when URL updates)
+    if (hasHydrated) return;
+
     const hydrateState = async () => {
       const sid = searchParams.get("sid");
       // Dev mode: ?dev=1 OR ?d OR ?d=4 (step number)
       const dParam = searchParams.get("d");
       const devMode = searchParams.get("dev") === "1" || dParam !== null;
-      const startStep = parseInt(dParam || searchParams.get("step") || "3", 10);
+      // Read step from URL (for refresh recovery)
+      // Priority: ?step=X (explicit) > ?d=X (dev mode jump) > default 1
+      const urlStep = searchParams.get("step");
+      const startStep = urlStep
+        ? parseInt(urlStep, 10)
+        : (dParam ? parseInt(dParam, 10) : 1);
 
       // PAYMENT SUCCESS: Redirect from Stripe after successful payment
       const paymentStatus = searchParams.get("payment_status");
@@ -194,6 +203,7 @@ export default function RevealShell({ children }: RevealShellProps) {
         }
 
         setIsHydrating(false);
+        setHasHydrated(true);
         setMounted(true);
         return;
       }
@@ -205,8 +215,8 @@ export default function RevealShell({ children }: RevealShellProps) {
         if (storedAstro) {
           astroFromQuiz = JSON.parse(storedAstro);
           console.log("✅ Loaded pre-calculated astro data from quiz");
-          // Clear after reading
-          localStorage.removeItem("astro_quiz_result");
+          // Don't clear immediately - keep for refresh recovery
+          // Will be cleared when user completes payment or leaves flow
         }
       } catch {
         // Ignore localStorage errors
@@ -218,8 +228,8 @@ export default function RevealShell({ children }: RevealShellProps) {
         const stored = localStorage.getItem("astro_quiz_session");
         if (stored) {
           sessionData = JSON.parse(stored);
-          // Clear after reading
-          localStorage.removeItem("astro_quiz_session");
+          // Don't clear immediately - keep for refresh recovery
+          // Will be cleared when user completes payment or leaves flow
         }
       } catch {
         // Ignore localStorage errors
@@ -241,6 +251,12 @@ export default function RevealShell({ children }: RevealShellProps) {
         });
         // Also save to astro-storage for map page
         saveAstroData(astroFromQuiz);
+        // Restore step from URL if provided (for refresh recovery)
+        if (urlStep) {
+          const step = Math.min(Math.max(parseInt(urlStep, 10), 1), 10);
+          console.log(`✅ Restoring step ${step} from URL`);
+          dispatch({ type: "SET_STEP", payload: step });
+        }
       } else if (sessionData) {
         // Have session data but no astro data - fallback (shouldn't happen in normal flow)
         dispatch({
@@ -256,6 +272,12 @@ export default function RevealShell({ children }: RevealShellProps) {
         if (astroFromQuiz) {
           dispatch({ type: "SET_ASTRO_DATA", payload: astroFromQuiz });
           saveAstroData(astroFromQuiz);
+        }
+        // Restore step from URL if provided (for refresh recovery)
+        if (urlStep) {
+          const step = Math.min(Math.max(parseInt(urlStep, 10), 1), 10);
+          console.log(`✅ Restoring step ${step} from URL`);
+          dispatch({ type: "SET_STEP", payload: step });
         }
       } else if (sid) {
         // Fallback: Fetch lead from Supabase (for refreshes or older links)
@@ -305,14 +327,21 @@ export default function RevealShell({ children }: RevealShellProps) {
           dispatch({ type: "SET_ASTRO_DATA", payload: astroFromQuiz });
           saveAstroData(astroFromQuiz);
         }
+        // Restore step from URL if provided (for refresh recovery)
+        if (urlStep) {
+          const step = Math.min(Math.max(parseInt(urlStep, 10), 1), 10);
+          console.log(`✅ Restoring step ${step} from URL (from Supabase fallback)`);
+          dispatch({ type: "SET_STEP", payload: step });
+        }
       }
 
       setIsHydrating(false);
+      setHasHydrated(true); // Mark as hydrated to prevent re-runs
       setMounted(true);
     };
 
     hydrateState();
-  }, [searchParams]);
+  }, [searchParams, hasHydrated]);
 
   // Track step changes
   useEffect(() => {
@@ -323,6 +352,18 @@ export default function RevealShell({ children }: RevealShellProps) {
       trackRevealEvent(state.session_id, eventName, state.stepIndex);
     }
   }, [state.stepIndex, state.session_id, mounted]);
+
+  // Update URL when step changes (for refresh recovery)
+  useEffect(() => {
+    if (!mounted) return;
+
+    // Build new URL with current step
+    const url = new URL(window.location.href);
+    url.searchParams.set("step", state.stepIndex.toString());
+
+    // Use replaceState to avoid adding to browser history on every step
+    window.history.replaceState({}, "", url.toString());
+  }, [state.stepIndex, mounted]);
 
   // Calculate map opacity based on current step
   const mapOpacity = getMapOpacity(state.stepIndex);
@@ -346,8 +387,9 @@ export default function RevealShell({ children }: RevealShellProps) {
     ? ((state.stepIndex - 2) / 5) * 100
     : null;
 
-  // PRD V4: Prevent scroll/bounce on map reveal screen (now step 1)
-  const isMapRevealScreen = state.stepIndex === 1;
+  // Block pull-to-refresh on most steps, but allow scrolling on paywall (step 9)
+  // Paywall needs scrolling for the long feature list
+  const needsScrolling = state.stepIndex === 9;
 
   return (
     <RevealContext.Provider value={{ state, dispatch }}>
@@ -361,12 +403,11 @@ export default function RevealShell({ children }: RevealShellProps) {
             radial-gradient(ellipse 50% 60% at 70% 80%, rgba(80, 60, 140, 0.1) 0%, transparent 50%),
             linear-gradient(180deg, #030308 0%, #050510 30%, #0a0a1e 70%, #050510 100%)
           `,
-          // Prevent iOS bounce/rubber-band scrolling on map reveal
-          ...(isMapRevealScreen && {
+          // Prevent iOS bounce/rubber-band scrolling (except on paywall which needs scroll)
+          ...(!needsScrolling && {
             position: "fixed" as const,
             inset: 0,
             overscrollBehavior: "none",
-            touchAction: "none",
           }),
         }}
       >
