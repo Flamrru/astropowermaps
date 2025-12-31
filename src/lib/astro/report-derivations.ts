@@ -103,32 +103,8 @@ function calculatePowerScore(forecast: YearForecast): { score: number; label: st
     score += 5; // Bonus for having peak months
   }
 
-  // Step 4: Benefic highlight bonus (Jupiter/Venus special aspects)
-  let beneficBonus = 0;
-  const seenAspects = new Set<string>();
-
-  for (const monthScore of forecast.months) {
-    for (const aspect of monthScore.keyAspects) {
-      const key = `${aspect.transitPlanet}-${aspect.natalPlanet}-${aspect.aspectType}`;
-      if (seenAspects.has(key)) continue;
-      seenAspects.add(key);
-
-      // Jupiter conjunctions and trines are especially lucky
-      if (aspect.transitPlanet === "jupiter") {
-        if (aspect.aspectType === "conjunction") beneficBonus += 3;
-        else if (aspect.aspectType === "trine") beneficBonus += 2;
-      }
-      // Venus trines bring harmony
-      if (aspect.transitPlanet === "venus" && aspect.aspectType === "trine") {
-        beneficBonus += 1;
-      }
-    }
-  }
-
-  // Cap benefic bonus at 10
-  score += Math.min(10, beneficBonus);
-
-  // Step 5: Ensure 50-100 range
+  // Step 4: Ensure 50-100 range
+  // NOTE: Benefic bonus removed to match paywall-derivations.ts formula exactly
   score = Math.min(100, Math.max(50, Math.round(score)));
 
   // Labels (all positive!)
