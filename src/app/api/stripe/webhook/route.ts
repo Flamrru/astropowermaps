@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { sendPurchaseEvent } from "@/lib/meta-capi";
+import { sendConfirmationEmail } from "@/lib/resend";
 
 // Lazy-initialize Stripe to avoid build-time errors
 function getStripe() {
@@ -128,6 +129,24 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
 
     if (success) {
       console.log(`Meta CAPI: Purchase event sent for ${appSessionId}, eventId: ${eventId}`);
+    }
+  }
+
+  // Send confirmation email with permanent map link via Resend
+  if (email && appSessionId) {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || "https://astropowermaps.com";
+
+    const emailResult = await sendConfirmationEmail({
+      email,
+      sessionId: appSessionId,
+      baseUrl,
+    });
+
+    if (emailResult.success) {
+      console.log(`Confirmation email sent to ${email.substring(0, 3)}***`);
+    } else {
+      console.error(`Failed to send confirmation email: ${emailResult.error}`);
     }
   }
 

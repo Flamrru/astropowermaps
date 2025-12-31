@@ -333,6 +333,21 @@ export default function RevealScreen12Confirmation() {
           </motion.div>
         )}
 
+        {/* Email Confirmation */}
+        {state.email && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.2 }}
+            className="text-center mb-4"
+          >
+            <p className="text-white/50 text-sm">
+              We&apos;ve also sent this link to{" "}
+              <span className="text-white/70">{state.email}</span>
+            </p>
+          </motion.div>
+        )}
+
         {/* CTA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -348,7 +363,7 @@ export default function RevealScreen12Confirmation() {
           </GoldButton>
 
           <p className="text-center text-white/40 text-xs mt-4">
-            Your map is saved forever. Bookmark your link above!
+            Your map is saved forever. Bookmark your link or check your email!
           </p>
         </motion.div>
       </motion.div>
