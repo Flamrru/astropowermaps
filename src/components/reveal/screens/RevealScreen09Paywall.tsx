@@ -209,7 +209,7 @@ export default function RevealScreen11Paywall() {
         >
           {daysUntil2026 > 0 ? (
             <p className="text-white/60 text-[15px] mb-2">
-              2026 is <span className="text-gold font-bold">{daysUntil2026}</span> days away.
+              2026 is <span className="text-gold font-bold">{daysUntil2026}</span> day{daysUntil2026 === 1 ? "" : "s"} away.
             </p>
           ) : (
             <p className="text-white/60 text-[15px] mb-2">

@@ -56,7 +56,9 @@ export default function RevealScreen09OnboardF() {
                   {countdown.days}
                 </span>
                 <span className="text-white/60 text-sm mt-2">
-                  {countdown.type === "until" ? "days until 2026" : "days into 2026"}
+                  {countdown.type === "until"
+                    ? `day${countdown.days === 1 ? "" : "s"} until 2026`
+                    : `day${countdown.days === 1 ? "" : "s"} into 2026`}
                 </span>
               </div>
             </motion.div>
@@ -64,8 +66,8 @@ export default function RevealScreen09OnboardF() {
             {/* Headline */}
             <h2 className="text-[22px] font-bold text-white text-center mb-5">
               {countdown.type === "until"
-                ? `2026 is ${countdown.days} days away.`
-                : `We're ${countdown.days} days into 2026.`
+                ? `2026 is ${countdown.days} day${countdown.days === 1 ? "" : "s"} away.`
+                : `We're ${countdown.days} day${countdown.days === 1 ? "" : "s"} into 2026.`
               }
             </h2>
 
