@@ -82,6 +82,9 @@ Before going live, verify the **full user flow** works with real data:
 - [ ] User reaches paywall (step 9) with their REAL email
 - [ ] Payment completes → `astro_purchases` updated, `has_purchased` = true
 - [ ] User redirected to `/map` with their actual birth chart
+- [ ] **Change price from test ($0.70) to production ($19):**
+  - [ ] `src/app/api/stripe/create-checkout-session/route.ts` → `PRICE_CENTS = 1900`
+  - [ ] `src/components/reveal/StripeCheckout.tsx` → `value: 19.0`
 - [ ] Switch Stripe keys from `pk_test_`/`sk_test_` to `pk_live_`/`sk_live_`
 - [ ] Set up production webhook in Stripe Dashboard
 - [ ] Add live Stripe keys to Vercel environment variables

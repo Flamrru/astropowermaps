@@ -56,8 +56,9 @@ export default function StripeCheckout({ onComplete }: StripeCheckoutProps) {
   // Handle checkout completion
   const handleComplete = useCallback(() => {
     // Track Purchase event client-side (backup for CAPI)
+    // Note: Keep in sync with PRICE_CENTS in /api/stripe/create-checkout-session
     trackMetaEvent("Purchase", {
-      value: 19.0,
+      value: 0.70,
       currency: "USD",
       content_type: "product",
       content_name: "2026 Astro Power Map",
