@@ -12,6 +12,7 @@ import {
 } from "@/lib/reveal-state";
 import AstroMap from "@/components/astro-map/AstroMap";
 import { saveAstroData } from "@/lib/astro-storage";
+import { trackMetaEvent } from "@/components/MetaPixel";
 import { calculatePowerMonths } from "@/lib/astro/power-months";
 import { calculateNatalPositions } from "@/lib/astro/calculations";
 import { YearForecast as TransitYearForecast } from "@/lib/astro/transit-types";
@@ -136,7 +137,17 @@ export default function RevealShell({ children }: RevealShellProps) {
       // PAYMENT SUCCESS: Redirect from Stripe after successful payment
       const paymentStatus = searchParams.get("payment_status");
       if (paymentStatus === "complete") {
-        console.log("✅ Payment completed - redirecting to map");
+        console.log("✅ Payment completed - tracking Purchase event");
+
+        // Track Purchase event (client-side pixel)
+        // Note: Keep value in sync with PRICE_CENTS in /api/stripe/create-checkout-session
+        trackMetaEvent("Purchase", {
+          value: 0.70,
+          currency: "USD",
+          content_type: "product",
+          content_name: "2026 Astro Power Map",
+        });
+
         // Redirect to map with payment success flag
         window.location.href = "/map?payment=success";
         return;

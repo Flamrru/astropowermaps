@@ -85,6 +85,7 @@ Before going live, verify the **full user flow** works with real data:
 - [ ] **Change price from test ($0.70) to production ($19):**
   - [ ] `src/app/api/stripe/create-checkout-session/route.ts` → `PRICE_CENTS = 1900`
   - [ ] `src/components/reveal/StripeCheckout.tsx` → `value: 19.0`
+  - [ ] `src/components/reveal/RevealShell.tsx` → `value: 19.0` (line ~145)
 - [ ] Switch Stripe keys from `pk_test_`/`sk_test_` to `pk_live_`/`sk_live_`
 - [ ] Set up production webhook in Stripe Dashboard
 - [ ] Add live Stripe keys to Vercel environment variables
