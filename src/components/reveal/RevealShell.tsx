@@ -142,7 +142,7 @@ export default function RevealShell({ children }: RevealShellProps) {
         // Track Purchase event (client-side pixel)
         // Note: Keep value in sync with PRICE_CENTS in /api/stripe/create-checkout-session
         trackMetaEvent("Purchase", {
-          value: 0.70,
+          value: 19.0,
           currency: "USD",
           content_type: "product",
           content_name: "2026 Astro Power Map",

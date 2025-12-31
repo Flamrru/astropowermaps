@@ -48,7 +48,7 @@ if (paymentStatus === "complete") {
 
   // Track Purchase event (client-side pixel)
   trackMetaEvent("Purchase", {
-    value: 0.70,  // Keep in sync with PRICE_CENTS
+    value: 19.0,  // Keep in sync with PRICE_CENTS
     currency: "USD",
     content_type: "product",
     content_name: "2026 Astro Power Map",
