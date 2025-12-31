@@ -92,6 +92,8 @@ function MapPageContent() {
         throw new Error(result.error || "Calculation failed");
       }
 
+      // Save to localStorage so it persists on refresh
+      saveAstroData(result.data);
       setMapData(result.data);
       setViewState("map");
     } catch (err) {
