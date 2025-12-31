@@ -15,21 +15,34 @@ export const MONTH_NAMES = [
 ];
 
 /**
- * Calculate a "2026 Power Score" (0-100) based on power month scores
- * This gives users a single number to hook onto
+ * Calculate a "2026 Power Score" (50-100) based on all monthly scores
+ *
+ * IMPORTANT: This must match the formula in report-derivations.ts
+ * so the score shown in paywall matches what user sees after payment.
+ *
+ * Formula: 50 + (yearlyAverage * 0.5) + bonuses for standout months
  */
 export function calculatePowerScore(forecast: YearForecast | null): number {
   if (!forecast) return 75; // Default fallback
 
-  // Average the overall scores of power months
-  const powerMonthScores = forecast.powerMonths.map(m => {
-    const month = forecast.months.find(mo => mo.month === m);
-    return month?.overall || 70;
-  });
+  // Step 1: Get average score across all 12 months
+  const monthScores = forecast.months.map(m => m.overall);
+  const yearlyAverage = monthScores.reduce((a, b) => a + b, 0) / monthScores.length;
 
-  const avg = powerMonthScores.reduce((a, b) => a + b, 0) / powerMonthScores.length;
-  // Normalize to be between 70-95 for better presentation
-  return Math.round(Math.min(95, Math.max(70, avg)));
+  // Step 2: Apply the same curve as report-derivations.ts
+  // Base of 50 + scaled contribution from monthly average
+  let score = 50 + (yearlyAverage * 0.5);
+
+  // Step 3: Bonus for standout power months
+  const sortedMonths = [...monthScores].sort((a, b) => b - a);
+  const topThreeAvg = (sortedMonths[0] + sortedMonths[1] + sortedMonths[2]) / 3;
+
+  if (topThreeAvg > yearlyAverage + 10) {
+    score += 5; // Bonus for having peak months
+  }
+
+  // Step 4: Ensure 50-100 range (matching report-derivations.ts)
+  return Math.min(100, Math.max(50, Math.round(score)));
 }
 
 /**
