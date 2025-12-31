@@ -8,9 +8,13 @@ import {
   revealReducer,
   initialRevealState,
   getMapOpacity,
+  YearForecast as RevealYearForecast,
 } from "@/lib/reveal-state";
 import AstroMap from "@/components/astro-map/AstroMap";
 import { saveAstroData } from "@/lib/astro-storage";
+import { calculatePowerMonths } from "@/lib/astro/power-months";
+import { calculateNatalPositions } from "@/lib/astro/calculations";
+import { YearForecast as TransitYearForecast } from "@/lib/astro/transit-types";
 
 // Dev mode birth data (Flamur's data for testing)
 const DEV_BIRTH_DATA = {
@@ -24,6 +28,44 @@ const DEV_BIRTH_DATA = {
     timezone: "Europe/Bratislava",
   },
 };
+
+/**
+ * Convert full transit YearForecast to simplified reveal-state YearForecast
+ */
+function convertToRevealForecast(transit: TransitYearForecast): RevealYearForecast {
+  const monthsMap = new Map<number, { love: number; career: number; growth: number; home: number }>();
+
+  for (const monthScore of transit.months) {
+    const m = monthScore.month;
+    if (!monthsMap.has(m)) {
+      monthsMap.set(m, { love: 0, career: 0, growth: 0, home: 0 });
+    }
+    const scores = monthsMap.get(m)!;
+    scores[monthScore.category] = monthScore.score;
+  }
+
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const m = i + 1;
+    const scores = monthsMap.get(m) || { love: 50, career: 50, growth: 50, home: 50 };
+    const overall = Math.round((scores.love + scores.career + scores.growth + scores.home) / 4);
+    return {
+      month: m,
+      scores,
+      overall,
+      isPowerMonth: transit.overallPowerMonths.includes(m),
+    };
+  });
+
+  const sortedByScore = [...months].sort((a, b) => a.overall - b.overall);
+  const avoidMonths = sortedByScore.slice(0, 3).map(m => m.month);
+
+  return {
+    year: transit.year,
+    months,
+    powerMonths: transit.overallPowerMonths.slice(0, 3),
+    avoidMonths,
+  };
+}
 
 // PRD V4: Reveal flow events for analytics (10 steps, starting at map reveal)
 const REVEAL_EVENTS: Record<number, string> = {
@@ -121,29 +163,16 @@ export default function RevealShell({ children }: RevealShellProps) {
               dispatch({ type: "SET_ASTRO_DATA", payload: response.data });
               saveAstroData(response.data);
 
-              // Generate mock forecast data for dev mode (needed for 2026 Report)
-              const mockForecast = {
-                year: 2026,
-                months: Array.from({ length: 12 }, (_, i) => ({
-                  month: i + 1,
-                  scores: {
-                    love: 40 + Math.floor(Math.random() * 50),
-                    career: 40 + Math.floor(Math.random() * 50),
-                    growth: 40 + Math.floor(Math.random() * 50),
-                    home: 40 + Math.floor(Math.random() * 50),
-                  },
-                  overall: 50 + Math.floor(Math.random() * 40),
-                  isPowerMonth: false,
-                })),
-                powerMonths: [3, 7, 10],
-                avoidMonths: [2, 6, 11],
-              };
-              // Mark power months
-              mockForecast.powerMonths.forEach((m) => {
-                mockForecast.months[m - 1].isPowerMonth = true;
-              });
-              dispatch({ type: "SET_FORECAST_DATA", payload: mockForecast });
-              console.log("🔧 Dev mode: Forecast data generated for 2026 Report");
+              // Calculate real forecast data for dev mode (uses same calculations as production)
+              try {
+                const natalPositions = calculateNatalPositions(DEV_BIRTH_DATA);
+                const transitForecast = calculatePowerMonths(natalPositions);
+                const revealForecast = convertToRevealForecast(transitForecast);
+                dispatch({ type: "SET_FORECAST_DATA", payload: revealForecast });
+                console.log("🔧 Dev mode: Real forecast data calculated");
+              } catch (forecastError) {
+                console.error("Dev mode forecast error:", forecastError);
+              }
 
               // PRD V4: Jump to specified step (default: 1 = map reveal)
               dispatch({ type: "SET_STEP", payload: Math.min(startStep, 10) });

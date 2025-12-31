@@ -2,12 +2,58 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useReveal } from "@/lib/reveal-state";
+import { useReveal, YearForecast as RevealYearForecast } from "@/lib/reveal-state";
+import { calculatePowerMonths } from "@/lib/astro/power-months";
+import { calculateNatalPositions } from "@/lib/astro/calculations";
+import { YearForecast as TransitYearForecast } from "@/lib/astro/transit-types";
 
 // Seeded pseudo-random for deterministic particles (avoids hydration mismatch)
 function seededRandom(seed: number) {
   const x = Math.sin(seed) * 10000;
   return x - Math.floor(x);
+}
+
+/**
+ * Convert full transit YearForecast to simplified reveal-state YearForecast
+ * Transit has 48 entries (12 months × 4 categories)
+ * Reveal needs 12 entries with combined scores
+ */
+function convertToRevealForecast(transit: TransitYearForecast): RevealYearForecast {
+  const monthsMap = new Map<number, { love: number; career: number; growth: number; home: number }>();
+
+  // Group scores by month
+  for (const monthScore of transit.months) {
+    const m = monthScore.month;
+    if (!monthsMap.has(m)) {
+      monthsMap.set(m, { love: 0, career: 0, growth: 0, home: 0 });
+    }
+    const scores = monthsMap.get(m)!;
+    scores[monthScore.category] = monthScore.score;
+  }
+
+  // Convert to reveal format
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const m = i + 1;
+    const scores = monthsMap.get(m) || { love: 50, career: 50, growth: 50, home: 50 };
+    const overall = Math.round((scores.love + scores.career + scores.growth + scores.home) / 4);
+    return {
+      month: m,
+      scores,
+      overall,
+      isPowerMonth: transit.overallPowerMonths.includes(m),
+    };
+  });
+
+  // Find avoid months (lowest 3 overall scores)
+  const sortedByScore = [...months].sort((a, b) => a.overall - b.overall);
+  const avoidMonths = sortedByScore.slice(0, 3).map(m => m.month);
+
+  return {
+    year: transit.year,
+    months,
+    powerMonths: transit.overallPowerMonths.slice(0, 3),
+    avoidMonths,
+  };
 }
 
 // PRD-specified loading messages for 2026 forecast generation
@@ -588,37 +634,44 @@ export default function RevealScreen10Generation2() {
     return () => clearInterval(interval);
   }, [apiComplete, dispatch]);
 
-  // Calculate 2026 forecast
+  // Calculate 2026 forecast using real transit calculations
   useEffect(() => {
     if (!state.birthData || hasCalledApiRef.current) return;
     hasCalledApiRef.current = true;
 
+    const birthData = state.birthData; // Capture for closure
+
     const generateForecast = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      try {
+        // Small delay for UX (animation needs time to show)
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const mockForecast = {
-        year: 2026,
-        months: Array.from({ length: 12 }, (_, i) => ({
-          month: i + 1,
-          scores: {
-            love: 40 + Math.floor(Math.random() * 50),
-            career: 40 + Math.floor(Math.random() * 50),
-            growth: 40 + Math.floor(Math.random() * 50),
-            home: 40 + Math.floor(Math.random() * 50),
-          },
-          overall: 50 + Math.floor(Math.random() * 40),
-          isPowerMonth: false,
-        })),
-        powerMonths: [3, 7, 10],
-        avoidMonths: [2, 6, 11],
-      };
+        // Calculate with exact time (reveal flow always has time)
+        const natalPositions = calculateNatalPositions(birthData);
+        const transitForecast = calculatePowerMonths(natalPositions);
 
-      mockForecast.powerMonths.forEach((m) => {
-        mockForecast.months[m - 1].isPowerMonth = true;
-      });
+        // Convert to reveal-state format
+        const revealForecast = convertToRevealForecast(transitForecast);
 
-      dispatch({ type: "SET_FORECAST_DATA", payload: mockForecast });
-      setApiComplete(true);
+        dispatch({ type: "SET_FORECAST_DATA", payload: revealForecast });
+        setApiComplete(true);
+      } catch (error) {
+        console.error("Error calculating forecast:", error);
+        // Fallback to simple mock if calculation fails
+        const fallbackForecast: RevealYearForecast = {
+          year: 2026,
+          months: Array.from({ length: 12 }, (_, i) => ({
+            month: i + 1,
+            scores: { love: 60, career: 60, growth: 60, home: 60 },
+            overall: 60,
+            isPowerMonth: [3, 7, 10].includes(i + 1),
+          })),
+          powerMonths: [3, 7, 10],
+          avoidMonths: [2, 6, 11],
+        };
+        dispatch({ type: "SET_FORECAST_DATA", payload: fallbackForecast });
+        setApiComplete(true);
+      }
     };
 
     generateForecast();
