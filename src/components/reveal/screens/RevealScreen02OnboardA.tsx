@@ -15,7 +15,7 @@ export default function RevealScreen04OnboardA() {
     <div className="flex-1 flex flex-col relative">
       {/* Map visible in background via RevealShell */}
 
-      <SlideUpPanel isVisible={true} height="70%">
+      <SlideUpPanel isVisible={true} height="100%">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
