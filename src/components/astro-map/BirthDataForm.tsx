@@ -118,6 +118,7 @@ export default function BirthDataForm({ onSubmit, loading = false }: BirthDataFo
           bg-white/[0.08] backdrop-blur-xl
           border border-white/[0.12]
           shadow-[0_8px_32px_rgba(0,0,0,0.3)]
+          overflow-hidden
         "
       >
         {/* Birth Date */}

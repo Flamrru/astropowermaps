@@ -22,15 +22,16 @@ const DEV_BIRTH_DATA = {
   },
 };
 
-type ViewState = "form" | "loading" | "map";
+type ViewState = "form" | "loading" | "map" | "needsPayment";
 
 function MapPageContent() {
   const [viewState, setViewState] = useState<ViewState>("form");
   const [mapData, setMapData] = useState<AstrocartographyResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
-  // Check for saved data or dev mode on mount
+  // Check for saved data, token (sid), or dev mode on mount
   useEffect(() => {
     const initMap = async () => {
       // Dev mode: ?d or ?d=1 skips form with test data
@@ -54,7 +55,7 @@ function MapPageContent() {
               saveAstroData(response.data);
               setMapData(response.data);
               setViewState("map");
-              console.log("🔧 Map dev mode - data loaded, forecast will calculate automatically");
+              console.log("🔧 Map dev mode - data loaded");
             }
           }
         } catch (error) {
@@ -64,7 +65,53 @@ function MapPageContent() {
         return;
       }
 
-      // Normal flow: check for saved data
+      // Token mode: ?sid=xxx loads from database (requires payment)
+      const sidParam = searchParams.get("sid");
+      if (sidParam) {
+        console.log("🔑 Loading map from token:", sidParam);
+        setSessionId(sidParam);
+        setViewState("loading");
+
+        try {
+          // Fetch lead data from API (checks has_purchased)
+          const leadRes = await fetch(`/api/lead?sid=${sidParam}`);
+          const leadData = await leadRes.json();
+
+          if (!leadRes.ok) {
+            if (leadData.needsPayment) {
+              // User hasn't paid - redirect to reveal flow with their session
+              console.log("💳 Payment required, redirecting to paywall");
+              setViewState("needsPayment");
+              return;
+            }
+            throw new Error(leadData.error || "Failed to load map");
+          }
+
+          // Generate astro map from birth data
+          const astroRes = await fetch("/api/astrocartography", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ birthData: leadData.data.birthData }),
+          });
+
+          if (astroRes.ok) {
+            const astroData = await astroRes.json();
+            if (astroData.success && astroData.data) {
+              saveAstroData(astroData.data);
+              setMapData(astroData.data);
+              setViewState("map");
+              console.log("✅ Map loaded from token");
+            }
+          }
+        } catch (error) {
+          console.error("Token load error:", error);
+          setError("Could not load your map. Please try again.");
+          setViewState("form");
+        }
+        return;
+      }
+
+      // Normal flow: check for saved data in localStorage
       const savedData = loadAstroData();
       if (savedData) {
         setMapData(savedData);
@@ -201,6 +248,44 @@ function MapPageContent() {
               style={{ minHeight: '100vh', minWidth: '100vw' }}
             >
               <AstroMap data={mapData} onReset={handleReset} />
+            </motion.div>
+          )}
+
+          {/* Payment Required View */}
+          {viewState === "needsPayment" && (
+            <motion.div
+              key="needsPayment"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="min-h-screen min-h-dvh flex flex-col items-center justify-center px-6"
+            >
+              <div className="max-w-md w-full text-center">
+                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-[#C9A227]/10 flex items-center justify-center">
+                  <svg className="w-10 h-10 text-[#C9A227]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-3">
+                  Unlock Your Map
+                </h2>
+                <p className="text-white/60 mb-8">
+                  Complete your purchase to access your personalized 2026 Power Map forever.
+                </p>
+                <a
+                  href={sessionId ? `/reveal?sid=${sessionId}` : "/reveal"}
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-full font-medium text-black transition-all"
+                  style={{
+                    background: "linear-gradient(135deg, #E8C547 0%, #C9A227 100%)",
+                    boxShadow: "0 4px 20px rgba(201, 162, 39, 0.4)",
+                  }}
+                >
+                  Continue to Payment
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

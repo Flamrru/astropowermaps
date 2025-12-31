@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useReveal } from "@/lib/reveal-state";
 import GoldButton from "@/components/GoldButton";
-import { Check, Calendar, MapPin, AlertTriangle, Sparkles } from "lucide-react";
+import { Check, Calendar, MapPin, AlertTriangle, Sparkles, Copy, Link2 } from "lucide-react";
 import { calculateAllPowerPlaces, LifeCategory } from "@/lib/astro/power-places";
 
 // Month names for display
@@ -24,6 +24,24 @@ export default function RevealScreen12Confirmation() {
   const { state } = useReveal();
   const [showContent, setShowContent] = useState(false);
   const [celebrationComplete, setCelebrationComplete] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Generate the unique map URL
+  const mapUrl = typeof window !== "undefined" && state.session_id
+    ? `${window.location.origin}/map?sid=${state.session_id}`
+    : null;
+
+  // Copy URL to clipboard
+  const handleCopyUrl = async () => {
+    if (!mapUrl) return;
+    try {
+      await navigator.clipboard.writeText(mapUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
 
   // Get forecast and astro data
   const forecast = state.forecastData;
@@ -257,14 +275,72 @@ export default function RevealScreen12Confirmation() {
           </div>
         </motion.div>
 
+        {/* Your Permanent Link */}
+        {mapUrl && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.1 }}
+            className="rounded-2xl p-4 mb-4"
+            style={{
+              background: "linear-gradient(135deg, rgba(100, 150, 255, 0.1), rgba(100, 150, 255, 0.05))",
+              border: "1px solid rgba(100, 150, 255, 0.2)",
+            }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Link2 className="w-4 h-4 text-blue-400" />
+              <span className="text-blue-400 font-medium text-sm">Your Permanent Link</span>
+            </div>
+            <p className="text-white/60 text-xs mb-3">
+              Bookmark this link to access your map anytime, on any device:
+            </p>
+            <div className="flex items-center gap-2">
+              <div
+                className="flex-1 px-3 py-2.5 rounded-lg text-xs text-white/70 overflow-hidden"
+                style={{
+                  background: "rgba(0, 0, 0, 0.3)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                }}
+              >
+                <span className="block truncate">{mapUrl}</span>
+              </div>
+              <button
+                onClick={handleCopyUrl}
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-medium transition-all"
+                style={{
+                  background: copied
+                    ? "rgba(76, 175, 80, 0.2)"
+                    : "rgba(255, 255, 255, 0.1)",
+                  border: copied
+                    ? "1px solid rgba(76, 175, 80, 0.3)"
+                    : "1px solid rgba(255, 255, 255, 0.15)",
+                  color: copied ? "#4CAF50" : "white",
+                }}
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    Copy
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         {/* CTA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.2 }}
+          transition={{ delay: 1.3 }}
           className="mt-auto"
         >
-          <GoldButton onClick={() => window.location.href = "/map"}>
+          <GoldButton onClick={() => window.location.href = mapUrl || "/map"}>
             <span className="flex items-center gap-2">
               <MapPin className="w-4 h-4" />
               Explore Your Full Map
@@ -272,7 +348,7 @@ export default function RevealScreen12Confirmation() {
           </GoldButton>
 
           <p className="text-center text-white/40 text-xs mt-4">
-            Your map is saved to your account. Check your email for a copy.
+            Your map is saved forever. Bookmark your link above!
           </p>
         </motion.div>
       </motion.div>

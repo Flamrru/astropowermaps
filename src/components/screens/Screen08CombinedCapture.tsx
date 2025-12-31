@@ -131,7 +131,7 @@ export default function Screen08CombinedCapture() {
       const localDateTime = `${date}T${finalTime}:00`;
       const birthDatetimeUtc = fromZonedTime(localDateTime, timezone).toISOString();
 
-      // 1. Save lead to database
+      // 1. Save lead to database (with birth data for permanent token access)
       const response = await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -144,6 +144,19 @@ export default function Screen08CombinedCapture() {
           utm: state.utm,
           session_id: state.session_id,
           timestamp: new Date().toISOString(),
+          birthData: {
+            date,
+            time: finalTime,
+            timeUnknown,
+            timeWindow: timeWindow || undefined,
+            location: {
+              name: location.name,
+              lat: location.lat,
+              lng: location.lng,
+              timezone,
+            },
+            birthDatetimeUtc,
+          },
         }),
       });
 

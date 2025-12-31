@@ -258,6 +258,25 @@ body {
   box-shadow: 0 0 20px rgba(201, 162, 39, 0.15);
 }
 
+/* Fix native date/time inputs on mobile - prevent overflow */
+input[type="date"],
+input[type="time"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+  input[type="date"],
+  input[type="time"] {
+    min-height: 48px;
+  }
+}
+
 /* ===== CREDIBILITY BAR ===== */
 .credibility-bar {
   background: rgba(0, 0, 0, 0.3);
