@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Clock, MapPin, Mail, Sparkles, ArrowRight } from "lucide-react";
+import { Calendar, Clock, MapPin, Mail, ArrowRight } from "lucide-react";
 import { useQuiz } from "@/lib/quiz-state";
 import { trackMetaEvent } from "@/components/MetaPixel";
 import GoldButton from "@/components/GoldButton";
@@ -237,33 +237,17 @@ export default function Screen08CombinedCapture() {
     <div className="flex-1 flex flex-col relative">
       <CelestialParticles />
 
-      <div className="flex-1 flex flex-col px-5 pb-6">
+      <div className="flex-1 flex flex-col px-5 pb-4">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
           className="flex-1 flex flex-col max-w-md mx-auto w-full"
         >
-          {/* Badge */}
-          <motion.div variants={itemVariants} className="flex justify-center pt-4 mb-3">
-            <div
-              className="flex items-center gap-2 px-4 py-2 rounded-full"
-              style={{
-                background: "linear-gradient(135deg, rgba(232,197,71,0.15) 0%, rgba(201,162,39,0.05) 100%)",
-                border: "1px solid rgba(201,162,39,0.3)",
-              }}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-gold" />
-              <span className="text-[11px] text-gold uppercase tracking-[0.15em] font-medium">
-                Almost there
-              </span>
-            </div>
-          </motion.div>
-
           {/* Headline */}
           <motion.h1
             variants={itemVariants}
-            className="text-[28px] md:text-[32px] font-bold text-white text-center mb-2 leading-tight"
+            className="text-[26px] md:text-[30px] font-bold text-white text-center mb-1 leading-tight pt-3"
           >
             One step to your{" "}
             <span className="text-gold-glow">map</span>.
@@ -272,7 +256,7 @@ export default function Screen08CombinedCapture() {
           {/* Subhead */}
           <motion.p
             variants={itemVariants}
-            className="text-[14px] text-white/60 text-center mb-5 leading-relaxed px-2"
+            className="text-[13px] text-white/60 text-center mb-3 leading-relaxed px-2"
           >
             Enter your details below. The more precise your birth info, the more accurate your{" "}
             <span className="text-gold/80">power places</span> and{" "}
@@ -286,7 +270,7 @@ export default function Screen08CombinedCapture() {
             className="flex-1 flex flex-col"
           >
             <div
-              className="rounded-2xl p-5 mb-4"
+              className="rounded-2xl p-4 mb-3"
               style={{
                 background: "rgba(10, 10, 25, 0.6)",
                 backdropFilter: "blur(20px)",
@@ -303,8 +287,8 @@ export default function Screen08CombinedCapture() {
               />
 
               {/* Email Field */}
-              <div className="mb-4">
-                <label className="flex items-center gap-2 text-white/80 text-[13px] font-medium mb-2">
+              <div className="mb-3">
+                <label className="flex items-center gap-2 text-white/80 text-[12px] font-medium mb-1.5">
                   <Mail size={13} className="text-gold" />
                   Email
                 </label>
@@ -316,9 +300,9 @@ export default function Screen08CombinedCapture() {
                     if (errors.email) setErrors((prev) => ({ ...prev, email: "" }));
                   }}
                   placeholder="your@email.com"
-                  className={`w-full px-4 py-3.5 rounded-xl bg-white/[0.06] border ${
+                  className={`w-full px-4 py-3 rounded-xl bg-white/[0.06] border ${
                     errors.email ? "border-red-400/50" : "border-white/10"
-                  } text-white text-[15px] placeholder:text-white/30 focus:outline-none focus:border-gold/40 focus:bg-white/[0.08] transition-all`}
+                  } text-white text-[14px] placeholder:text-white/30 focus:outline-none focus:border-gold/40 focus:bg-white/[0.08] transition-all`}
                   disabled={isSubmitting}
                 />
                 {errors.email && (
@@ -327,8 +311,8 @@ export default function Screen08CombinedCapture() {
               </div>
 
               {/* Birth Date */}
-              <div className="mb-4">
-                <label className="flex items-center gap-2 text-white/80 text-[13px] font-medium mb-2">
+              <div className="mb-3">
+                <label className="flex items-center gap-2 text-white/80 text-[12px] font-medium mb-1.5">
                   <Calendar size={13} className="text-gold" />
                   Birth Date
                 </label>
@@ -340,9 +324,9 @@ export default function Screen08CombinedCapture() {
                     if (errors.date) setErrors((prev) => ({ ...prev, date: "" }));
                   }}
                   max={new Date().toISOString().split("T")[0]}
-                  className={`w-full px-4 py-3.5 rounded-xl bg-white/[0.06] border ${
+                  className={`w-full px-4 py-3 rounded-xl bg-white/[0.06] border ${
                     errors.date ? "border-red-400/50" : "border-white/10"
-                  } text-white text-[15px] focus:outline-none focus:border-gold/40 focus:bg-white/[0.08] transition-all [color-scheme:dark]`}
+                  } text-white text-[14px] focus:outline-none focus:border-gold/40 focus:bg-white/[0.08] transition-all [color-scheme:dark]`}
                   disabled={isSubmitting}
                 />
                 {errors.date && (
@@ -351,8 +335,8 @@ export default function Screen08CombinedCapture() {
               </div>
 
               {/* Birth Time */}
-              <div className="mb-4">
-                <label className="flex items-center gap-2 text-white/80 text-[13px] font-medium mb-2">
+              <div className="mb-3">
+                <label className="flex items-center gap-2 text-white/80 text-[12px] font-medium mb-1.5">
                   <Clock size={13} className="text-gold" />
                   Birth Time
                 </label>
@@ -365,15 +349,15 @@ export default function Screen08CombinedCapture() {
                     setTimeWindow(null);
                     if (errors.time) setErrors((prev) => ({ ...prev, time: "" }));
                   }}
-                  className={`w-full px-4 py-3.5 rounded-xl bg-white/[0.06] border ${
+                  className={`w-full px-4 py-3 rounded-xl bg-white/[0.06] border ${
                     errors.time ? "border-red-400/50" : "border-white/10"
-                  } text-white text-[15px] focus:outline-none focus:border-gold/40 focus:bg-white/[0.08] transition-all [color-scheme:dark]`}
+                  } text-white text-[14px] focus:outline-none focus:border-gold/40 focus:bg-white/[0.08] transition-all [color-scheme:dark]`}
                   disabled={isSubmitting}
                 />
 
                 {/* Time window selector */}
-                <div className="mt-3 pt-3 border-t border-white/5">
-                  <p className="text-white/50 text-[12px] mb-2.5">
+                <div className="mt-2 pt-2 border-t border-white/5">
+                  <p className="text-white/50 text-[11px] mb-2">
                     Not sure? Estimate:
                   </p>
                   <div
@@ -431,7 +415,7 @@ export default function Screen08CombinedCapture() {
 
               {/* Birth City */}
               <div className="relative">
-                <label className="flex items-center gap-2 text-white/80 text-[13px] font-medium mb-2">
+                <label className="flex items-center gap-2 text-white/80 text-[12px] font-medium mb-1.5">
                   <MapPin size={13} className="text-gold" />
                   Birth City
                 </label>
@@ -471,7 +455,7 @@ export default function Screen08CombinedCapture() {
             )}
 
             {/* CTA Button */}
-            <div className="mt-auto pt-2">
+            <div className="mt-auto pt-1">
               <GoldButton
                 type="submit"
                 loading={isSubmitting}
@@ -484,9 +468,16 @@ export default function Screen08CombinedCapture() {
               </GoldButton>
             </div>
 
-            {/* Privacy note */}
-            <p className="text-center text-white/30 text-[11px] mt-3">
-              Your data is used only to calculate your chart. No spam.
+            {/* Legal disclaimer */}
+            <p className="text-center text-white/40 text-[10px] mt-2 leading-relaxed">
+              By continuing, you agree to our{" "}
+              <a href="/terms" target="_blank" className="underline hover:text-white/60 transition-colors">
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a href="/privacy" target="_blank" className="underline hover:text-white/60 transition-colors">
+                Privacy Policy
+              </a>
             </p>
           </motion.form>
         </motion.div>

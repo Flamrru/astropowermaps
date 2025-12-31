@@ -108,7 +108,7 @@ export default function LocationSearch({
         const response = await fetch(
           `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
             query
-          )}.json?access_token=${token}&types=place,locality,region&limit=5`
+          )}.json?access_token=${token}&types=place,locality,region&limit=3`
         );
 
         if (!response.ok) throw new Error("Geocoding failed");
