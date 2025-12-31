@@ -146,7 +146,7 @@ export default function RevealShell({ children }: RevealShellProps) {
       // PAYMENT SUCCESS: Handle return from Stripe after successful payment
       const paymentStatus = searchParams.get("payment_status");
       if (paymentStatus === "complete") {
-        console.log("✅ Payment completed - recovering session and showing confirmation");
+        console.log("✅ Payment completed - recovering session and redirecting to map");
 
         // Get Stripe's checkout session ID from URL
         const stripeSessionId = searchParams.get("session_id");
@@ -170,7 +170,7 @@ export default function RevealShell({ children }: RevealShellProps) {
             return;
           }
 
-          const { app_session_id, email } = lookupData;
+          const { app_session_id } = lookupData;
           console.log("✅ Recovered app_session_id:", app_session_id);
 
           // 2. Track Purchase event (client-side pixel)
@@ -181,74 +181,11 @@ export default function RevealShell({ children }: RevealShellProps) {
             content_name: "2026 Astro Power Map",
           });
 
-          // 3. Fetch lead data to get birth data for confirmation screen
-          const lead = await fetchLead(app_session_id);
-
-          if (lead?.birthData) {
-            // 4. Set birth data
-            dispatch({ type: "SET_BIRTH_DATA", payload: lead.birthData });
-
-            // 5. Recalculate astro data from birth data
-            const astroRes = await fetch("/api/astrocartography", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ birthData: lead.birthData }),
-            });
-
-            if (astroRes.ok) {
-              const astroResponse = await astroRes.json();
-              if (astroResponse.success && astroResponse.data) {
-                dispatch({ type: "SET_ASTRO_DATA", payload: astroResponse.data });
-                saveAstroData(astroResponse.data);
-
-                // 6. Calculate forecast data for confirmation screen
-                try {
-                  const natalPositions = calculateNatalPositions(lead.birthData);
-                  const transitForecast = calculatePowerMonths(natalPositions);
-                  const revealForecast = convertToRevealForecast(transitForecast);
-                  dispatch({ type: "SET_FORECAST_DATA", payload: revealForecast });
-                } catch (forecastError) {
-                  console.error("Forecast calculation error:", forecastError);
-                }
-              }
-            }
-          }
-
-          // 7. Hydrate state with session data
-          dispatch({
-            type: "HYDRATE",
-            payload: {
-              email: email || lead?.email || "",
-              session_id: app_session_id,
-              utm: lead?.utm || {},
-              quizAnswers: {
-                q1: lead?.quiz_q1 || null,
-                q2: lead?.quiz_q2 || [],
-              },
-            },
-          });
-
-          // 8. Mark payment as complete and go to Step 10 (Confirmation)
-          dispatch({
-            type: "SET_PAYMENT_COMPLETE",
-            payload: { orderId: app_session_id },
-          });
-          dispatch({ type: "SET_STEP", payload: 10 });
-
-          // 9. Update URL for refresh recovery (with our app_session_id, not Stripe's)
-          window.history.replaceState(
-            {},
-            "",
-            `/reveal?sid=${app_session_id}&step=10`
-          );
-
-          setIsHydrating(false);
-          setHasHydrated(true);
-          setMounted(true);
+          // 3. Redirect to map with session ID preserved
+          window.location.href = `/map?sid=${app_session_id}&payment=success`;
           return;
         } catch (error) {
           console.error("Error handling payment completion:", error);
-          // Fallback to map page if something goes wrong
           window.location.href = "/map?payment=success";
           return;
         }
