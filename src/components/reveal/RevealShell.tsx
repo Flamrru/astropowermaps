@@ -181,8 +181,8 @@ export default function RevealShell({ children }: RevealShellProps) {
             content_name: "2026 Astro Power Map",
           });
 
-          // 3. Redirect to map with session ID preserved
-          window.location.href = `/map?sid=${app_session_id}&payment=success`;
+          // 3. Redirect to map (astro data is already in localStorage from reveal flow)
+          window.location.href = "/map?payment=success";
           return;
         } catch (error) {
           console.error("Error handling payment completion:", error);
