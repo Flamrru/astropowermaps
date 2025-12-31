@@ -4,9 +4,10 @@ import { motion } from "framer-motion";
 import GoldButton from "@/components/GoldButton";
 import { COPY } from "@/content/copy";
 import { useQuiz } from "@/lib/quiz-state";
+import Link from "next/link";
 
 export default function Screen02Insight() {
-  const { state, dispatch } = useQuiz();
+  const { dispatch } = useQuiz();
 
   const handleNext = () => {
     dispatch({ type: "NEXT_STEP" });
@@ -38,20 +39,39 @@ export default function Screen02Insight() {
           </motion.p>
         </div>
 
-        {/* Spacer to push button down */}
-        <div className="flex-1 min-h-[60px]" />
-
-        {/* CTA */}
+        {/* CTA - mt-auto pushes to bottom, adjust mb to move up */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="max-w-md mx-auto w-full mb-6"
+          className="max-w-md mx-auto w-full mt-auto mb-7"
         >
           <GoldButton onClick={handleNext}>
             {COPY.screen2.button}
           </GoldButton>
         </motion.div>
+
+        {/* Legal disclaimer */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+          className="text-center text-[12px] text-white/70 leading-relaxed max-w-md mx-auto mb-14"
+        >
+          By clicking Next, you agree to our{" "}
+          <Link href="/terms" className="underline hover:text-white/70 transition-colors">
+            Terms
+          </Link>
+          ,{" "}
+          <Link href="/privacy" className="underline hover:text-white/70 transition-colors">
+            Privacy Policy
+          </Link>
+          {" "}&{" "}
+          <Link href="/cookies" className="underline hover:text-white/70 transition-colors">
+            Cookie Policy
+          </Link>
+          .
+        </motion.p>
       </div>
     </div>
   );

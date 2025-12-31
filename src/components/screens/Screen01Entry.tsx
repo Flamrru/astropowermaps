@@ -115,7 +115,7 @@ export default function Screen01Entry() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.55, ease: "easeOut" }}
-            className="mt-5 mb-6"
+            className="mt-5 mb-8"
           >
             <motion.button
               onClick={handleStart}
@@ -127,6 +127,7 @@ export default function Screen01Entry() {
               <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
             </motion.button>
           </motion.div>
+
         </div>
       </div>
     </div>

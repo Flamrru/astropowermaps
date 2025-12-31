@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { QuizContext, quizReducer, initialQuizState } from "@/lib/quiz-state";
 import { parseUTMParams } from "@/lib/utm";
 import ProgressHeader from "@/components/ProgressHeader";
+import CookieConsent from "@/components/CookieConsent";
 
 // Funnel events to track
 const FUNNEL_EVENTS: Record<number, string> = {
@@ -401,6 +402,9 @@ export default function QuizShell({ children }: QuizShellProps) {
               {children}
             </div>
           </main>
+
+          {/* Cookie consent banner - inside container for proper stacking */}
+          <CookieConsent />
         </div>
       </div>
     </QuizContext.Provider>
