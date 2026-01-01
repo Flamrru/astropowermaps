@@ -15,11 +15,14 @@ interface Lead {
   utm_term: string | null;
   session_id: string;
   created_at: string;
+  has_purchased: boolean;
 }
 
 interface Stats {
   total: number;
   today: number;
+  thisWeek: number;
+  thisMonth: number;
 }
 
 interface FunnelData {
@@ -29,7 +32,26 @@ interface FunnelData {
   q2_answered: number;
   email_screen: number;
   lead: number;
+  purchase: number;
 }
+
+interface RevenueBySource {
+  source: string;
+  revenue: number;
+  purchases: number;
+  leads: number;
+  conversionRate: number;
+}
+
+interface RevenueData {
+  total: number;
+  purchaseCount: number;
+  conversionRate: number;
+  averageOrderValue: number;
+  bySource: RevenueBySource[];
+}
+
+type Period = "today" | "week" | "month" | "all";
 
 // Q1 and Q2 answer options for analytics
 const Q1_OPTIONS = ["Yes, definitely", "Maybe once or twice", "Not sure"];
@@ -43,7 +65,7 @@ const Q2_OPTIONS = [
 
 export default function AdminDashboardPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [stats, setStats] = useState<Stats>({ total: 0, today: 0 });
+  const [stats, setStats] = useState<Stats>({ total: 0, today: 0, thisWeek: 0, thisMonth: 0 });
   const [funnel, setFunnel] = useState<FunnelData>({
     page_view: 0,
     quiz_start: 0,
@@ -51,7 +73,16 @@ export default function AdminDashboardPage() {
     q2_answered: 0,
     email_screen: 0,
     lead: 0,
+    purchase: 0,
   });
+  const [revenue, setRevenue] = useState<RevenueData>({
+    total: 0,
+    purchaseCount: 0,
+    conversionRate: 0,
+    averageOrderValue: 0,
+    bySource: [],
+  });
+  const [period, setPeriod] = useState<Period>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -59,10 +90,10 @@ export default function AdminDashboardPage() {
   const router = useRouter();
 
   // Fetch leads function (reusable for refresh)
-  const fetchLeads = useCallback(async (showLoading = true) => {
+  const fetchLeads = useCallback(async (showLoading = true, selectedPeriod: Period = period) => {
     if (showLoading) setIsLoading(true);
     try {
-      const res = await fetch("/api/admin/leads");
+      const res = await fetch(`/api/admin/leads?period=${selectedPeriod}`);
       if (res.status === 401) {
         router.replace("/admin");
         return;
@@ -71,7 +102,7 @@ export default function AdminDashboardPage() {
 
       const data = await res.json();
       setLeads(data.leads || []);
-      setStats(data.stats || { total: 0, today: 0 });
+      setStats(data.stats || { total: 0, today: 0, thisWeek: 0, thisMonth: 0 });
       setFunnel(data.funnel || {
         page_view: 0,
         quiz_start: 0,
@@ -79,6 +110,14 @@ export default function AdminDashboardPage() {
         q2_answered: 0,
         email_screen: 0,
         lead: 0,
+        purchase: 0,
+      });
+      setRevenue(data.revenue || {
+        total: 0,
+        purchaseCount: 0,
+        conversionRate: 0,
+        averageOrderValue: 0,
+        bySource: [],
       });
       setLastUpdated(new Date());
       setError("");
@@ -87,7 +126,7 @@ export default function AdminDashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [router]);
+  }, [router, period]);
 
   // Fetch on mount
   useEffect(() => {
@@ -97,10 +136,16 @@ export default function AdminDashboardPage() {
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchLeads(false); // Don't show loading spinner on auto-refresh
+      fetchLeads(false, period); // Don't show loading spinner on auto-refresh
     }, 30000);
     return () => clearInterval(interval);
-  }, [fetchLeads]);
+  }, [fetchLeads, period]);
+
+  // Handle period change
+  const handlePeriodChange = (newPeriod: Period) => {
+    setPeriod(newPeriod);
+    fetchLeads(true, newPeriod);
+  };
 
   // Analytics calculations
   const analytics = useMemo(() => {
@@ -280,49 +325,131 @@ export default function AdminDashboardPage() {
 
       {/* Main content */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard
-            label="Total Leads"
-            value={stats.total}
-            icon={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            }
-            accent
-          />
-          <StatCard
-            label="Today's Leads"
-            value={stats.today}
-            icon={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
-          />
-          <StatCard
-            label="Conversion Sources"
-            value={new Set(leads.filter(l => l.utm_source).map(l => l.utm_source)).size}
-            icon={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-            }
-          />
-          <StatCard
-            label="This Week"
-            value={leads.filter(l => {
-              const weekAgo = new Date();
-              weekAgo.setDate(weekAgo.getDate() - 7);
-              return new Date(l.created_at) >= weekAgo;
-            }).length}
-            icon={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            }
-          />
+        {/* Period Tabs */}
+        <div className="mb-6 overflow-x-auto">
+          <div className="flex gap-2 min-w-max">
+            {(["today", "week", "month", "all"] as Period[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => handlePeriodChange(p)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  period === p
+                    ? "bg-[var(--gold-main)] text-black"
+                    : "bg-white/5 text-[var(--text-soft)] hover:bg-white/10 border border-white/10"
+                }`}
+              >
+                {p === "today" && "Today"}
+                {p === "week" && "This Week"}
+                {p === "month" && "This Month"}
+                {p === "all" && "All Time"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Revenue Cards */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Revenue
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <RevenueCard
+              label="Total Revenue"
+              value={`$${(revenue.total / 100).toFixed(2)}`}
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
+              accent
+            />
+            <RevenueCard
+              label="Purchases"
+              value={revenue.purchaseCount.toString()}
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              }
+            />
+            <RevenueCard
+              label="Conversion Rate"
+              value={`${(revenue.conversionRate * 100).toFixed(1)}%`}
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              }
+            />
+            <RevenueCard
+              label="Avg Order Value"
+              value={revenue.purchaseCount > 0 ? `$${(revenue.averageOrderValue / 100).toFixed(2)}` : "$0.00"}
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              }
+            />
+          </div>
+        </div>
+
+        {/* Revenue by Source */}
+        {revenue.bySource.length > 0 && (
+          <div className="mb-8">
+            <RevenueBySourceTable data={revenue.bySource} />
+          </div>
+        )}
+
+        {/* Lead Stats cards */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-[var(--gold-main)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Leads Overview
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              label="Total Leads"
+              value={stats.total}
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              }
+              accent
+            />
+            <StatCard
+              label="Today"
+              value={stats.today}
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
+            />
+            <StatCard
+              label="This Week"
+              value={stats.thisWeek}
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              }
+            />
+            <StatCard
+              label="This Month"
+              value={stats.thisMonth}
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              }
+            />
+          </div>
         </div>
 
         {/* Funnel Analytics */}
@@ -411,6 +538,9 @@ export default function AdminDashboardPage() {
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                       Email
                     </th>
+                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden sm:table-cell">
+                      Status
+                    </th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden md:table-cell">
                       Q1 Answer
                     </th>
@@ -434,8 +564,12 @@ export default function AdminDashboardPage() {
                     >
                       <td className="px-4 sm:px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--gold-main)]/20 to-[var(--gold-dark)]/20 border border-[var(--gold-main)]/20 flex items-center justify-center flex-shrink-0">
-                            <span className="text-xs font-medium text-[var(--gold-main)]">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            lead.has_purchased
+                              ? "bg-green-500/20 border border-green-500/30"
+                              : "bg-gradient-to-br from-[var(--gold-main)]/20 to-[var(--gold-dark)]/20 border border-[var(--gold-main)]/20"
+                          }`}>
+                            <span className={`text-xs font-medium ${lead.has_purchased ? "text-green-400" : "text-[var(--gold-main)]"}`}>
                               {lead.email.charAt(0).toUpperCase()}
                             </span>
                           </div>
@@ -443,6 +577,20 @@ export default function AdminDashboardPage() {
                             {lead.email}
                           </span>
                         </div>
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 hidden sm:table-cell">
+                        {lead.has_purchased ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                            Paid
+                          </span>
+                        ) : (
+                          <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-white/5 text-[var(--text-muted)] border border-white/10">
+                            Lead
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden md:table-cell">
                         {lead.quiz_q1 ? (
@@ -608,11 +756,12 @@ function BarChart({
 // Funnel chart component
 function FunnelChart({ data }: { data: FunnelData }) {
   const steps = [
-    { key: "quiz_start", label: "Quiz Started", icon: "🚀" },
-    { key: "q1_answered", label: "Q1 Answered", icon: "✓" },
-    { key: "q2_answered", label: "Q2 Answered", icon: "✓" },
-    { key: "email_screen", label: "Email Screen", icon: "📧" },
-    { key: "lead", label: "Lead Captured", icon: "🎯" },
+    { key: "quiz_start", label: "Quiz Started", icon: "🚀", color: "gold" },
+    { key: "q1_answered", label: "Q1 Answered", icon: "✓", color: "gold" },
+    { key: "q2_answered", label: "Q2 Answered", icon: "✓", color: "gold" },
+    { key: "email_screen", label: "Email Screen", icon: "📧", color: "gold" },
+    { key: "lead", label: "Lead Captured", icon: "🎯", color: "gold" },
+    { key: "purchase", label: "Purchased", icon: "💰", color: "green" },
   ];
 
   const maxValue = Math.max(...steps.map((s) => data[s.key as keyof FunnelData] || 0), 1);
@@ -660,11 +809,11 @@ function FunnelChart({ data }: { data: FunnelData }) {
                   style={{
                     width: `${barWidth}%`,
                     background:
-                      idx === steps.length - 1
+                      step.color === "green"
                         ? "linear-gradient(90deg, #22c55e, #4ade80)"
                         : "linear-gradient(90deg, var(--gold-dark), var(--gold-main))",
                     boxShadow:
-                      idx === steps.length - 1
+                      step.color === "green"
                         ? "0 0 8px rgba(34, 197, 94, 0.4)"
                         : "0 0 8px rgba(201, 162, 39, 0.3)",
                   }}
@@ -675,20 +824,155 @@ function FunnelChart({ data }: { data: FunnelData }) {
         })}
       </div>
 
-      {/* Conversion rate */}
+      {/* Conversion rates */}
       {data.quiz_start > 0 && (
-        <div className="mt-6 pt-4 border-t border-white/10">
+        <div className="mt-6 pt-4 border-t border-white/10 space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-[var(--text-muted)]">Overall Conversion</span>
-            <span className="text-lg font-bold text-green-400">
+            <span className="text-sm text-[var(--text-muted)]">Quiz → Lead</span>
+            <span className="text-base font-semibold text-[var(--gold-bright)]">
               {((data.lead / data.quiz_start) * 100).toFixed(1)}%
             </span>
           </div>
-          <p className="text-xs text-[var(--text-faint)] mt-1">
-            {data.lead} leads from {data.quiz_start} quiz starts
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-[var(--text-muted)]">Lead → Purchase</span>
+            <span className="text-base font-semibold text-green-400">
+              {data.lead > 0 ? ((data.purchase / data.lead) * 100).toFixed(1) : "0.0"}%
+            </span>
+          </div>
+          <p className="text-xs text-[var(--text-faint)]">
+            {data.quiz_start} started → {data.lead} leads → {data.purchase} purchases
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+// Revenue card component (green theme)
+function RevenueCard({
+  label,
+  value,
+  icon,
+  accent,
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={`glass-card rounded-xl p-5 ${
+        accent ? "border-green-500/30" : ""
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm text-[var(--text-muted)] mb-1">{label}</p>
+          <p
+            className={`text-3xl font-bold ${
+              accent ? "text-green-400" : "text-white"
+            }`}
+          >
+            {value}
+          </p>
+        </div>
+        <div
+          className={`p-2.5 rounded-lg ${
+            accent
+              ? "bg-green-500/10 text-green-400"
+              : "bg-white/5 text-[var(--text-muted)]"
+          }`}
+        >
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Revenue by source table component
+function RevenueBySourceTable({ data }: { data: RevenueBySource[] }) {
+  return (
+    <div className="glass-card rounded-2xl overflow-hidden">
+      <div className="p-4 sm:p-6 border-b border-white/10">
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+          Revenue by Source
+        </h3>
+        <p className="text-xs text-[var(--text-faint)] mt-1">See which traffic sources bring the most revenue</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-white/10 bg-black/20">
+              <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+                Source
+              </th>
+              <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+                Revenue
+              </th>
+              <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden sm:table-cell">
+                Purchases
+              </th>
+              <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden sm:table-cell">
+                Leads
+              </th>
+              <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+                Conv %
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {data.map((row) => (
+              <tr key={row.source} className="hover:bg-white/5 transition-colors">
+                <td className="px-4 sm:px-6 py-4">
+                  <span className="inline-flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${
+                      row.source === "direct" ? "bg-blue-400" :
+                      row.source === "fb" ? "bg-blue-500" :
+                      row.source === "ig" ? "bg-pink-500" :
+                      "bg-gray-400"
+                    }`} />
+                    <span className="text-sm font-medium text-white capitalize">
+                      {row.source === "fb" ? "Facebook" :
+                       row.source === "ig" ? "Instagram" :
+                       row.source === "direct" ? "Direct" :
+                       row.source}
+                    </span>
+                  </span>
+                </td>
+                <td className="px-4 sm:px-6 py-4 text-right">
+                  <span className="text-sm font-semibold text-green-400">
+                    ${(row.revenue / 100).toFixed(2)}
+                  </span>
+                </td>
+                <td className="px-4 sm:px-6 py-4 text-right hidden sm:table-cell">
+                  <span className="text-sm text-white">
+                    {row.purchases}
+                  </span>
+                </td>
+                <td className="px-4 sm:px-6 py-4 text-right hidden sm:table-cell">
+                  <span className="text-sm text-[var(--text-muted)]">
+                    {row.leads}
+                  </span>
+                </td>
+                <td className="px-4 sm:px-6 py-4 text-right">
+                  <span className={`text-sm font-medium ${
+                    row.conversionRate > 0.1 ? "text-green-400" :
+                    row.conversionRate > 0.05 ? "text-yellow-400" :
+                    "text-[var(--text-muted)]"
+                  }`}>
+                    {(row.conversionRate * 100).toFixed(1)}%
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
