@@ -44,9 +44,31 @@ export default function LocationSearch({
   useLayoutEffect(() => {
     if (isOpen && inputRef.current) {
       const rect = inputRef.current.getBoundingClientRect();
+
+      // Calculate safe top position (ensure dropdown stays in viewport)
+      let top = rect.bottom + 8;
+
+      // On mobile with keyboard open, visualViewport helps us position correctly
+      if (typeof window !== "undefined" && window.visualViewport) {
+        const viewportHeight = window.visualViewport.height;
+        const viewportTop = window.visualViewport.offsetTop;
+
+        // Ensure dropdown doesn't go below visible viewport
+        const maxTop = viewportTop + viewportHeight - 200; // Leave room for dropdown
+        if (top > maxTop) {
+          // Position above the input instead
+          top = rect.top - 8 - 150; // Approximate dropdown height
+        }
+
+        // Ensure dropdown doesn't go above viewport
+        if (top < viewportTop + 10) {
+          top = viewportTop + 10;
+        }
+      }
+
       setDropdownStyle({
         position: "fixed",
-        top: rect.bottom + 8,
+        top,
         left: rect.left,
         width: rect.width,
         zIndex: 9999,
@@ -54,16 +76,37 @@ export default function LocationSearch({
     }
   }, [isOpen]);
 
-  // Update position on scroll/resize
+  // Update position on scroll/resize/keyboard
   useEffect(() => {
     if (!isOpen) return;
 
     const updatePosition = () => {
       if (inputRef.current) {
         const rect = inputRef.current.getBoundingClientRect();
+
+        // Calculate safe top position (ensure dropdown stays in viewport)
+        let top = rect.bottom + 8;
+
+        // On mobile with keyboard open, visualViewport helps us position correctly
+        if (typeof window !== "undefined" && window.visualViewport) {
+          const viewportHeight = window.visualViewport.height;
+          const viewportTop = window.visualViewport.offsetTop;
+
+          // Ensure dropdown doesn't go below visible viewport
+          const maxTop = viewportTop + viewportHeight - 200;
+          if (top > maxTop) {
+            top = rect.top - 8 - 150;
+          }
+
+          // Ensure dropdown doesn't go above viewport
+          if (top < viewportTop + 10) {
+            top = viewportTop + 10;
+          }
+        }
+
         setDropdownStyle({
           position: "fixed",
-          top: rect.bottom + 8,
+          top,
           left: rect.left,
           width: rect.width,
           zIndex: 9999,
@@ -73,9 +116,21 @@ export default function LocationSearch({
 
     window.addEventListener("scroll", updatePosition, true);
     window.addEventListener("resize", updatePosition);
+
+    // Listen to visualViewport changes (keyboard open/close on mobile)
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (vv) {
+      vv.addEventListener("resize", updatePosition);
+      vv.addEventListener("scroll", updatePosition);
+    }
+
     return () => {
       window.removeEventListener("scroll", updatePosition, true);
       window.removeEventListener("resize", updatePosition);
+      if (vv) {
+        vv.removeEventListener("resize", updatePosition);
+        vv.removeEventListener("scroll", updatePosition);
+      }
     };
   }, [isOpen]);
 
@@ -261,11 +316,12 @@ export default function LocationSearch({
           onFocus={() => results.length > 0 && setIsOpen(true)}
           placeholder={placeholder}
           className="
-            w-full pl-12 pr-10 py-4 rounded-xl
+            w-full pl-11 pr-10 py-4 rounded-xl
             bg-white/10 backdrop-blur-xl
             border border-white/20
             text-white placeholder:text-white/40
-            text-base
+            text-base text-left
+            caret-white
             focus:outline-none focus:border-[#C9A227]/50
             focus:shadow-[0_0_20px_rgba(201,162,39,0.15)]
             transition-all duration-300

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { Calendar, Clock, MapPin, Mail, ArrowRight } from "lucide-react";
 import { useQuiz } from "@/lib/quiz-state";
@@ -18,6 +18,14 @@ const TIME_WINDOWS: { id: BirthTimeWindow; label: string; hint: string }[] = [
   { id: "evening", label: "Evening", hint: "6pm-12am" },
   { id: "unknown", label: "Not sure", hint: "We'll use noon" },
 ];
+
+// Display values for time windows (12-hour format for Americans)
+const TIME_WINDOW_DISPLAY: Record<BirthTimeWindow, string> = {
+  morning: "~9:00 AM",
+  afternoon: "~3:00 PM",
+  evening: "~9:00 PM",
+  unknown: "~12:00 PM",
+};
 
 // Floating celestial particles
 function CelestialParticles() {
@@ -81,6 +89,7 @@ export default function Screen08CombinedCapture() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [honeypot, setHoneypot] = useState("");
+  const timeInputRef = useRef<HTMLInputElement>(null);
 
   const validateEmail = (email: string): boolean => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -354,20 +363,42 @@ export default function Screen08CombinedCapture() {
                   <Clock size={13} className="text-gold" />
                   Birth Time
                 </label>
-                <input
-                  type="time"
-                  value={time}
-                  onChange={(e) => {
-                    setTime(e.target.value);
-                    setTimeUnknown(false);
-                    setTimeWindow(null);
-                    if (errors.time) setErrors((prev) => ({ ...prev, time: "" }));
-                  }}
-                  className={`w-full px-4 py-3 rounded-xl bg-white/[0.06] border ${
-                    errors.time ? "border-red-400/50" : "border-white/10"
-                  } text-white text-[14px] focus:outline-none focus:border-gold/40 focus:bg-white/[0.08] transition-all [color-scheme:dark]`}
-                  disabled={isSubmitting}
-                />
+                <div className="relative">
+                  <input
+                    ref={timeInputRef}
+                    type="time"
+                    value={time}
+                    onChange={(e) => {
+                      setTime(e.target.value);
+                      setTimeUnknown(false);
+                      setTimeWindow(null);
+                      if (errors.time) setErrors((prev) => ({ ...prev, time: "" }));
+                    }}
+                    className={`w-full px-4 py-3 rounded-xl bg-white/[0.06] border ${
+                      errors.time ? "border-red-400/50" : "border-white/10"
+                    } text-white text-[14px] focus:outline-none focus:border-gold/40 focus:bg-white/[0.08] transition-all [color-scheme:dark] ${
+                      timeUnknown && timeWindow ? "opacity-0" : ""
+                    }`}
+                    disabled={isSubmitting}
+                  />
+
+                  {/* Time window display overlay */}
+                  {timeUnknown && timeWindow && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTimeUnknown(false);
+                        setTimeWindow(null);
+                        // Focus the input after clearing
+                        setTimeout(() => timeInputRef.current?.focus(), 50);
+                      }}
+                      className="absolute inset-0 flex items-center px-4 py-3 rounded-xl bg-white/[0.06] border border-gold/30 text-left transition-colors hover:bg-white/[0.08]"
+                    >
+                      <span className="text-gold text-[14px]">{TIME_WINDOW_DISPLAY[timeWindow]}</span>
+                      <span className="ml-2 text-white/40 text-[11px]">(tap to change)</span>
+                    </button>
+                  )}
+                </div>
 
                 {/* Time window selector */}
                 <div className="mt-2 pt-2 border-t border-white/5">
