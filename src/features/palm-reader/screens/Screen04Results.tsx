@@ -175,7 +175,7 @@ export default function Screen04Results() {
     "In your palm, I see not fate carved in stone, but possibilities written in starlight.";
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 relative">
+    <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
       {/* Scrollable content */}
       <div
         className="absolute inset-0 overflow-y-auto px-5 pb-36"
@@ -294,7 +294,7 @@ export default function Screen04Results() {
 
       {/* Fixed bottom CTA */}
       <motion.div
-        className="absolute bottom-0 left-0 right-0 p-5"
+        className="fixed bottom-0 left-0 right-0 p-5 z-50"
         style={{
           background:
             "linear-gradient(to top, rgba(5,5,16,1) 0%, rgba(5,5,16,0.95) 80%, transparent 100%)",
@@ -302,7 +302,7 @@ export default function Screen04Results() {
         }}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 2.5 }}
+        transition={{ delay: 1.5 }}
       >
         <motion.button
           onClick={() => dispatch({ type: "NEXT_STEP" })}
