@@ -161,7 +161,11 @@ export async function GET(request: NextRequest) {
 
     // Add revenue from purchases
     completedPurchases.forEach(purchase => {
-      const lead = leads?.find(l => l.id === purchase.lead_id);
+      // Try to find lead by lead_id first, then by email
+      let lead = leads?.find(l => l.id === purchase.lead_id);
+      if (!lead && purchase.email) {
+        lead = leads?.find(l => l.email === purchase.email);
+      }
       const source = lead?.utm_source || "direct";
       if (!revenueBySource[source]) {
         revenueBySource[source] = { revenue: 0, purchases: 0, leads: 0 };
@@ -181,24 +185,36 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.revenue - a.revenue);
 
-    // Create a map of lead_id to purchase info
+    // Create maps of lead_id and email to purchase info
     const purchasesByLeadId = new Map<string, { amount_cents: number; completed_at: string }>();
+    const purchasesByEmail = new Map<string, { amount_cents: number; completed_at: string }>();
+    const purchasedEmails = new Set<string>();
+
     completedPurchases.forEach(p => {
+      const purchaseInfo = { amount_cents: p.amount_cents, completed_at: p.completed_at };
       if (p.lead_id) {
-        purchasesByLeadId.set(p.lead_id, {
-          amount_cents: p.amount_cents,
-          completed_at: p.completed_at,
-        });
+        purchasesByLeadId.set(p.lead_id, purchaseInfo);
+      }
+      if (p.email) {
+        purchasesByEmail.set(p.email, purchaseInfo);
+        purchasedEmails.add(p.email);
       }
     });
 
-    // Add purchase details to leads
-    const leadsWithPurchaseStatus = leads?.map(lead => ({
-      ...lead,
-      has_purchased: purchasedLeadIds.has(lead.id),
-      purchase_amount: purchasesByLeadId.get(lead.id)?.amount_cents || null,
-      purchase_date: purchasesByLeadId.get(lead.id)?.completed_at || null,
-    })) || [];
+    // Add purchase details to leads (check by lead_id first, then by email)
+    const leadsWithPurchaseStatus = leads?.map(lead => {
+      const purchaseById = purchasesByLeadId.get(lead.id);
+      const purchaseByEmail = purchasesByEmail.get(lead.email);
+      const purchase = purchaseById || purchaseByEmail;
+      const hasPurchased = purchasedLeadIds.has(lead.id) || purchasedEmails.has(lead.email);
+
+      return {
+        ...lead,
+        has_purchased: hasPurchased,
+        purchase_amount: purchase?.amount_cents || null,
+        purchase_date: purchase?.completed_at || null,
+      };
+    }) || [];
 
     // Calculate analytics
     const analytics = {
