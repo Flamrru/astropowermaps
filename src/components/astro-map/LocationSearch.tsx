@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useLayoutEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { MapPin, Search, X } from "lucide-react";
-import { createPortal } from "react-dom";
 import { BirthLocation } from "@/lib/astro/types";
 
 interface LocationSearchProps {
@@ -28,114 +27,9 @@ export default function LocationSearch({
   const [results, setResults] = useState<GeocodingResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Client-side only
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Calculate dropdown position synchronously before paint
-  useLayoutEffect(() => {
-    if (isOpen && inputRef.current) {
-      const rect = inputRef.current.getBoundingClientRect();
-
-      // Default: position below input
-      let top = rect.bottom + 4;
-      let positionAbove = false;
-
-      // On mobile with keyboard open, check if we need to flip above
-      if (typeof window !== "undefined" && window.visualViewport) {
-        const vv = window.visualViewport;
-        const visibleBottom = vv.offsetTop + vv.height;
-        const dropdownHeight = 160; // ~3 results * 50px + padding
-
-        // If dropdown would go below visible area, position above input
-        if (rect.bottom + dropdownHeight > visibleBottom) {
-          positionAbove = true;
-          top = rect.top - dropdownHeight - 4;
-        }
-
-        // Safety: ensure dropdown stays within visible viewport
-        const visibleTop = vv.offsetTop;
-        if (top < visibleTop) {
-          top = visibleTop + 8;
-        }
-      }
-
-      setDropdownStyle({
-        position: "fixed",
-        top,
-        left: rect.left,
-        width: rect.width,
-        zIndex: 9999,
-      });
-    }
-  }, [isOpen]);
-
-  // Update position on scroll/resize/keyboard
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const updatePosition = () => {
-      if (inputRef.current) {
-        const rect = inputRef.current.getBoundingClientRect();
-
-        // Default: position below input
-        let top = rect.bottom + 4;
-
-        // On mobile with keyboard open, check if we need to flip above
-        if (typeof window !== "undefined" && window.visualViewport) {
-          const vv = window.visualViewport;
-          const visibleBottom = vv.offsetTop + vv.height;
-          const dropdownHeight = 160;
-
-          // If dropdown would go below visible area, position above input
-          if (rect.bottom + dropdownHeight > visibleBottom) {
-            top = rect.top - dropdownHeight - 4;
-          }
-
-          // Safety: ensure dropdown stays within visible viewport
-          const visibleTop = vv.offsetTop;
-          if (top < visibleTop) {
-            top = visibleTop + 8;
-          }
-        }
-
-        setDropdownStyle({
-          position: "fixed",
-          top,
-          left: rect.left,
-          width: rect.width,
-          zIndex: 9999,
-        });
-      }
-    };
-
-    window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("resize", updatePosition);
-
-    // Listen to visualViewport changes (keyboard open/close on mobile)
-    const vv = typeof window !== "undefined" ? window.visualViewport : null;
-    if (vv) {
-      vv.addEventListener("resize", updatePosition);
-      vv.addEventListener("scroll", updatePosition);
-    }
-
-    return () => {
-      window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("resize", updatePosition);
-      if (vv) {
-        vv.removeEventListener("resize", updatePosition);
-        vv.removeEventListener("scroll", updatePosition);
-      }
-    };
-  }, [isOpen]);
 
   // Debounced search
   useEffect(() => {
@@ -197,13 +91,8 @@ export default function LocationSearch({
 
     function handleClickOutside(event: MouseEvent | TouchEvent) {
       const target = event.target as Node;
-      // Check if click is outside container AND outside the portal dropdown
       if (containerRef.current && !containerRef.current.contains(target)) {
-        // Also check if click is on the dropdown itself (in portal)
-        const dropdown = document.getElementById("location-dropdown");
-        if (!dropdown || !dropdown.contains(target)) {
-          setIsOpen(false);
-        }
+        setIsOpen(false);
       }
     }
 
@@ -252,48 +141,6 @@ export default function LocationSearch({
     setIsOpen(false);
   };
 
-  // Dropdown content rendered via portal
-  const dropdownContent = isOpen && results.length > 0 && mounted && (
-    <div
-      id="location-dropdown"
-      style={{
-        ...dropdownStyle,
-        backgroundColor: "#0a0a1e",
-        border: "1px solid rgba(255, 255, 255, 0.2)",
-        borderRadius: "0.75rem",
-        boxShadow: "0 10px 40px rgba(0,0,0,0.8)",
-        overflow: "hidden",
-      }}
-    >
-      {results.map((result, index) => (
-        <button
-          key={result.id}
-          type="button"
-          onClick={() => handleSelect(result)}
-          onTouchEnd={(e) => {
-            e.preventDefault();
-            handleSelect(result);
-          }}
-          className="
-            w-full px-4 py-3 text-left
-            flex items-center gap-3
-            text-white/80 hover:text-white hover:bg-[#15152a]
-            active:bg-[#15152a]
-            border-b border-white/5 last:border-b-0
-            transition-colors
-          "
-          style={{
-            backgroundColor: "#0a0a1e",
-            animationDelay: `${index * 50}ms`,
-          }}
-        >
-          <MapPin size={16} className="text-[#C9A227] flex-shrink-0" />
-          <span className="truncate">{result.place_name}</span>
-        </button>
-      ))}
-    </div>
-  );
-
   return (
     <div ref={containerRef} className="relative w-full">
       {/* Input Field */}
@@ -312,7 +159,6 @@ export default function LocationSearch({
         </div>
 
         <input
-          ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -343,8 +189,43 @@ export default function LocationSearch({
         )}
       </div>
 
-      {/* Dropdown rendered via portal to escape stacking contexts */}
-      {mounted && createPortal(dropdownContent, document.body)}
+      {/* Dropdown - simple absolute positioning, no portal */}
+      {isOpen && results.length > 0 && (
+        <div
+          className="absolute left-0 right-0 mt-2 rounded-xl overflow-hidden z-50"
+          style={{
+            backgroundColor: "#0a0a1e",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            boxShadow: "0 10px 40px rgba(0,0,0,0.8)",
+          }}
+        >
+          {results.map((result, index) => (
+            <button
+              key={result.id}
+              type="button"
+              onClick={() => handleSelect(result)}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                handleSelect(result);
+              }}
+              className="
+                w-full px-4 py-3 text-left
+                flex items-center gap-3
+                text-white/80 hover:text-white hover:bg-[#15152a]
+                active:bg-[#15152a]
+                border-b border-white/5 last:border-b-0
+                transition-colors
+              "
+              style={{
+                backgroundColor: "#0a0a1e",
+              }}
+            >
+              <MapPin size={16} className="text-[#C9A227] flex-shrink-0" />
+              <span className="truncate">{result.place_name}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
