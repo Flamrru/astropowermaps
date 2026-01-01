@@ -20,8 +20,11 @@ interface SendConfirmationEmailParams {
   baseUrl: string;
 }
 
+const SUPPORT_EMAIL = "support@astropowermap.com";
+
 /**
  * Send purchase confirmation email with permanent map link
+ * Uses inline styles for Gmail compatibility
  */
 export async function sendConfirmationEmail({
   email,
@@ -38,59 +41,105 @@ export async function sendConfirmationEmail({
 
   try {
     const { error } = await resend.emails.send({
-      from: "Astro Power Maps <noreply@astropowermaps.com>",
+      from: "Astro Power Maps <noreply@astropowermap.com>",
       to: [email],
-      subject: "Your 2026 Astro Power Map is Ready!",
-      html: `
-<!DOCTYPE html>
-<html>
+      subject: "You're In — Your 2026 Power Map is Ready",
+      html: `<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Your 2026 Power Map</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #050510; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #050510; padding: 40px 20px;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0a0a0f; color: #e5e5e5; line-height: 1.7;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0f; padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="100%" max-width="600" cellpadding="0" cellspacing="0" style="max-width: 600px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px;">
+
           <!-- Header -->
           <tr>
-            <td align="center" style="padding-bottom: 30px;">
-              <h1 style="color: #C9A227; font-size: 28px; margin: 0; font-weight: 600;">
-                Your 2026 Power Map is Ready!
-              </h1>
+            <td align="center" style="padding-bottom: 40px;">
+              <div style="font-size: 24px; margin-bottom: 16px;">🌙</div>
+              <h1 style="font-size: 28px; font-weight: 600; color: #C9A227; margin: 0 0 8px 0;">You're In.</h1>
+              <p style="color: #888888; font-size: 16px; margin: 0;">Your 2026 Power Map is ready</p>
             </td>
           </tr>
 
-          <!-- Main Content -->
+          <!-- Main Content Box -->
           <tr>
-            <td style="background: linear-gradient(135deg, rgba(201, 162, 39, 0.1), rgba(201, 162, 39, 0.05)); border: 1px solid rgba(201, 162, 39, 0.2); border-radius: 16px; padding: 30px;">
-              <p style="color: #ffffff; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                Thank you for your purchase! Your personalized astrocartography map is now available.
-              </p>
+            <td style="background: linear-gradient(135deg, rgba(201, 162, 39, 0.08) 0%, rgba(201, 162, 39, 0.02) 100%); border: 1px solid rgba(201, 162, 39, 0.2); border-radius: 16px; padding: 32px;">
 
-              <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; margin: 0 0 15px 0;">
-                <strong style="color: #C9A227;">Your permanent access link:</strong>
-              </p>
+              <p style="font-size: 18px; margin: 0 0 20px 0; color: #ffffff;">Hey there 👋</p>
+
+              <p style="margin: 0 0 16px 0; color: #b5b5b5; font-size: 15px;">First off — <span style="color: #C9A227;">thank you</span>. Seriously. You just trusted us with something as personal as your birth chart, and that means everything.</p>
+
+              <p style="margin: 0 0 16px 0; color: #b5b5b5; font-size: 15px;">We're not some big faceless company chasing numbers. It's a small team building this from scratch because we genuinely believe knowing your power places and power months can change how you plan your year.</p>
+
+              <p style="margin: 0 0 16px 0; color: #b5b5b5; font-size: 15px;">You're not just a customer — you're part of the community now. And without people like you, there is no us.</p>
 
               <!-- Link Box -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 25px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(201, 162, 39, 0.3); border-radius: 12px; margin: 24px 0;">
                 <tr>
-                  <td style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 15px;">
-                    <a href="${mapUrl}" style="color: #6496ff; font-size: 14px; word-break: break-all; text-decoration: none;">
-                      ${mapUrl}
-                    </a>
+                  <td style="padding: 20px;">
+                    <p style="font-size: 13px; color: #C9A227; margin: 0 0 12px 0; font-weight: 500;">Your permanent access link:</p>
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background: rgba(201, 162, 39, 0.1); border: 1px solid rgba(201, 162, 39, 0.2); border-radius: 8px; margin-bottom: 16px;">
+                      <tr>
+                        <td style="padding: 14px 16px;">
+                          <a href="${mapUrl}" style="color: #C9A227; text-decoration: none; word-break: break-all; font-size: 14px;">${mapUrl}</a>
+                        </td>
+                      </tr>
+                    </table>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center">
+                          <a href="${mapUrl}" style="display: inline-block; background: linear-gradient(135deg, #C9A227 0%, #d4af37 100%); color: #0a0a0f; text-align: center; padding: 16px 32px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px;">Explore Your Map →</a>
+                        </td>
+                      </tr>
+                    </table>
+                    <p style="text-align: center; font-size: 13px; color: #666666; margin: 12px 0 0 0;">Bookmark this — it's yours forever, on any device.</p>
                   </td>
                 </tr>
               </table>
 
-              <!-- CTA Button -->
+              <!-- Personal Note -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: rgba(255, 255, 255, 0.03); border-left: 3px solid rgba(201, 162, 39, 0.5); border-radius: 0 12px 12px 0; margin: 24px 0;">
+                <tr>
+                  <td style="padding: 20px 24px;">
+                    <p style="margin: 0 0 12px 0; font-style: italic; color: #999999; font-size: 15px;">As hard as we try, things might not always be perfect. If you ever notice something off or have an idea that would make your experience better — we genuinely want to hear it.</p>
+                    <p style="margin: 0; color: #C9A227; font-size: 15px; font-weight: 500;">We're constantly improving this, and your feedback helps us make it better for everyone.</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Divider -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+                <tr>
+                  <td style="height: 1px; background: linear-gradient(90deg, transparent, rgba(201, 162, 39, 0.3), transparent);"></td>
+                </tr>
+              </table>
+
+              <!-- Share Section -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="center">
-                    <a href="${mapUrl}" style="display: inline-block; background: linear-gradient(135deg, #E8C547, #C9A227); color: #000000; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 50px;">
-                      Explore Your Map
-                    </a>
+                  <td align="center" style="padding: 24px 0;">
+                    <p style="color: #888888; font-size: 14px; margin: 0 0 8px 0;">Know someone who'd find their power places fascinating?</p>
+                    <p style="color: #888888; font-size: 14px; margin: 0;">Feel free to share the love ✨</p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Support Section -->
+          <tr>
+            <td style="padding-top: 24px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: rgba(201, 162, 39, 0.05); border-radius: 12px;">
+                <tr>
+                  <td align="center" style="padding: 20px;">
+                    <p style="margin: 0 0 8px 0; font-size: 14px; color: #b5b5b5;">Questions, ideas, or just want to say hi?</p>
+                    <p style="margin: 0; font-size: 14px; color: #b5b5b5;">We're always here: <a href="mailto:${SUPPORT_EMAIL}" style="color: #C9A227; text-decoration: none; font-weight: 500;">${SUPPORT_EMAIL}</a></p>
                   </td>
                 </tr>
               </table>
@@ -99,22 +148,18 @@ export async function sendConfirmationEmail({
 
           <!-- Footer -->
           <tr>
-            <td style="padding-top: 30px;">
-              <p style="color: rgba(255, 255, 255, 0.4); font-size: 12px; text-align: center; margin: 0;">
-                Bookmark this link to access your map anytime, on any device.
-              </p>
-              <p style="color: rgba(255, 255, 255, 0.3); font-size: 11px; text-align: center; margin: 15px 0 0 0;">
-                &copy; 2025 Astro Power Maps. All rights reserved.
-              </p>
+            <td align="center" style="padding-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.05);">
+              <p style="font-size: 12px; letter-spacing: 1.5px; color: #555555; margin: 0 0 8px 0;">2026 POWER MAP</p>
+              <p style="font-size: 12px; color: #444444; margin: 0;">© 2025 Astro Power Maps. All rights reserved.</p>
             </td>
           </tr>
+
         </table>
       </td>
     </tr>
   </table>
 </body>
-</html>
-      `,
+</html>`,
     });
 
     if (error) {

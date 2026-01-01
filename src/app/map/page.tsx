@@ -91,7 +91,7 @@ function MapPageContent() {
           const astroRes = await fetch("/api/astrocartography", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ birthData: leadData.data.birthData }),
+            body: JSON.stringify({ birthData: leadData.birthData }),
           });
 
           if (astroRes.ok) {

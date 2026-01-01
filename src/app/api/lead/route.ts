@@ -64,9 +64,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Build birth data if available
+    // Strip seconds from time (database stores HH:MM:SS, API expects HH:MM)
+    const formattedTime = lead.birth_time?.substring(0, 5) || null;
     const birthData = lead.birth_date ? {
       date: lead.birth_date,
-      time: lead.birth_time,
+      time: formattedTime,
       timeUnknown: lead.birth_time_unknown,
       timeWindow: lead.birth_time_window,
       location: {
