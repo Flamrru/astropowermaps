@@ -1,7 +1,7 @@
 /**
- * TEST ENDPOINT - Delete before production!
+ * Test endpoint for MailerLite integration
  *
- * Test MailerLite integration:
+ * Usage:
  * - POST /api/test-mailerlite?action=add-lead&email=test@example.com
  * - POST /api/test-mailerlite?action=move-customer&email=test@example.com
  */
@@ -10,11 +10,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { addSubscriberToLeads, moveSubscriberToCustomers } from "@/lib/mailerlite";
 
 export async function POST(request: NextRequest) {
-  // Only allow in development
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not available in production" }, { status: 403 });
-  }
-
   const { searchParams } = new URL(request.url);
   const action = searchParams.get("action");
   const email = searchParams.get("email");
