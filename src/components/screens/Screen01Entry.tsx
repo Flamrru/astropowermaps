@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useQuiz } from "@/lib/quiz-state";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export default function Screen01Entry() {
   const { dispatch } = useQuiz();
@@ -127,6 +128,24 @@ export default function Screen01Entry() {
               <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
             </motion.button>
           </motion.div>
+
+          {/* ================================================================
+              ⚠️⚠️⚠️ TESTING ONLY - DELETE BEFORE PRODUCTION ⚠️⚠️⚠️
+
+              This button is for internal testing of the Palm Reader feature.
+              MUST BE REMOVED before deploying to production!
+
+              TODO: Delete this entire block when merging to main branch
+              ================================================================ */}
+          <Link
+            href="/palm"
+            className="mb-4 py-3 px-6 rounded-full border-2 border-dashed border-red-500/50 text-red-400 text-sm text-center hover:bg-red-500/10 transition-colors"
+          >
+            🔮 Test Palm Reader (DEV ONLY)
+          </Link>
+          {/* ================================================================
+              END OF TESTING BLOCK - DELETE ABOVE
+              ================================================================ */}
 
         </div>
       </div>
