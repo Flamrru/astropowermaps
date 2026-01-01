@@ -73,6 +73,36 @@ interface RevenueData {
   bySource: RevenueBySource[];
 }
 
+interface MailerLiteGroup {
+  name: string;
+  subscribers: number;
+  openRate: number;
+  clickRate: number;
+}
+
+interface MailerLiteCampaign {
+  name: string;
+  sent: number;
+  openRate: number;
+  clickRate: number;
+  finishedAt: string | null;
+}
+
+interface MailerLiteData {
+  configured: boolean;
+  groups: {
+    leads: MailerLiteGroup | null;
+    customers: MailerLiteGroup | null;
+  };
+  campaigns: {
+    totalSent: number;
+    avgOpenRate: number;
+    avgClickRate: number;
+    totalUnsubscribes: number;
+    recent: MailerLiteCampaign[];
+  };
+}
+
 type Period = "today" | "week" | "month" | "all";
 
 // Q1 and Q2 answer options for analytics
@@ -113,6 +143,7 @@ export default function AdminDashboardPage() {
     purchased: 0,
     notPurchased: 0,
   });
+  const [mailerlite, setMailerlite] = useState<MailerLiteData | null>(null);
   const [period, setPeriod] = useState<Period>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -170,10 +201,26 @@ export default function AdminDashboardPage() {
     }
   }, [router, period]);
 
+  // Fetch MailerLite stats
+  const fetchMailerLiteStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/mailerlite-stats");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.configured) {
+          setMailerlite(data);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch MailerLite stats:", err);
+    }
+  }, []);
+
   // Fetch on mount
   useEffect(() => {
     fetchLeads();
-  }, [fetchLeads]);
+    fetchMailerLiteStats();
+  }, [fetchLeads, fetchMailerLiteStats]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -456,6 +503,109 @@ export default function AdminDashboardPage() {
         {revenue.bySource.length > 0 && (
           <div className="mb-8">
             <RevenueBySourceTable data={revenue.bySource} />
+          </div>
+        )}
+
+        {/* MailerLite Email Marketing Stats */}
+        {mailerlite && mailerlite.configured && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#09c269]" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+              </svg>
+              Email Marketing
+              <span className="text-xs font-normal text-[var(--text-faint)] ml-2">(MailerLite)</span>
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Leads Subscribers */}
+              {mailerlite.groups.leads && (
+                <div className="glass-card rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-[var(--text-muted)]">
+                      {mailerlite.groups.leads.name}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
+                      Leads
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold text-white">{mailerlite.groups.leads.subscribers}</p>
+                  <p className="text-xs text-[var(--text-faint)] mt-1">Active subscribers</p>
+                </div>
+              )}
+
+              {/* Customers Subscribers */}
+              {mailerlite.groups.customers && (
+                <div className="glass-card rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-[var(--text-muted)]">
+                      {mailerlite.groups.customers.name}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">
+                      Customers
+                    </span>
+                  </div>
+                  <p className="text-2xl font-bold text-white">{mailerlite.groups.customers.subscribers}</p>
+                  <p className="text-xs text-[var(--text-faint)] mt-1">Paying customers</p>
+                </div>
+              )}
+
+              {/* Open Rate */}
+              <div className="glass-card rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-[var(--text-muted)]">Avg Open Rate</span>
+                  <svg className="w-4 h-4 text-[var(--text-faint)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" />
+                  </svg>
+                </div>
+                <p className="text-2xl font-bold text-white">{mailerlite.campaigns.avgOpenRate.toFixed(1)}%</p>
+                <p className="text-xs text-[var(--text-faint)] mt-1">From recent campaigns</p>
+              </div>
+
+              {/* Click Rate */}
+              <div className="glass-card rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-[var(--text-muted)]">Avg Click Rate</span>
+                  <svg className="w-4 h-4 text-[var(--text-faint)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                  </svg>
+                </div>
+                <p className="text-2xl font-bold text-white">{mailerlite.campaigns.avgClickRate.toFixed(1)}%</p>
+                <p className="text-xs text-[var(--text-faint)] mt-1">From recent campaigns</p>
+              </div>
+            </div>
+
+            {/* Recent Campaigns */}
+            {mailerlite.campaigns.recent.length > 0 && (
+              <div className="mt-4 glass-card rounded-xl p-4">
+                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3">Recent Campaigns</h3>
+                <div className="space-y-2">
+                  {mailerlite.campaigns.recent.map((campaign, idx) => (
+                    <div key={idx} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                      <div className="flex-1 min-w-0 mr-4">
+                        <p className="text-sm text-white truncate">{campaign.name}</p>
+                        <p className="text-xs text-[var(--text-faint)]">
+                          {campaign.finishedAt ? new Date(campaign.finishedAt).toLocaleDateString() : "N/A"}
+                        </p>
+                      </div>
+                      <div className="flex gap-4 text-right">
+                        <div>
+                          <p className="text-sm font-medium text-white">{campaign.sent}</p>
+                          <p className="text-xs text-[var(--text-faint)]">Sent</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-green-400">{campaign.openRate.toFixed(1)}%</p>
+                          <p className="text-xs text-[var(--text-faint)]">Opens</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-blue-400">{campaign.clickRate.toFixed(1)}%</p>
+                          <p className="text-xs text-[var(--text-faint)]">Clicks</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

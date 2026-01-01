@@ -107,7 +107,7 @@ export default function LocationSearch({
         const response = await fetch(
           `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
             query
-          )}.json?access_token=${token}&types=place,locality,region&limit=3`
+          )}.json?access_token=${token}&types=place,locality,region&limit=2`
         );
 
         if (!response.ok) throw new Error("Geocoding failed");
@@ -260,16 +260,20 @@ export default function LocationSearch({
           onFocus={() => results.length > 0 && setIsOpen(true)}
           placeholder={placeholder}
           className="
-            w-full pl-11 pr-10 py-4 rounded-xl
-            bg-white/10 backdrop-blur-xl
+            w-full py-4 rounded-xl
+            bg-white/10
             border border-white/20
             text-white placeholder:text-white/40
-            text-base text-left
-            caret-white
+            text-[16px] leading-normal
             focus:outline-none focus:border-[#C9A227]/50
             focus:shadow-[0_0_20px_rgba(201,162,39,0.15)]
             transition-all duration-300
           "
+          style={{
+            paddingLeft: 44,
+            paddingRight: 40,
+            WebkitAppearance: 'none',
+          }}
         />
 
         {/* Clear Button */}
