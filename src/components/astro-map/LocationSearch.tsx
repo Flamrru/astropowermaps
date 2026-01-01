@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { MapPin, Search, X } from "lucide-react";
 import { BirthLocation } from "@/lib/astro/types";
@@ -27,9 +28,55 @@ export default function LocationSearch({
   const [results, setResults] = useState<GeocodingResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Client-side only for portal
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Update dropdown position when open
+  useEffect(() => {
+    if (!isOpen || !inputRef.current) return;
+
+    const updatePosition = () => {
+      if (!inputRef.current) return;
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+      });
+    };
+
+    // Initial position
+    updatePosition();
+
+    // Update on scroll/resize
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+
+    // Update on keyboard (iOS)
+    const vv = window.visualViewport;
+    if (vv) {
+      vv.addEventListener("resize", updatePosition);
+      vv.addEventListener("scroll", updatePosition);
+    }
+
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+      if (vv) {
+        vv.removeEventListener("resize", updatePosition);
+        vv.removeEventListener("scroll", updatePosition);
+      }
+    };
+  }, [isOpen]);
 
   // Debounced search
   useEffect(() => {
@@ -92,7 +139,10 @@ export default function LocationSearch({
     function handleClickOutside(event: MouseEvent | TouchEvent) {
       const target = event.target as Node;
       if (containerRef.current && !containerRef.current.contains(target)) {
-        setIsOpen(false);
+        const dropdown = document.getElementById("location-dropdown-portal");
+        if (!dropdown || !dropdown.contains(target)) {
+          setIsOpen(false);
+        }
       }
     }
 
@@ -141,6 +191,50 @@ export default function LocationSearch({
     setIsOpen(false);
   };
 
+  // Dropdown via portal (escapes stacking contexts)
+  const dropdown = isOpen && results.length > 0 && mounted && createPortal(
+    <div
+      id="location-dropdown-portal"
+      style={{
+        position: "fixed",
+        top: dropdownPos.top,
+        left: dropdownPos.left,
+        width: dropdownPos.width,
+        zIndex: 99999,
+        backgroundColor: "#0a0a1e",
+        border: "1px solid rgba(255, 255, 255, 0.2)",
+        borderRadius: "0.75rem",
+        boxShadow: "0 10px 40px rgba(0,0,0,0.8)",
+        overflow: "hidden",
+      }}
+    >
+      {results.map((result) => (
+        <button
+          key={result.id}
+          type="button"
+          onClick={() => handleSelect(result)}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            handleSelect(result);
+          }}
+          className="
+            w-full px-4 py-3 text-left
+            flex items-center gap-3
+            text-white/80 hover:text-white hover:bg-[#15152a]
+            active:bg-[#15152a]
+            border-b border-white/5 last:border-b-0
+            transition-colors
+          "
+          style={{ backgroundColor: "#0a0a1e" }}
+        >
+          <MapPin size={16} className="text-[#C9A227] flex-shrink-0" />
+          <span className="truncate">{result.place_name}</span>
+        </button>
+      ))}
+    </div>,
+    document.body
+  );
+
   return (
     <div ref={containerRef} className="relative w-full">
       {/* Input Field */}
@@ -159,6 +253,7 @@ export default function LocationSearch({
         </div>
 
         <input
+          ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -189,43 +284,8 @@ export default function LocationSearch({
         )}
       </div>
 
-      {/* Dropdown - simple absolute positioning, no portal */}
-      {isOpen && results.length > 0 && (
-        <div
-          className="absolute left-0 right-0 mt-2 rounded-xl overflow-hidden z-50"
-          style={{
-            backgroundColor: "#0a0a1e",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.8)",
-          }}
-        >
-          {results.map((result, index) => (
-            <button
-              key={result.id}
-              type="button"
-              onClick={() => handleSelect(result)}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                handleSelect(result);
-              }}
-              className="
-                w-full px-4 py-3 text-left
-                flex items-center gap-3
-                text-white/80 hover:text-white hover:bg-[#15152a]
-                active:bg-[#15152a]
-                border-b border-white/5 last:border-b-0
-                transition-colors
-              "
-              style={{
-                backgroundColor: "#0a0a1e",
-              }}
-            >
-              <MapPin size={16} className="text-[#C9A227] flex-shrink-0" />
-              <span className="truncate">{result.place_name}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Dropdown rendered via portal */}
+      {dropdown}
     </div>
   );
 }
