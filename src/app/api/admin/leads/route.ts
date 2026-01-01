@@ -181,11 +181,121 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.revenue - a.revenue);
 
-    // Add has_purchased flag to leads
+    // Create a map of lead_id to purchase info
+    const purchasesByLeadId = new Map<string, { amount_cents: number; completed_at: string }>();
+    completedPurchases.forEach(p => {
+      if (p.lead_id) {
+        purchasesByLeadId.set(p.lead_id, {
+          amount_cents: p.amount_cents,
+          completed_at: p.completed_at,
+        });
+      }
+    });
+
+    // Add purchase details to leads
     const leadsWithPurchaseStatus = leads?.map(lead => ({
       ...lead,
       has_purchased: purchasedLeadIds.has(lead.id),
+      purchase_amount: purchasesByLeadId.get(lead.id)?.amount_cents || null,
+      purchase_date: purchasesByLeadId.get(lead.id)?.completed_at || null,
     })) || [];
+
+    // Calculate analytics
+    const analytics = {
+      // Zodiac sign distribution
+      zodiacSigns: {} as Record<string, number>,
+      // Age distribution
+      ageRanges: {
+        "18-24": 0,
+        "25-34": 0,
+        "35-44": 0,
+        "45-54": 0,
+        "55-64": 0,
+        "65+": 0,
+        "unknown": 0,
+      } as Record<string, number>,
+      // Location distribution (by country)
+      countries: {} as Record<string, number>,
+      // Birth data stats
+      withBirthData: 0,
+      withoutBirthData: 0,
+      // Purchase stats
+      purchased: 0,
+      notPurchased: 0,
+    };
+
+    const getZodiacSign = (date: string): string => {
+      const d = new Date(date);
+      const month = d.getMonth() + 1;
+      const day = d.getDate();
+
+      if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return "Aries";
+      if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return "Taurus";
+      if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) return "Gemini";
+      if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) return "Cancer";
+      if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) return "Leo";
+      if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) return "Virgo";
+      if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) return "Libra";
+      if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) return "Scorpio";
+      if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) return "Sagittarius";
+      if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) return "Capricorn";
+      if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) return "Aquarius";
+      return "Pisces";
+    };
+
+    const getAge = (birthDate: string): number => {
+      const today = new Date();
+      const birth = new Date(birthDate);
+      let age = today.getFullYear() - birth.getFullYear();
+      const monthDiff = today.getMonth() - birth.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+      }
+      return age;
+    };
+
+    const getCountry = (location: string): string => {
+      if (!location) return "Unknown";
+      const parts = location.split(", ");
+      return parts[parts.length - 1] || "Unknown";
+    };
+
+    leadsWithPurchaseStatus.forEach(lead => {
+      // Birth data stats
+      if (lead.birth_date) {
+        analytics.withBirthData++;
+
+        // Zodiac
+        const sign = getZodiacSign(lead.birth_date);
+        analytics.zodiacSigns[sign] = (analytics.zodiacSigns[sign] || 0) + 1;
+
+        // Age
+        const age = getAge(lead.birth_date);
+        if (age >= 18 && age <= 24) analytics.ageRanges["18-24"]++;
+        else if (age >= 25 && age <= 34) analytics.ageRanges["25-34"]++;
+        else if (age >= 35 && age <= 44) analytics.ageRanges["35-44"]++;
+        else if (age >= 45 && age <= 54) analytics.ageRanges["45-54"]++;
+        else if (age >= 55 && age <= 64) analytics.ageRanges["55-64"]++;
+        else if (age >= 65) analytics.ageRanges["65+"]++;
+        else analytics.ageRanges["unknown"]++;
+      } else {
+        analytics.withoutBirthData++;
+        analytics.ageRanges["unknown"]++;
+      }
+
+      // Location
+      if (lead.birth_location_name) {
+        const country = getCountry(lead.birth_location_name);
+        analytics.countries[country] = (analytics.countries[country] || 0) + 1;
+      }
+
+      // Purchase status
+      if (lead.has_purchased) {
+        analytics.purchased++;
+      } else {
+        analytics.notPurchased++;
+      }
+    });
 
     return NextResponse.json({
       period,
@@ -199,6 +309,7 @@ export async function GET(request: NextRequest) {
         averageOrderValue,
         bySource,
       },
+      analytics,
     });
   } catch (error) {
     console.error("Error fetching leads:", error);

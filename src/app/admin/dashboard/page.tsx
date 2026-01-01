@@ -16,7 +16,29 @@ interface Lead {
   session_id: string;
   created_at: string;
   has_purchased: boolean;
+  // Birth data
+  birth_date: string | null;
+  birth_time: string | null;
+  birth_time_unknown: boolean | null;
+  birth_location_name: string | null;
+  birth_location_lat: number | null;
+  birth_location_lng: number | null;
+  // Purchase info
+  purchase_amount: number | null;
+  purchase_date: string | null;
 }
+
+interface Analytics {
+  zodiacSigns: Record<string, number>;
+  ageRanges: Record<string, number>;
+  countries: Record<string, number>;
+  withBirthData: number;
+  withoutBirthData: number;
+  purchased: number;
+  notPurchased: number;
+}
+
+type StatusFilter = "all" | "purchased" | "leads";
 
 interface Stats {
   total: number;
@@ -82,8 +104,19 @@ export default function AdminDashboardPage() {
     averageOrderValue: 0,
     bySource: [],
   });
+  const [analytics, setAnalytics] = useState<Analytics>({
+    zodiacSigns: {},
+    ageRanges: {},
+    countries: {},
+    withBirthData: 0,
+    withoutBirthData: 0,
+    purchased: 0,
+    notPurchased: 0,
+  });
   const [period, setPeriod] = useState<Period>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -119,6 +152,15 @@ export default function AdminDashboardPage() {
         averageOrderValue: 0,
         bySource: [],
       });
+      setAnalytics(data.analytics || {
+        zodiacSigns: {},
+        ageRanges: {},
+        countries: {},
+        withBirthData: 0,
+        withoutBirthData: 0,
+        purchased: 0,
+        notPurchased: 0,
+      });
       setLastUpdated(new Date());
       setError("");
     } catch (err) {
@@ -147,8 +189,8 @@ export default function AdminDashboardPage() {
     fetchLeads(true, newPeriod);
   };
 
-  // Analytics calculations
-  const analytics = useMemo(() => {
+  // Quiz analytics calculations
+  const quizAnalytics = useMemo(() => {
     // Q1 distribution
     const q1Counts = Q1_OPTIONS.map((opt) => ({
       label: opt,
@@ -174,14 +216,28 @@ export default function AdminDashboardPage() {
     return { q1Counts, q1Total, q2Counts, q2Respondents };
   }, [leads]);
 
-  // Filter leads by search query
+  // Filter leads by search query and status
   const filteredLeads = useMemo(() => {
-    if (!searchQuery.trim()) return leads;
-    const query = searchQuery.toLowerCase();
-    return leads.filter((lead) =>
-      lead.email.toLowerCase().includes(query)
-    );
-  }, [leads, searchQuery]);
+    let filtered = leads;
+
+    // Filter by status
+    if (statusFilter === "purchased") {
+      filtered = filtered.filter(l => l.has_purchased);
+    } else if (statusFilter === "leads") {
+      filtered = filtered.filter(l => !l.has_purchased);
+    }
+
+    // Filter by search
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((lead) =>
+        lead.email.toLowerCase().includes(query) ||
+        lead.birth_location_name?.toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
+  }, [leads, searchQuery, statusFilter]);
 
   // Logout handler
   const handleLogout = async () => {
@@ -462,16 +518,74 @@ export default function AdminDashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <BarChart
               title="Q1: Have you visited a place that felt right?"
-              data={analytics.q1Counts}
-              total={analytics.q1Total}
-              note={`${analytics.q1Total} responses`}
+              data={quizAnalytics.q1Counts}
+              total={quizAnalytics.q1Total}
+              note={`${quizAnalytics.q1Total} responses`}
             />
             <BarChart
               title="Q2: What do you want 2026 to be about?"
-              data={analytics.q2Counts}
-              total={analytics.q2Respondents}
-              note={`${analytics.q2Respondents} respondents (multi-select)`}
+              data={quizAnalytics.q2Counts}
+              total={quizAnalytics.q2Respondents}
+              note={`${quizAnalytics.q2Respondents} respondents (multi-select)`}
             />
+          </div>
+        )}
+
+        {/* Demographics Analytics */}
+        {Object.keys(analytics.zodiacSigns).length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <span className="text-xl">✨</span>
+              Demographics
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Zodiac Signs */}
+              <div className="glass-card rounded-xl p-4">
+                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3">Zodiac Signs</h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {Object.entries(analytics.zodiacSigns)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 6)
+                    .map(([sign, count]) => (
+                      <div key={sign} className="flex justify-between items-center">
+                        <span className="text-sm text-white">{sign}</span>
+                        <span className="text-sm text-[var(--gold-bright)]">{count}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Age Ranges */}
+              <div className="glass-card rounded-xl p-4">
+                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3">Age Groups</h3>
+                <div className="space-y-2">
+                  {Object.entries(analytics.ageRanges)
+                    .filter(([, count]) => count > 0)
+                    .map(([range, count]) => (
+                      <div key={range} className="flex justify-between items-center">
+                        <span className="text-sm text-white">{range}</span>
+                        <span className="text-sm text-[var(--gold-bright)]">{count}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Countries */}
+              <div className="glass-card rounded-xl p-4">
+                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3">Top Countries</h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {Object.entries(analytics.countries)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 6)
+                    .map(([country, count]) => (
+                      <div key={country} className="flex justify-between items-center">
+                        <span className="text-sm text-white truncate mr-2">{country}</span>
+                        <span className="text-sm text-[var(--gold-bright)]">{count}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -479,31 +593,55 @@ export default function AdminDashboardPage() {
         <div className="glass-card rounded-2xl overflow-hidden">
           {/* Table header */}
           <div className="p-4 sm:p-6 border-b border-white/10">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-white">Lead Database</h2>
-                <p className="text-sm text-[var(--text-muted)]">
-                  {filteredLeads.length} {filteredLeads.length === 1 ? "lead" : "leads"} found
-                </p>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Lead Database</h2>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    {filteredLeads.length} {filteredLeads.length === 1 ? "lead" : "leads"}
+                    {statusFilter !== "all" && ` (${statusFilter})`}
+                  </p>
+                </div>
+
+                {/* Search */}
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-faint)]"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search by email or location..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="input-glass pl-10 pr-4 py-2.5 rounded-xl text-sm w-full sm:w-72"
+                  />
+                </div>
               </div>
 
-              {/* Search */}
-              <div className="relative">
-                <svg
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-faint)]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Search by email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="input-glass pl-10 pr-4 py-2.5 rounded-xl text-sm w-full sm:w-72"
-                />
+              {/* Status Filter */}
+              <div className="flex gap-2">
+                {(["all", "purchased", "leads"] as StatusFilter[]).map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setStatusFilter(filter)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      statusFilter === filter
+                        ? filter === "purchased"
+                          ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                          : "bg-[var(--gold-main)]/20 text-[var(--gold-bright)] border border-[var(--gold-main)]/30"
+                        : "bg-white/5 text-[var(--text-muted)] hover:bg-white/10 border border-white/10"
+                    }`}
+                  >
+                    {filter === "all" && `All (${leads.length})`}
+                    {filter === "purchased" && `Purchased (${analytics.purchased})`}
+                    {filter === "leads" && `Leads Only (${analytics.notPurchased})`}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -559,8 +697,9 @@ export default function AdminDashboardPage() {
                   {filteredLeads.map((lead, idx) => (
                     <tr
                       key={lead.id}
-                      className="hover:bg-white/5 transition-colors"
+                      className="hover:bg-white/5 transition-colors cursor-pointer"
                       style={{ animationDelay: `${idx * 20}ms` }}
+                      onClick={() => setSelectedLead(lead)}
                     >
                       <td className="px-4 sm:px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -645,7 +784,235 @@ export default function AdminDashboardPage() {
             </div>
           )}
         </div>
+
+        {/* Lead Detail Modal */}
+        {selectedLead && (
+          <LeadDetailModal
+            lead={selectedLead}
+            onClose={() => setSelectedLead(null)}
+          />
+        )}
       </main>
+    </div>
+  );
+}
+
+// Lead detail modal component
+function LeadDetailModal({ lead, onClose }: { lead: Lead; onClose: () => void }) {
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const formatTime = (timeStr: string | null) => {
+    if (!timeStr) return "-";
+    return timeStr;
+  };
+
+  const formatDateTime = (dateStr: string | null) => {
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getZodiacSign = (date: string | null): string => {
+    if (!date) return "-";
+    const d = new Date(date);
+    const month = d.getMonth() + 1;
+    const day = d.getDate();
+
+    if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return "♈ Aries";
+    if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return "♉ Taurus";
+    if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) return "♊ Gemini";
+    if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) return "♋ Cancer";
+    if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) return "♌ Leo";
+    if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) return "♍ Virgo";
+    if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) return "♎ Libra";
+    if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) return "♏ Scorpio";
+    if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) return "♐ Sagittarius";
+    if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) return "♑ Capricorn";
+    if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) return "♒ Aquarius";
+    return "♓ Pisces";
+  };
+
+  const getAge = (birthDate: string | null): string => {
+    if (!birthDate) return "-";
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return `${age} years old`;
+  };
+
+  const formatQ2 = (q2: string | null): string[] => {
+    if (!q2) return [];
+    try {
+      const arr = JSON.parse(q2);
+      return Array.isArray(arr) ? arr : [];
+    } catch {
+      return [];
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="relative glass-card rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-[#0a0a12]/95 backdrop-blur-xl p-4 sm:p-6 border-b border-white/10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+              lead.has_purchased
+                ? "bg-green-500/20 border border-green-500/30"
+                : "bg-gradient-to-br from-[var(--gold-main)]/20 to-[var(--gold-dark)]/20 border border-[var(--gold-main)]/20"
+            }`}>
+              <span className={`text-lg font-bold ${lead.has_purchased ? "text-green-400" : "text-[var(--gold-main)]"}`}>
+                {lead.email.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">{lead.email}</h2>
+              <p className="text-sm text-[var(--text-muted)]">
+                {lead.has_purchased ? (
+                  <span className="text-green-400">Customer • ${((lead.purchase_amount || 0) / 100).toFixed(2)}</span>
+                ) : (
+                  "Lead"
+                )}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+          >
+            <svg className="w-5 h-5 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 sm:p-6 space-y-6">
+          {/* Birth Data */}
+          {lead.birth_date && (
+            <div>
+              <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3 flex items-center gap-2">
+                <span>🌟</span> Birth Data
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="glass-card rounded-xl p-3">
+                  <p className="text-xs text-[var(--text-faint)] mb-1">Birthday</p>
+                  <p className="text-sm text-white">{formatDate(lead.birth_date)}</p>
+                </div>
+                <div className="glass-card rounded-xl p-3">
+                  <p className="text-xs text-[var(--text-faint)] mb-1">Birth Time</p>
+                  <p className="text-sm text-white">
+                    {lead.birth_time_unknown ? "Unknown" : formatTime(lead.birth_time)}
+                  </p>
+                </div>
+                <div className="glass-card rounded-xl p-3">
+                  <p className="text-xs text-[var(--text-faint)] mb-1">Zodiac Sign</p>
+                  <p className="text-sm text-[var(--gold-bright)]">{getZodiacSign(lead.birth_date)}</p>
+                </div>
+                <div className="glass-card rounded-xl p-3">
+                  <p className="text-xs text-[var(--text-faint)] mb-1">Age</p>
+                  <p className="text-sm text-white">{getAge(lead.birth_date)}</p>
+                </div>
+              </div>
+              {lead.birth_location_name && (
+                <div className="glass-card rounded-xl p-3 mt-4">
+                  <p className="text-xs text-[var(--text-faint)] mb-1">Birth Location</p>
+                  <p className="text-sm text-white">{lead.birth_location_name}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Quiz Answers */}
+          <div>
+            <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3 flex items-center gap-2">
+              <span>📋</span> Quiz Answers
+            </h3>
+            <div className="space-y-3">
+              <div className="glass-card rounded-xl p-3">
+                <p className="text-xs text-[var(--text-faint)] mb-1">Q1: Have you visited a place that felt right?</p>
+                <p className="text-sm text-white">{lead.quiz_q1 || "-"}</p>
+              </div>
+              <div className="glass-card rounded-xl p-3">
+                <p className="text-xs text-[var(--text-faint)] mb-1">Q2: What do you want 2026 to be about?</p>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {formatQ2(lead.quiz_q2).length > 0 ? (
+                    formatQ2(lead.quiz_q2).map((answer, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-[var(--gold-main)]/10 text-[var(--gold-bright)] border border-[var(--gold-main)]/20"
+                      >
+                        {answer}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-white">-</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Attribution */}
+          <div>
+            <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3 flex items-center gap-2">
+              <span>📊</span> Attribution
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="glass-card rounded-xl p-3">
+                <p className="text-xs text-[var(--text-faint)] mb-1">Source</p>
+                <p className="text-sm text-white">{lead.utm_source || "Direct"}</p>
+              </div>
+              <div className="glass-card rounded-xl p-3">
+                <p className="text-xs text-[var(--text-faint)] mb-1">Campaign</p>
+                <p className="text-sm text-white">{lead.utm_campaign || "-"}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Timestamps */}
+          <div>
+            <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3 flex items-center gap-2">
+              <span>🕐</span> Timeline
+            </h3>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center py-2 border-b border-white/5">
+                <span className="text-sm text-[var(--text-muted)]">Lead Captured</span>
+                <span className="text-sm text-white">{formatDateTime(lead.created_at)}</span>
+              </div>
+              {lead.has_purchased && lead.purchase_date && (
+                <div className="flex justify-between items-center py-2 border-b border-white/5">
+                  <span className="text-sm text-green-400">Purchased</span>
+                  <span className="text-sm text-white">{formatDateTime(lead.purchase_date)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
