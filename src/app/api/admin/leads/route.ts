@@ -118,9 +118,12 @@ export async function GET(request: NextRequest) {
     });
 
     // Fetch purchases with period filter for revenue metrics
+    // Filter out test purchases (test@example.com and amounts under $1)
     let purchasesQuery = supabaseAdmin
       .from("astro_purchases")
-      .select("id, amount_cents, lead_id, status, completed_at");
+      .select("id, email, amount_cents, lead_id, status, completed_at")
+      .neq("email", "test@example.com")
+      .gte("amount_cents", 100); // Exclude test amounts under $1
 
     if (periodStart) {
       purchasesQuery = purchasesQuery.gte("completed_at", periodStart.toISOString());
