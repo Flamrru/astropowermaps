@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { addSubscriberToLeads } from "@/lib/mailerlite";
 
 interface BirthDataPayload {
   date: string;
@@ -183,6 +184,29 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Add to MailerLite Leads group (async, don't block response)
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://astropowermaps.com";
+    const mapUrl = `${baseUrl}/map?sid=${body.session_id}`;
+
+    // Parse quiz interests from JSON array (e.g., '["Career / business growth", "Love / relationships"]')
+    let quizInterest = "";
+    if (body.quiz?.q2) {
+      try {
+        const interests = JSON.parse(body.quiz.q2);
+        quizInterest = Array.isArray(interests) ? interests.join(", ") : body.quiz.q2;
+      } catch {
+        quizInterest = body.quiz.q2;
+      }
+    }
+
+    addSubscriberToLeads({
+      email: body.email,
+      mapUrl,
+      birthLocation: body.birthData?.location?.name,
+      quizInterest,
+      utmSource: body.utm?.utm_source,
+    }).catch((err) => console.error("MailerLite error:", err));
 
     // Optional: Forward to webhook if configured
     const webhookUrl = process.env.LEAD_WEBHOOK_URL;

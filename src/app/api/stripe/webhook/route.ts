@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { sendPurchaseEvent } from "@/lib/meta-capi";
 import { sendConfirmationEmail } from "@/lib/resend";
+import { moveSubscriberToCustomers } from "@/lib/mailerlite";
 
 // Lazy-initialize Stripe to avoid build-time errors
 function getStripe() {
@@ -112,6 +113,15 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
 
     if (leadError) {
       console.error("Failed to update lead:", leadError);
+    }
+
+    // Move subscriber from Leads to Customers in MailerLite
+    // This stops the nurture sequence and triggers customer welcome automation
+    const mailerliteResult = await moveSubscriberToCustomers(email);
+    if (mailerliteResult.success) {
+      console.log(`MailerLite: Moved ${email.substring(0, 3)}*** to Customers`);
+    } else if (mailerliteResult.error) {
+      console.error(`MailerLite error: ${mailerliteResult.error}`);
     }
   }
 
