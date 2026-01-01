@@ -532,16 +532,46 @@ export default function AdminDashboardPage() {
         )}
 
         {/* Demographics Analytics */}
-        {Object.keys(analytics.zodiacSigns).length > 0 && (
+        {(analytics.withBirthData > 0 || analytics.withoutBirthData > 0) && (
           <div className="mb-8">
             <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <span className="text-xl">✨</span>
               Demographics
             </h2>
+
+            {/* Birth Data Coverage */}
+            <div className="glass-card rounded-xl p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-[var(--text-muted)]">Birth Data Coverage</h3>
+                  <p className="text-xs text-[var(--text-faint)] mt-0.5">
+                    Leads who entered birth data in the reveal flow
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-bold text-[var(--gold-bright)]">{analytics.withBirthData}</span>
+                  <span className="text-lg text-[var(--text-muted)]"> / {analytics.withBirthData + analytics.withoutBirthData}</span>
+                  <p className="text-xs text-[var(--text-faint)]">
+                    {((analytics.withBirthData / (analytics.withBirthData + analytics.withoutBirthData)) * 100).toFixed(1)}% have birth data
+                  </p>
+                </div>
+              </div>
+              {/* Progress bar */}
+              <div className="mt-3 h-2 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[var(--gold-main)] to-[var(--gold-bright)]"
+                  style={{ width: `${(analytics.withBirthData / (analytics.withBirthData + analytics.withoutBirthData)) * 100}%` }}
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Zodiac Signs */}
               <div className="glass-card rounded-xl p-4">
-                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3">Zodiac Signs</h3>
+                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3">
+                  Zodiac Signs
+                  <span className="text-xs text-[var(--text-faint)] ml-2">({analytics.withBirthData} with data)</span>
+                </h3>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {Object.entries(analytics.zodiacSigns)
                     .sort((a, b) => b[1] - a[1])
@@ -557,7 +587,10 @@ export default function AdminDashboardPage() {
 
               {/* Age Ranges */}
               <div className="glass-card rounded-xl p-4">
-                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3">Age Groups</h3>
+                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3">
+                  Age Groups
+                  <span className="text-xs text-[var(--text-faint)] ml-2">({analytics.withBirthData} known)</span>
+                </h3>
                 <div className="space-y-2">
                   {Object.entries(analytics.ageRanges)
                     .filter(([, count]) => count > 0)
