@@ -181,7 +181,10 @@ export default function Screen05Chat() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-4">
+      <div
+        className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-4"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}

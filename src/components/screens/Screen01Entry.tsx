@@ -111,6 +111,32 @@ export default function Screen01Entry() {
             </div>
           </motion.div>
 
+          {/* ================================================================
+              ⚠️⚠️⚠️ TESTING ONLY - DELETE BEFORE PRODUCTION ⚠️⚠️⚠️
+
+              This button is for internal testing of the Palm Reader feature.
+              MUST BE REMOVED before deploying to production!
+
+              TODO: Delete this entire block when merging to main branch
+              ================================================================ */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+            className="mb-6"
+          >
+            <Link
+              href="/palm"
+              className="block w-full py-4 px-8 rounded-xl bg-gradient-to-r from-red-600 to-rose-500 text-white text-center font-bold text-lg shadow-lg shadow-red-500/30 hover:shadow-red-500/50 transition-all"
+            >
+              🔮 Test Palm Reader
+              <span className="block text-xs font-normal opacity-80 mt-1">DEV ONLY - Delete before production</span>
+            </Link>
+          </motion.div>
+          {/* ================================================================
+              END OF TESTING BLOCK - DELETE ABOVE
+              ================================================================ */}
+
           {/* CTA Button with premium glow */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -128,24 +154,6 @@ export default function Screen01Entry() {
               <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
             </motion.button>
           </motion.div>
-
-          {/* ================================================================
-              ⚠️⚠️⚠️ TESTING ONLY - DELETE BEFORE PRODUCTION ⚠️⚠️⚠️
-
-              This button is for internal testing of the Palm Reader feature.
-              MUST BE REMOVED before deploying to production!
-
-              TODO: Delete this entire block when merging to main branch
-              ================================================================ */}
-          <Link
-            href="/palm"
-            className="mb-4 py-3 px-6 rounded-full border-2 border-dashed border-red-500/50 text-red-400 text-sm text-center hover:bg-red-500/10 transition-colors"
-          >
-            🔮 Test Palm Reader (DEV ONLY)
-          </Link>
-          {/* ================================================================
-              END OF TESTING BLOCK - DELETE ABOVE
-              ================================================================ */}
 
         </div>
       </div>

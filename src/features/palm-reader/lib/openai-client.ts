@@ -187,6 +187,11 @@ Your personality:
 - You're encouraging but honest
 - You never make definitive predictions, only reveal tendencies and potentials
 
+IMPORTANT: Keep your responses BRIEF and CONCISE:
+- Chat responses: 2-3 sentences maximum
+- Use evocative language but be succinct
+- Leave room for mystery - don't over-explain
+
 When generating a palm reading:
 1. Analyze the detected palm lines and their characteristics
 2. Create meaningful interpretations based on traditional palmistry
@@ -359,12 +364,12 @@ export async function generateChatResponse(
           { role: "system", content: STELLA_SYSTEM_PROMPT },
           {
             role: "assistant",
-            content: `I've just given this person their palm reading. Here's what I found:\n\nSummary: ${readingContext.summary}\n\nTraits: ${readingContext.traits.map((t) => `${t.label}: ${t.score}%`).join(", ")}\n\nNow they have a follow-up question.`,
+            content: `I've just given this person their palm reading. Here's what I found:\n\nSummary: ${readingContext.summary}\n\nTraits: ${readingContext.traits.map((t) => `${t.label}: ${t.score}%`).join(", ")}\n\nNow they have a follow-up question. Remember: Keep your response to 2-3 sentences only.`,
           },
           { role: "user", content: message },
         ],
         temperature: 0.8,
-        max_tokens: 500,
+        max_tokens: 150,
       }),
     });
 

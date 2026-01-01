@@ -178,7 +178,7 @@ export default function Screen04Results() {
     <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
       {/* Scrollable content */}
       <div
-        className="absolute inset-0 overflow-y-auto px-5 pb-36"
+        className="absolute inset-0 overflow-y-auto px-5 pb-48"
         style={{
           WebkitOverflowScrolling: "touch",
           overscrollBehavior: "contain",
