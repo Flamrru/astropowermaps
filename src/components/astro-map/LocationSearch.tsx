@@ -45,24 +45,26 @@ export default function LocationSearch({
     if (isOpen && inputRef.current) {
       const rect = inputRef.current.getBoundingClientRect();
 
-      // Calculate safe top position (ensure dropdown stays in viewport)
-      let top = rect.bottom + 8;
+      // Default: position below input
+      let top = rect.bottom + 4;
+      let positionAbove = false;
 
-      // On mobile with keyboard open, visualViewport helps us position correctly
+      // On mobile with keyboard open, check if we need to flip above
       if (typeof window !== "undefined" && window.visualViewport) {
-        const viewportHeight = window.visualViewport.height;
-        const viewportTop = window.visualViewport.offsetTop;
+        const vv = window.visualViewport;
+        const visibleBottom = vv.offsetTop + vv.height;
+        const dropdownHeight = 160; // ~3 results * 50px + padding
 
-        // Ensure dropdown doesn't go below visible viewport
-        const maxTop = viewportTop + viewportHeight - 200; // Leave room for dropdown
-        if (top > maxTop) {
-          // Position above the input instead
-          top = rect.top - 8 - 150; // Approximate dropdown height
+        // If dropdown would go below visible area, position above input
+        if (rect.bottom + dropdownHeight > visibleBottom) {
+          positionAbove = true;
+          top = rect.top - dropdownHeight - 4;
         }
 
-        // Ensure dropdown doesn't go above viewport
-        if (top < viewportTop + 10) {
-          top = viewportTop + 10;
+        // Safety: ensure dropdown stays within visible viewport
+        const visibleTop = vv.offsetTop;
+        if (top < visibleTop) {
+          top = visibleTop + 8;
         }
       }
 
@@ -84,23 +86,24 @@ export default function LocationSearch({
       if (inputRef.current) {
         const rect = inputRef.current.getBoundingClientRect();
 
-        // Calculate safe top position (ensure dropdown stays in viewport)
-        let top = rect.bottom + 8;
+        // Default: position below input
+        let top = rect.bottom + 4;
 
-        // On mobile with keyboard open, visualViewport helps us position correctly
+        // On mobile with keyboard open, check if we need to flip above
         if (typeof window !== "undefined" && window.visualViewport) {
-          const viewportHeight = window.visualViewport.height;
-          const viewportTop = window.visualViewport.offsetTop;
+          const vv = window.visualViewport;
+          const visibleBottom = vv.offsetTop + vv.height;
+          const dropdownHeight = 160;
 
-          // Ensure dropdown doesn't go below visible viewport
-          const maxTop = viewportTop + viewportHeight - 200;
-          if (top > maxTop) {
-            top = rect.top - 8 - 150;
+          // If dropdown would go below visible area, position above input
+          if (rect.bottom + dropdownHeight > visibleBottom) {
+            top = rect.top - dropdownHeight - 4;
           }
 
-          // Ensure dropdown doesn't go above viewport
-          if (top < viewportTop + 10) {
-            top = viewportTop + 10;
+          // Safety: ensure dropdown stays within visible viewport
+          const visibleTop = vv.offsetTop;
+          if (top < visibleTop) {
+            top = visibleTop + 8;
           }
         }
 
