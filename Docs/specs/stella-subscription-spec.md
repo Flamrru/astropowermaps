@@ -104,18 +104,71 @@ Transform AstroPowerMaps from a $19 one-time purchase model to a **$7.99/month s
 
 ### 3.1 Auth System
 - **Provider:** Supabase Auth
-- **Method:** Passwordless magic links
+- **Method:** Magic link (initial) → Password + Profile (after map reveal)
 - **Session:** Managed by Supabase (automatic refresh)
 
-### 3.2 Account Creation Flow
+### 3.2 Account Creation Flow (Progressive Profiling)
 
-| Step | Where | What Happens |
-|------|-------|--------------|
-| 1 | Quiz Screen 9 (email capture) | Soft account creation - user record created behind scenes |
-| 2 | Reveal Step 10 (after payment) | "Secure your account" prompt - send magic link |
-| 3 | Email click | User authenticated, session established |
+```
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 1: Quiz Screen 9 (Email Capture)                       │
+│ • Email + birth data captured                               │
+│ • Account record created (no password yet)                  │
+│ • Status: "pending_setup"                                   │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 2: Payment (Reveal Step 9)                             │
+│ • Stripe subscription checkout                              │
+│ • Webhook: subscription.created                             │
+│ • Magic link email sent: "Your map is ready!"               │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 3: Magic Link Click → Map Reveal                       │
+│ • User clicks link in email                                 │
+│ • Temporary session created                                 │
+│ • Full map revealed (wow moment!)                           │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 4: Account Setup Screen (NEW)                          │
+│ • "Secure your Stella+ account"                             │
+│ • Create password (required)                                │
+│ • Choose display name (required)                            │
+│ • [Complete Setup] button                                   │
+│ • Status: "active"                                          │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│ STEP 5: Dashboard Unlocked                                  │
+│ • Full access to /dashboard                                 │
+│ • Can log in with email + password going forward            │
+│ • Magic links still work as backup                          │
+└─────────────────────────────────────────────────────────────┘
+```
 
-### 3.3 Legacy Support
+### 3.3 Account Setup Screen UI
+
+| Field | Required | Details |
+|-------|----------|---------|
+| Display name | Yes | "What should Stella call you?" |
+| Password | Yes | Min 8 characters |
+| Confirm password | Yes | Must match |
+
+**Design notes:**
+- Mystical styling consistent with app
+- Stella avatar saying "Let's secure your cosmic journey"
+- Single screen, not multi-step
+
+### 3.4 Future Logins
+| Method | Available |
+|--------|-----------|
+| Email + Password | ✅ Primary method |
+| Magic link (backup) | ✅ "Forgot password? Send login link" |
+| Social login | ❌ Not in MVP |
+
+### 3.5 Legacy Support
 - Keep `/map?sid=<session_id>` working for existing buyers
 - Show upgrade banner to Stella+ on legacy map access
 
@@ -209,6 +262,8 @@ Transform AstroPowerMaps from a $19 one-time purchase model to a **$7.99/month s
 CREATE TABLE user_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  display_name TEXT, -- "What should Stella call you?"
+  account_status TEXT DEFAULT 'pending_setup', -- pending_setup, active
   birth_date DATE NOT NULL,
   birth_time TIME,
   birth_place TEXT NOT NULL,
@@ -217,6 +272,7 @@ CREATE TABLE user_profiles (
   birth_timezone TEXT,
   label TEXT DEFAULT 'Me',
   created_at TIMESTAMPTZ DEFAULT NOW(),
+  setup_completed_at TIMESTAMPTZ, -- When they set password + name
   UNIQUE(user_id) -- Single profile per user for MVP
 );
 
