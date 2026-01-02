@@ -102,6 +102,7 @@ export default function Screen03Analyzing() {
             sessionId: state.sessionId,
             palmBounds: state.palmBounds,
             handLandmarks: state.handLandmarks, // Send landmarks for anatomical line positioning
+            handedness: state.handedness, // Left or Right hand
           }),
         });
 

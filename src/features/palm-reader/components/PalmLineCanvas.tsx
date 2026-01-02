@@ -11,6 +11,9 @@ interface PalmLineCanvasProps {
   height?: number;
   showLabels?: boolean;
   animate?: boolean;
+  // Debug mode props
+  debugMode?: boolean;
+  landmarks?: { x: number; y: number }[];
 }
 
 // Line colors with stronger glow for visibility
@@ -69,6 +72,37 @@ function calculateImageLayout(
   return { offsetX, offsetY, displayWidth, displayHeight };
 }
 
+// Landmark colors for debug visualization
+const LANDMARK_COLORS: Record<string, string> = {
+  wrist: "#FF0000",      // Red - anchor point
+  thumb: "#FF6B00",      // Orange
+  index: "#FFD700",      // Gold
+  middle: "#00FF00",     // Green
+  ring: "#00FFFF",       // Cyan
+  pinky: "#0080FF",      // Blue
+};
+
+// Get landmark color based on index
+function getLandmarkColor(index: number): string {
+  if (index === 0) return LANDMARK_COLORS.wrist;
+  if (index >= 1 && index <= 4) return LANDMARK_COLORS.thumb;
+  if (index >= 5 && index <= 8) return LANDMARK_COLORS.index;
+  if (index >= 9 && index <= 12) return LANDMARK_COLORS.middle;
+  if (index >= 13 && index <= 16) return LANDMARK_COLORS.ring;
+  if (index >= 17 && index <= 20) return LANDMARK_COLORS.pinky;
+  return "#FFFFFF";
+}
+
+// Key landmark names for labels
+const KEY_LANDMARKS: Record<number, string> = {
+  0: "Wrist",
+  1: "Thumb CMC",
+  5: "Index MCP",
+  9: "Middle MCP",
+  13: "Ring MCP",
+  17: "Pinky MCP",
+};
+
 export default function PalmLineCanvas({
   imageUrl,
   lines,
@@ -76,6 +110,8 @@ export default function PalmLineCanvas({
   height = 400,
   showLabels = true,
   animate = true,
+  debugMode = false,
+  landmarks,
 }: PalmLineCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -221,7 +257,82 @@ export default function PalmLineCanvas({
         ctx.restore();
       }
     });
-  }, [lines, width, height, imageLoaded, imageLayout, animationProgress, showLabels]);
+
+    // Debug mode: Draw landmark dots
+    if (debugMode && landmarks && landmarks.length > 0) {
+      console.log("🔴 Drawing debug landmarks:", landmarks.length);
+
+      landmarks.forEach((landmark, index) => {
+        // Convert normalized coordinates to pixel coordinates
+        const x = imageLayout.offsetX + landmark.x * imageLayout.displayWidth;
+        const y = imageLayout.offsetY + landmark.y * imageLayout.displayHeight;
+
+        const color = getLandmarkColor(index);
+        const isKeyLandmark = KEY_LANDMARKS[index] !== undefined;
+        const radius = isKeyLandmark ? 6 : 4;
+
+        // Draw outer glow
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, radius + 3, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.3;
+        ctx.fill();
+        ctx.restore();
+
+        // Draw main dot
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 1;
+        ctx.fill();
+        ctx.restore();
+
+        // Draw index number on key landmarks
+        if (isKeyLandmark) {
+          ctx.save();
+          ctx.font = "bold 8px system-ui";
+          ctx.fillStyle = "#FFFFFF";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.shadowColor = "rgba(0,0,0,0.9)";
+          ctx.shadowBlur = 3;
+          ctx.fillText(String(index), x, y - radius - 6);
+          ctx.restore();
+        }
+      });
+
+      // Connect key landmarks with thin lines to show hand structure
+      const connections = [
+        [0, 1], [1, 2], [2, 3], [3, 4], // Thumb
+        [0, 5], [5, 6], [6, 7], [7, 8], // Index
+        [0, 9], [9, 10], [10, 11], [11, 12], // Middle
+        [0, 13], [13, 14], [14, 15], [15, 16], // Ring
+        [0, 17], [17, 18], [18, 19], [19, 20], // Pinky
+        [5, 9], [9, 13], [13, 17], // Palm connections
+      ];
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.3)";
+      ctx.lineWidth = 1;
+
+      connections.forEach(([from, to]) => {
+        if (landmarks[from] && landmarks[to]) {
+          const x1 = imageLayout.offsetX + landmarks[from].x * imageLayout.displayWidth;
+          const y1 = imageLayout.offsetY + landmarks[from].y * imageLayout.displayHeight;
+          const x2 = imageLayout.offsetX + landmarks[to].x * imageLayout.displayWidth;
+          const y2 = imageLayout.offsetY + landmarks[to].y * imageLayout.displayHeight;
+
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        }
+      });
+      ctx.restore();
+    }
+  }, [lines, width, height, imageLoaded, imageLayout, animationProgress, showLabels, debugMode, landmarks]);
 
   // Handle image load - calculate layout based on natural dimensions
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {

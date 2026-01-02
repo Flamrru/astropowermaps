@@ -108,6 +108,8 @@ export interface GeminiAnalysisResult {
   handType: "left" | "right";
   imageQuality: "poor" | "acceptable" | "good";
   error?: string;
+  // Debug: landmarks used for line calculation
+  landmarks?: { x: number; y: number }[];
 }
 
 // ============================================
@@ -183,6 +185,7 @@ export interface PalmReaderState {
   capturedImage: string | null; // Base64 data URL
   handLandmarks: HandLandmarks | null; // MediaPipe landmarks
   palmBounds: PalmBounds | null; // Calculated palm region
+  handedness: "Left" | "Right" | null; // Which hand was detected
   isCapturing: boolean;
   cameraError: string | null;
 

@@ -131,11 +131,14 @@ function InsightCard({ title, content, icon, delay }: InsightCardProps) {
 export default function Screen04Results() {
   const { state, dispatch } = usePalm();
   const [showContent, setShowContent] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
 
   // Get data from state
   const result = state.analysisResult;
   const reading = result?.openaiResult?.reading;
   const lines = result?.geminiResult?.lines || [];
+  const landmarks = result?.geminiResult?.landmarks;
+  const handType = result?.geminiResult?.handType;
   const palmImage = state.capturedImage;
 
   // Debug logging
@@ -146,6 +149,7 @@ export default function Screen04Results() {
     lines: lines,
     hasResult: !!result,
     hasReading: !!reading,
+    landmarksCount: landmarks?.length || 0,
   });
 
   // Delay content reveal for dramatic effect
@@ -191,14 +195,16 @@ export default function Screen04Results() {
           animate={{ opacity: 1, y: 0 }}
         >
           <h1 className="text-2xl font-display text-white mb-1">Your Reading</h1>
-          <p className="text-white/50 text-sm">Revealed by Stella</p>
+          <p className="text-white/50 text-sm">
+            {handType ? `${handType === "left" ? "Left" : "Right"} Palm · ` : ""}Revealed by Stella
+          </p>
         </motion.div>
 
         {showContent && (
           <>
             {/* Palm image with lines */}
             <motion.div
-              className="flex justify-center mb-6"
+              className="flex flex-col items-center mb-6"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2 }}
@@ -210,6 +216,8 @@ export default function Screen04Results() {
                   width={260}
                   height={340}
                   animate={true}
+                  debugMode={debugMode}
+                  landmarks={landmarks}
                 />
               ) : (
                 <div
@@ -221,6 +229,46 @@ export default function Screen04Results() {
                 >
                   <span className="text-white/30 text-sm">No image</span>
                 </div>
+              )}
+
+              {/* Debug toggle button */}
+              <button
+                onClick={() => setDebugMode(!debugMode)}
+                className={`mt-3 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                  debugMode
+                    ? "bg-red-500/20 text-red-400 border border-red-500/40"
+                    : "bg-white/5 text-white/40 border border-white/10"
+                }`}
+              >
+                {debugMode ? "🔴 Debug ON" : "Debug Mode"}
+              </button>
+
+              {/* Debug legend */}
+              {debugMode && (
+                <motion.div
+                  className="mt-3 flex flex-wrap justify-center gap-2"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <span className="text-[10px] text-white/50 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-red-500" /> Wrist
+                  </span>
+                  <span className="text-[10px] text-white/50 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-orange-500" /> Thumb
+                  </span>
+                  <span className="text-[10px] text-white/50 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-yellow-400" /> Index
+                  </span>
+                  <span className="text-[10px] text-white/50 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-green-500" /> Middle
+                  </span>
+                  <span className="text-[10px] text-white/50 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400" /> Ring
+                  </span>
+                  <span className="text-[10px] text-white/50 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" /> Pinky
+                  </span>
+                </motion.div>
               )}
             </motion.div>
 

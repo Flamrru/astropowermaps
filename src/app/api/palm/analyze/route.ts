@@ -10,7 +10,7 @@ import type { PalmAnalysisResult, PalmBounds, DetectedLine } from "@/features/pa
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { imageBase64, sessionId, palmBounds, handLandmarks } = body;
+    const { imageBase64, sessionId, palmBounds, handLandmarks, handedness } = body;
 
     // Validate input
     if (!imageBase64) {
@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`📍 Palm analysis started for session: ${sessionId?.substring(0, 8)}...`);
     console.log(`📐 Palm bounds received:`, palmBounds);
+    console.log(`🖐️ Handedness:`, handedness || "unknown");
 
     // Step 1: Crop image to palm region if we have bounds
     let processedImage = imageBase64;
@@ -70,11 +71,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the line detection result
+    // Map MediaPipe handedness to our format (lowercase)
+    const detectedHandType = handedness === "Left" ? "left" : handedness === "Right" ? "right" : "right";
+
     const lineDetectionResult = {
       success: true,
       lines: detectedLines,
-      handType: "right" as const, // Default, could be detected from landmarks
+      handType: detectedHandType as "left" | "right",
       imageQuality: "good" as const,
+      // Include landmarks for debug visualization
+      landmarks: handLandmarks?.map((lm: { x: number; y: number }) => ({ x: lm.x, y: lm.y })) || undefined,
     };
 
     console.log(`📷 Lines detected: ${lineDetectionResult.lines.length}`);

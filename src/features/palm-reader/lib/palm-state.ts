@@ -26,6 +26,7 @@ export type PalmAction =
   | { type: "SET_CAPTURED_IMAGE"; payload: string }
   | { type: "SET_HAND_LANDMARKS"; payload: HandLandmarks | null }
   | { type: "SET_PALM_BOUNDS"; payload: PalmBounds | null }
+  | { type: "SET_HANDEDNESS"; payload: "Left" | "Right" | null }
   | { type: "SET_CAPTURING"; payload: boolean }
   | { type: "SET_CAMERA_ERROR"; payload: string }
   | { type: "START_ANALYSIS" }
@@ -45,6 +46,7 @@ export const initialPalmState: PalmReaderState = {
   capturedImage: null,
   handLandmarks: null,
   palmBounds: null,
+  handedness: null,
   isCapturing: false,
   cameraError: null,
   isAnalyzing: false,
@@ -90,6 +92,9 @@ export function palmReducer(
 
     case "SET_PALM_BOUNDS":
       return { ...state, palmBounds: action.payload };
+
+    case "SET_HANDEDNESS":
+      return { ...state, handedness: action.payload };
 
     case "SET_CAPTURING":
       return { ...state, isCapturing: action.payload };

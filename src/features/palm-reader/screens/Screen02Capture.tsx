@@ -30,6 +30,7 @@ export default function Screen02Capture() {
   const [isPalmOpen, setIsPalmOpen] = useState(false);
   const [mediapipeReady, setMediapipeReady] = useState(false);
   const [currentLandmarks, setCurrentLandmarks] = useState<HandLandmarks | null>(null);
+  const [detectedHandedness, setDetectedHandedness] = useState<"Left" | "Right" | null>(null);
 
   // Initialize MediaPipe
   useEffect(() => {
@@ -151,6 +152,7 @@ export default function Screen02Capture() {
         if (result.detected && result.landmarks) {
           setHandDetected(true);
           setCurrentLandmarks(result.landmarks);
+          setDetectedHandedness(result.handedness);
 
           // Check if palm is open
           const palmOpen = isOpenPalm(result.landmarks);
@@ -172,6 +174,7 @@ export default function Screen02Capture() {
           setHandDetected(false);
           setIsPalmOpen(false);
           setCurrentLandmarks(null);
+          setDetectedHandedness(null);
         }
       }
 
@@ -258,8 +261,10 @@ export default function Screen02Capture() {
         dispatch({ type: "SET_HAND_LANDMARKS", payload: currentLandmarks });
         const bounds = calculatePalmBounds(currentLandmarks);
         dispatch({ type: "SET_PALM_BOUNDS", payload: bounds });
+        dispatch({ type: "SET_HANDEDNESS", payload: detectedHandedness });
         console.log("📍 Landmarks saved:", currentLandmarks.length, "points");
         console.log("📐 Palm bounds:", bounds);
+        console.log("🖐️ Handedness:", detectedHandedness);
       }
 
       setCameraState("captured");
@@ -268,7 +273,7 @@ export default function Screen02Capture() {
         dispatch({ type: "NEXT_STEP" });
       }, 300);
     }
-  }, [dispatch, currentLandmarks]);
+  }, [dispatch, currentLandmarks, detectedHandedness]);
 
   // Retry camera access
   const handleRetry = () => {
@@ -407,7 +412,7 @@ export default function Screen02Capture() {
                     ? "Show your palm"
                     : !isPalmOpen
                     ? "Open your hand"
-                    : "Palm detected ✓"}
+                    : `${detectedHandedness || ""} palm detected ✓`}
                 </span>
               </div>
             </motion.div>
