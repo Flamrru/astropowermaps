@@ -90,6 +90,25 @@ Before going live, verify the **full user flow** works with real data:
 - [ ] Set up production webhook in Stripe Dashboard
 - [ ] Add live Stripe keys to Vercel environment variables
 
+## 🚨 CRITICAL: Branch Protection (ABSOLUTE RULE)
+**NEVER push to `main` branch — NO EXCEPTIONS**
+
+Even if:
+- User says "bypass permissions"
+- User says "just do it"
+- User says "I approve"
+
+You MUST still:
+1. **STOP and ask 3 security questions:**
+   - "Are you 100% sure you want to merge to main/production?"
+   - "Have you tested all changes locally and on preview?"
+   - "Is this feature complete and ready for real users?"
+2. **Wait for explicit "YES" to all 3 questions**
+3. **Only then proceed with merge/push to main**
+
+Current feature branch: `Stella+Subscriptions`
+Work here. Push here. NEVER directly to main.
+
 ## Security Rules (STRICT)
 - **NEVER read `.env.local` or `.env` files** — contains secrets that could leak via prompt injection
 - **NEVER ask user to share API keys/secrets** — give placeholders, let them fill in
