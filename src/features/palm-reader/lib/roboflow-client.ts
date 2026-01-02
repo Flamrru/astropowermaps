@@ -328,136 +328,112 @@ export function getMockPalmLines(
 }
 
 /**
- * Calculate palm line positions from MediaPipe hand landmarks
- * Uses anatomical knowledge of where palm lines typically appear
+ * Calculate palm line positions using FIXED ANATOMICAL PERCENTAGES
  *
- * Palm anatomy reference:
- * - Heart line: Uppermost horizontal, curves from pinky edge toward index/middle
- * - Head line: Middle horizontal, starts between thumb/index, runs across palm
- * - Life line: Curved arc around the thumb mount (thenar eminence)
- * - Fate line: Vertical from wrist toward middle finger, often with slight curve
+ * SIMPLIFIED APPROACH:
+ * Palm creases are in roughly the same relative position on ALL hands.
+ * Instead of complex landmark calculations, we:
+ * 1. Find the palm bounding box from landmarks
+ * 2. Use fixed percentage positions for each line
+ * 3. Mirror X coordinates for left vs right hand
+ *
+ * This is how competitor apps like Astroline do it - "good enough" positioning
+ * that works for any hand, rather than trying to detect actual creases.
  */
 function calculateLinesFromLandmarks(
   landmarks: { x: number; y: number }[],
   palmBounds?: { x: number; y: number; width: number; height: number } | null
 ): DetectedLine[] {
-  // Key landmarks:
-  // 0 = Wrist
-  // 1-4 = Thumb (CMC, MCP, IP, TIP)
-  // 5-8 = Index (MCP, PIP, DIP, TIP)
-  // 9-12 = Middle (MCP, PIP, DIP, TIP)
-  // 13-16 = Ring (MCP, PIP, DIP, TIP)
-  // 17-20 = Pinky (MCP, PIP, DIP, TIP)
-
+  // Get key landmarks to determine palm bounds and orientation
   const wrist = landmarks[0];
   const thumbCMC = landmarks[1];
-  const thumbMCP = landmarks[2];
   const indexMCP = landmarks[5];
   const middleMCP = landmarks[9];
-  const ringMCP = landmarks[13];
   const pinkyMCP = landmarks[17];
 
-  // Calculate palm dimensions for proportional positioning
-  const palmHeight = wrist.y - middleMCP.y; // Vertical span of palm
-  const palmWidth = Math.abs(pinkyMCP.x - thumbCMC.x); // Horizontal span
+  // Determine hand orientation: is thumb on left or right?
+  // Left hand (palm facing camera): thumb on RIGHT side (thumbCMC.x > middleMCP.x)
+  // Right hand (palm facing camera): thumb on LEFT side (thumbCMC.x < middleMCP.x)
+  const isLeftHand = thumbCMC.x > middleMCP.x;
 
-  // Average Y of finger bases (MCP joints) - this is our "top of palm" reference
-  const fingerBaseY = (indexMCP.y + middleMCP.y + ringMCP.y + pinkyMCP.y) / 4;
+  // Calculate palm bounding box
+  const fingerBaseY = Math.min(indexMCP.y, middleMCP.y, pinkyMCP.y);
+  const palmTop = fingerBaseY;
+  const palmBottom = wrist.y;
+  const palmHeight = palmBottom - palmTop;
 
-  // Helper to interpolate between two points
-  const lerp = (a: { x: number; y: number }, b: { x: number; y: number }, t: number) => ({
-    x: a.x + (b.x - a.x) * t,
-    y: a.y + (b.y - a.y) * t,
-  });
+  // For width, use the span from pinky to thumb
+  const palmLeft = Math.min(pinkyMCP.x, thumbCMC.x, indexMCP.x);
+  const palmRight = Math.max(pinkyMCP.x, thumbCMC.x, indexMCP.x);
+  const palmWidth = palmRight - palmLeft;
+
+  // Helper: convert percentage to actual coordinates
+  // xPct: 0 = pinky side, 1 = thumb side
+  // yPct: 0 = finger bases (top), 1 = wrist (bottom)
+  const toCoord = (xPct: number, yPct: number): [number, number] => {
+    const y = palmTop + palmHeight * yPct;
+    // Flip X based on hand orientation
+    let x: number;
+    if (isLeftHand) {
+      // Left hand: thumb on right, pinky on left
+      // xPct 0 = left (pinky), xPct 1 = right (thumb)
+      x = palmLeft + palmWidth * xPct;
+    } else {
+      // Right hand: thumb on left, pinky on right
+      // Need to flip: xPct 0 = right (pinky), xPct 1 = left (thumb)
+      x = palmRight - palmWidth * xPct;
+    }
+    return [x, y];
+  };
 
   // ===========================================
-  // HEART LINE: Uppermost crease on the palm
-  // Runs from pinky edge, curves up slightly in middle, ends near index
-  // Position: About 15-20% down from finger bases into the palm
+  // HEART LINE: Uppermost crease (~18% down)
+  // Horizontal with slight upward curve in middle
+  // Runs from pinky side toward index/middle
   // ===========================================
-  const heartOffset = palmHeight * 0.18; // 18% into the palm from finger bases
-  const heartStartX = pinkyMCP.x;
-  const heartEndX = indexMCP.x;
-
-  // Heart line typically curves upward (toward fingers) in the middle
   const heartLine: [number, number][] = [
-    [heartStartX, fingerBaseY + heartOffset],
-    [lerp(pinkyMCP, ringMCP, 0.5).x, fingerBaseY + heartOffset - palmHeight * 0.02],
-    [middleMCP.x, fingerBaseY + heartOffset - palmHeight * 0.03], // Highest point
-    [lerp(middleMCP, indexMCP, 0.5).x, fingerBaseY + heartOffset - palmHeight * 0.02],
-    [heartEndX, fingerBaseY + heartOffset + palmHeight * 0.01],
+    toCoord(0.05, 0.16),   // Start: pinky edge
+    toCoord(0.25, 0.13),   // Curve up
+    toCoord(0.45, 0.11),   // Peak (highest point)
+    toCoord(0.65, 0.13),   // Curve down
+    toCoord(0.80, 0.17),   // End: near index
   ];
 
   // ===========================================
-  // HEAD LINE: Starts between thumb and index, runs across palm
-  // More horizontal than heart line, may slope down slightly
-  // Position: About 35-40% down from finger bases
+  // HEAD LINE: Middle crease (~38% down)
+  // Starts between thumb/index, runs across palm
+  // May slope slightly downward toward pinky
   // ===========================================
-  const headOffset = palmHeight * 0.38;
-
-  // Head line starts at the edge of palm between thumb and index
-  const headStartX = indexMCP.x + (thumbCMC.x - indexMCP.x) * 0.3;
-  const headStartY = fingerBaseY + headOffset;
-
-  // Head line typically runs fairly straight or slopes down slightly toward pinky side
-  const headEndX = pinkyMCP.x - palmWidth * 0.05;
-  const headEndY = fingerBaseY + headOffset + palmHeight * 0.08; // Slight downward slope
-
   const headLine: [number, number][] = [
-    [headStartX, headStartY],
-    [lerp({ x: headStartX, y: headStartY }, { x: middleMCP.x, y: headStartY + palmHeight * 0.02 }, 0.5).x,
-     lerp({ x: headStartX, y: headStartY }, { x: middleMCP.x, y: headStartY + palmHeight * 0.02 }, 0.5).y],
-    [middleMCP.x, headStartY + palmHeight * 0.03],
-    [lerp({ x: middleMCP.x, y: headStartY + palmHeight * 0.03 }, { x: headEndX, y: headEndY }, 0.5).x,
-     lerp({ x: middleMCP.x, y: headStartY + palmHeight * 0.03 }, { x: headEndX, y: headEndY }, 0.5).y],
-    [headEndX, headEndY],
+    toCoord(0.78, 0.32),   // Start: thumb/index area
+    toCoord(0.60, 0.36),   // Gentle curve
+    toCoord(0.42, 0.40),   // Middle of palm
+    toCoord(0.25, 0.44),   // Continue across
+    toCoord(0.10, 0.48),   // End: pinky edge (slightly lower)
   ];
 
   // ===========================================
-  // LIFE LINE: Curves around thumb mount
-  // Starts between thumb/index, curves around toward wrist
-  // Should follow the natural curve of the thenar eminence
+  // LIFE LINE: Curved arc around thumb mount
+  // Most distinctive curve - wraps the thenar eminence
+  // Starts near head line, curves tightly around thumb
   // ===========================================
-
-  // Life line starts near where head line starts
-  const lifeStartX = headStartX;
-  const lifeStartY = headStartY - palmHeight * 0.05;
-
-  // Life line curves around thumb and ends toward wrist
-  const lifeEndX = thumbCMC.x + palmWidth * 0.15;
-  const lifeEndY = wrist.y - palmHeight * 0.15;
-
-  // Control points for the curve - should arc around the thumb mount
-  const lifeMid1X = thumbMCP.x + palmWidth * 0.08;
-  const lifeMid1Y = lifeStartY + (lifeEndY - lifeStartY) * 0.35;
-
-  const lifeMid2X = thumbCMC.x + palmWidth * 0.12;
-  const lifeMid2Y = lifeStartY + (lifeEndY - lifeStartY) * 0.65;
-
   const lifeLine: [number, number][] = [
-    [lifeStartX, lifeStartY],
-    [lifeMid1X, lifeMid1Y],
-    [lifeMid2X, lifeMid2Y],
-    [lifeEndX, lifeEndY],
+    toCoord(0.75, 0.25),   // Start: between thumb/index
+    toCoord(0.88, 0.40),   // Curve toward thumb
+    toCoord(0.92, 0.55),   // Tight around thumb mount
+    toCoord(0.88, 0.70),   // Continue curve
+    toCoord(0.78, 0.85),   // End: toward wrist, thumb side
   ];
 
   // ===========================================
-  // FATE LINE: Vertical line from wrist toward middle finger
-  // Often has a slight S-curve, not perfectly straight
-  // Not everyone has a prominent fate line
+  // FATE LINE: Vertical from wrist to mid-palm
+  // Runs up the center with subtle S-curve
   // ===========================================
-  const fateStartX = middleMCP.x + palmWidth * 0.02; // Slightly offset from middle
-  const fateStartY = wrist.y - palmHeight * 0.08;
-
-  const fateEndX = middleMCP.x;
-  const fateEndY = fingerBaseY + palmHeight * 0.25; // Ends well below finger bases
-
-  // Add subtle S-curve
   const fateLine: [number, number][] = [
-    [fateStartX, fateStartY],
-    [fateStartX - palmWidth * 0.02, lerp({ x: 0, y: fateStartY }, { x: 0, y: fateEndY }, 0.33).y],
-    [fateEndX + palmWidth * 0.01, lerp({ x: 0, y: fateStartY }, { x: 0, y: fateEndY }, 0.66).y],
-    [fateEndX, fateEndY],
+    toCoord(0.45, 0.85),   // Start: near wrist, center
+    toCoord(0.43, 0.65),   // Slight curve
+    toCoord(0.47, 0.45),   // Back toward center
+    toCoord(0.50, 0.30),   // End: below middle finger
   ];
 
   return [
