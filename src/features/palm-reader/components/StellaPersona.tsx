@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 interface StellaPersonaProps {
   quote: string;
@@ -8,39 +9,21 @@ interface StellaPersonaProps {
   delay?: number;
 }
 
-// Constellation points for Stella's star symbol
-const CONSTELLATION_POINTS = [
-  { x: 50, y: 15 }, // Top star
-  { x: 30, y: 35 }, // Left
-  { x: 70, y: 35 }, // Right
-  { x: 38, y: 60 }, // Bottom left
-  { x: 62, y: 60 }, // Bottom right
-];
-
-const CONSTELLATION_LINES = [
-  [0, 1],
-  [0, 2],
-  [1, 3],
-  [2, 4],
-  [3, 4],
-  [1, 2],
-];
-
 function StellaAvatar({ size = 56 }: { size?: number }) {
   return (
     <motion.div
       className="relative flex-shrink-0"
       style={{ width: size, height: size }}
-      initial={{ scale: 0, rotate: -180 }}
-      animate={{ scale: 1, rotate: 0 }}
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
       transition={{ type: "spring", stiffness: 200, damping: 15 }}
     >
       {/* Outer glow */}
       <motion.div
-        className="absolute inset-0 rounded-full"
+        className="absolute inset-[-4px] rounded-full"
         style={{
           background:
-            "radial-gradient(circle, rgba(232,197,71,0.3) 0%, transparent 70%)",
+            "radial-gradient(circle, rgba(232,197,71,0.4) 0%, transparent 70%)",
           filter: "blur(8px)",
         }}
         animate={{
@@ -50,74 +33,27 @@ function StellaAvatar({ size = 56 }: { size?: number }) {
         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      {/* Main circle */}
+      {/* Main image circle */}
       <div
-        className="absolute inset-0 rounded-full"
+        className="absolute inset-0 rounded-full overflow-hidden"
         style={{
-          background:
-            "linear-gradient(135deg, rgba(201,162,39,0.2) 0%, rgba(5,5,16,0.9) 100%)",
-          border: "1px solid rgba(201,162,39,0.4)",
-          boxShadow: "inset 0 0 20px rgba(201,162,39,0.1)",
+          border: "2px solid rgba(201,162,39,0.5)",
+          boxShadow: "0 0 20px rgba(201,162,39,0.3)",
         }}
-      />
-
-      {/* Constellation SVG */}
-      <svg
-        viewBox="0 0 100 80"
-        className="absolute inset-0 w-full h-full p-2"
-        style={{ transform: "translateY(10%)" }}
       >
-        {/* Constellation lines */}
-        {CONSTELLATION_LINES.map(([from, to], i) => (
-          <motion.line
-            key={i}
-            x1={CONSTELLATION_POINTS[from].x}
-            y1={CONSTELLATION_POINTS[from].y}
-            x2={CONSTELLATION_POINTS[to].x}
-            y2={CONSTELLATION_POINTS[to].y}
-            stroke="rgba(232,197,71,0.4)"
-            strokeWidth="1"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ delay: 0.3 + i * 0.1, duration: 0.5 }}
-          />
-        ))}
-
-        {/* Stars at each point */}
-        {CONSTELLATION_POINTS.map((point, i) => (
-          <motion.circle
-            key={i}
-            cx={point.x}
-            cy={point.y}
-            r={i === 0 ? 4 : 2.5}
-            fill="#E8C547"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.5 + i * 0.1 }}
-          />
-        ))}
-
-        {/* Central glow on main star */}
-        <motion.circle
-          cx={50}
-          cy={15}
-          r="8"
-          fill="url(#stellaGlow)"
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 2, repeat: Infinity }}
+        <Image
+          src="/images/stella.png"
+          alt="Stella"
+          width={size}
+          height={size}
+          className="w-full h-full object-cover object-top"
+          style={{ transform: "scale(1.2)" }}
         />
-
-        <defs>
-          <radialGradient id="stellaGlow">
-            <stop offset="0%" stopColor="rgba(232,197,71,0.6)" />
-            <stop offset="100%" stopColor="rgba(232,197,71,0)" />
-          </radialGradient>
-        </defs>
-      </svg>
+      </div>
 
       {/* Rotating ring */}
       <motion.div
-        className="absolute inset-[-4px]"
+        className="absolute inset-[-6px]"
         animate={{ rotate: 360 }}
         transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
       >
@@ -127,7 +63,7 @@ function StellaAvatar({ size = 56 }: { size?: number }) {
             cy="50"
             r="48"
             fill="none"
-            stroke="rgba(201,162,39,0.2)"
+            stroke="rgba(201,162,39,0.3)"
             strokeWidth="0.5"
             strokeDasharray="6 4"
           />
