@@ -104,7 +104,7 @@ export default function TermsPage() {
             </p>
             <p className="text-white/80 leading-relaxed mt-3">
               <strong className="text-white">REFUNDS:</strong> If dissatisfied, you may request a refund
-              within 14 days of purchase by emailing info@astropowermap.com. Refunds are reviewed case-by-case.
+              within 14 days of purchase by emailing support@astropowermap.com. Refunds are reviewed case-by-case.
               We may deny requests that appear fraudulent or abusive.
             </p>
           </section>
@@ -210,11 +210,11 @@ export default function TermsPage() {
             </p>
             <p className="text-white/80 leading-relaxed mt-3">
               <strong className="text-white">INFORMAL RESOLUTION:</strong> Before arbitration, contact
-              us at info@astropowermap.com and attempt to resolve the dispute informally for at least 30 days.
+              us at support@astropowermap.com and attempt to resolve the dispute informally for at least 30 days.
             </p>
             <p className="text-white/80 leading-relaxed mt-3">
               <strong className="text-white">OPT-OUT:</strong> You may opt out of arbitration by emailing
-              info@astropowermap.com within 30 days of first using the Service.
+              support@astropowermap.com within 30 days of first using the Service.
             </p>
           </section>
 
@@ -233,8 +233,8 @@ export default function TermsPage() {
             <h2 className="text-xl font-semibold text-white mt-10 mb-4">12. Contact</h2>
             <p className="text-white/80 leading-relaxed">
               Email:{" "}
-              <a href="mailto:info@astropowermap.com" className="text-gold-glow hover:underline">
-                info@astropowermap.com
+              <a href="mailto:support@astropowermap.com" className="text-gold-glow hover:underline">
+                support@astropowermap.com
               </a>
             </p>
           </section>

@@ -121,8 +121,8 @@ export default function PrivacyPage() {
             </p>
             <p className="text-white/80 leading-relaxed">
               To exercise rights, email:{" "}
-              <a href="mailto:info@astropowermap.com" className="text-gold-glow hover:underline">
-                info@astropowermap.com
+              <a href="mailto:support@astropowermap.com" className="text-gold-glow hover:underline">
+                support@astropowermap.com
               </a>
             </p>
           </section>
@@ -166,8 +166,8 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold text-white mt-10 mb-4">11. Contact</h2>
             <p className="text-white/80 leading-relaxed">
               Email:{" "}
-              <a href="mailto:info@astropowermap.com" className="text-gold-glow hover:underline">
-                info@astropowermap.com
+              <a href="mailto:support@astropowermap.com" className="text-gold-glow hover:underline">
+                support@astropowermap.com
               </a>
             </p>
           </section>

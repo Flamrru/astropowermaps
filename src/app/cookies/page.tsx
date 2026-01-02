@@ -192,8 +192,8 @@ export default function CookiesPage() {
             <h2 className="text-xl font-semibold text-white mt-10 mb-4">7. Contact Us</h2>
             <p className="text-white/80 leading-relaxed">
               If you have questions about our use of cookies, please contact us at:{" "}
-              <a href="mailto:info@astropowermap.com" className="text-gold-glow hover:underline">
-                info@astropowermap.com
+              <a href="mailto:support@astropowermap.com" className="text-gold-glow hover:underline">
+                support@astropowermap.com
               </a>
             </p>
           </section>
