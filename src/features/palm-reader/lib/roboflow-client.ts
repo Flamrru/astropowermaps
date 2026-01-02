@@ -387,42 +387,42 @@ function calculateLinesFromLandmarks(
   };
 
   // ===========================================
-  // HEART LINE: Uppermost crease (~18% down)
+  // HEART LINE: Uppermost crease (~15-20% down)
   // Horizontal with slight upward curve in middle
   // Runs from pinky side toward index/middle
   // ===========================================
   const heartLine: [number, number][] = [
-    toCoord(0.05, 0.16),   // Start: pinky edge
-    toCoord(0.25, 0.13),   // Curve up
-    toCoord(0.45, 0.11),   // Peak (highest point)
-    toCoord(0.65, 0.13),   // Curve down
-    toCoord(0.80, 0.17),   // End: near index
+    toCoord(0.08, 0.18),   // Start: pinky edge
+    toCoord(0.28, 0.14),   // Curve up
+    toCoord(0.48, 0.12),   // Peak (highest point)
+    toCoord(0.65, 0.14),   // Curve down
+    toCoord(0.78, 0.18),   // End: near index
   ];
 
   // ===========================================
-  // HEAD LINE: Middle crease (~38% down)
+  // HEAD LINE: Middle crease (~35-45% down)
   // Starts between thumb/index, runs across palm
-  // May slope slightly downward toward pinky
+  // Slopes slightly downward toward pinky
   // ===========================================
   const headLine: [number, number][] = [
-    toCoord(0.78, 0.32),   // Start: thumb/index area
-    toCoord(0.60, 0.36),   // Gentle curve
-    toCoord(0.42, 0.40),   // Middle of palm
-    toCoord(0.25, 0.44),   // Continue across
-    toCoord(0.10, 0.48),   // End: pinky edge (slightly lower)
+    toCoord(0.72, 0.35),   // Start: thumb/index area
+    toCoord(0.55, 0.38),   // Gentle curve
+    toCoord(0.40, 0.42),   // Middle of palm
+    toCoord(0.25, 0.46),   // Continue across
+    toCoord(0.12, 0.50),   // End: pinky edge (slightly lower)
   ];
 
   // ===========================================
   // LIFE LINE: Curved arc around thumb mount
-  // Most distinctive curve - wraps the thenar eminence
-  // Starts near head line, curves tightly around thumb
+  // Wraps the thenar eminence (fleshy thumb base)
+  // Should curve AROUND it, not too far to edge
   // ===========================================
   const lifeLine: [number, number][] = [
-    toCoord(0.75, 0.25),   // Start: between thumb/index
-    toCoord(0.88, 0.40),   // Curve toward thumb
-    toCoord(0.92, 0.55),   // Tight around thumb mount
-    toCoord(0.88, 0.70),   // Continue curve
-    toCoord(0.78, 0.85),   // End: toward wrist, thumb side
+    toCoord(0.68, 0.28),   // Start: between thumb/index
+    toCoord(0.78, 0.42),   // Curve toward thumb
+    toCoord(0.82, 0.56),   // Apex of curve (not too far!)
+    toCoord(0.78, 0.70),   // Continue curve back
+    toCoord(0.68, 0.84),   // End: toward wrist
   ];
 
   // ===========================================
@@ -430,10 +430,10 @@ function calculateLinesFromLandmarks(
   // Runs up the center with subtle S-curve
   // ===========================================
   const fateLine: [number, number][] = [
-    toCoord(0.45, 0.85),   // Start: near wrist, center
-    toCoord(0.43, 0.65),   // Slight curve
-    toCoord(0.47, 0.45),   // Back toward center
-    toCoord(0.50, 0.30),   // End: below middle finger
+    toCoord(0.42, 0.82),   // Start: near wrist, center
+    toCoord(0.40, 0.62),   // Slight curve
+    toCoord(0.44, 0.42),   // Back toward center
+    toCoord(0.48, 0.28),   // End: below middle finger
   ];
 
   return [
