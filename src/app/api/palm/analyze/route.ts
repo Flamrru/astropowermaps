@@ -45,6 +45,8 @@ export async function POST(request: NextRequest) {
 
     const roboflowResult = await detectPalmLinesWithRoboflow(processedImage);
 
+    let usedRoboflow = false;
+
     if (roboflowResult.success && roboflowResult.predictions.length > 0) {
       // Convert Roboflow predictions to our format
       detectedLines = convertRoboflowToLines(
@@ -52,17 +54,19 @@ export async function POST(request: NextRequest) {
         roboflowResult.imageSize.width || croppedWidth || 1280,
         roboflowResult.imageSize.height || croppedHeight || 720
       );
+      usedRoboflow = true;
       console.log(`✅ Roboflow detected ${detectedLines.length} palm lines`);
+
+      // Only transform Roboflow lines (they're in cropped space)
+      if (palmBounds && detectedLines.length > 0) {
+        detectedLines = transformLinesToOriginalSpace(detectedLines, palmBounds);
+      }
     } else {
       // Fallback to anatomical lines based on MediaPipe landmarks
+      // These are already in full-image normalized coordinates - NO transform needed
       console.log("⚠️ Using anatomical palm lines from MediaPipe landmarks");
       console.log(`📍 Hand landmarks available: ${handLandmarks?.length || 0} points`);
       detectedLines = getMockPalmLines(handLandmarks, palmBounds);
-    }
-
-    // If we cropped, we need to transform coordinates back to original image space
-    if (palmBounds && detectedLines.length > 0) {
-      detectedLines = transformLinesToOriginalSpace(detectedLines, palmBounds);
     }
 
     // Create the line detection result
