@@ -30,8 +30,9 @@ const MODELS = {
   },
 };
 
-// Use the palm line detection model by default
-const DEFAULT_MODEL = MODELS.PALM_LINE_DETECTION;
+// Use the keypoint detection model for actual line coordinates
+// PALM_LINE_DETECTION only returns bounding boxes, not actual line paths
+const DEFAULT_MODEL = MODELS.PALM_LINES_KEYPOINT;
 
 function getConfig() {
   const apiKey = process.env.ROBOFLOW_API_KEY;
@@ -94,7 +95,12 @@ export async function detectPalmLinesWithRoboflow(
     const data: RoboflowResponse = await response.json();
 
     console.log(`✅ Roboflow detected ${data.predictions?.length || 0} objects`);
-    console.log("📦 Predictions:", JSON.stringify(data.predictions?.map(p => p.class)));
+    console.log("📦 Predictions:", JSON.stringify(data.predictions?.map(p => ({
+      class: p.class,
+      hasPoints: !!(p.points && p.points.length > 0),
+      pointCount: p.points?.length || 0,
+      confidence: p.confidence
+    }))));
 
     return {
       success: true,
