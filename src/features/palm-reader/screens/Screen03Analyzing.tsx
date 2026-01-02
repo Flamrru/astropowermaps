@@ -100,7 +100,8 @@ export default function Screen03Analyzing() {
           body: JSON.stringify({
             imageBase64: state.capturedImage,
             sessionId: state.sessionId,
-            palmBounds: state.palmBounds, // Send palm bounds for coordinate mapping
+            palmBounds: state.palmBounds,
+            handLandmarks: state.handLandmarks, // Send landmarks for anatomical line positioning
           }),
         });
 

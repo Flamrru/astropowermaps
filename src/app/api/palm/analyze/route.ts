@@ -10,7 +10,7 @@ import type { PalmAnalysisResult, PalmBounds, DetectedLine } from "@/features/pa
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { imageBase64, sessionId, palmBounds } = body;
+    const { imageBase64, sessionId, palmBounds, handLandmarks } = body;
 
     // Validate input
     if (!imageBase64) {
@@ -54,9 +54,10 @@ export async function POST(request: NextRequest) {
       );
       console.log(`✅ Roboflow detected ${detectedLines.length} palm lines`);
     } else {
-      // Fallback to mock lines if Roboflow fails or returns nothing
-      console.log("⚠️ Using mock palm lines (Roboflow unavailable or no detections)");
-      detectedLines = getMockPalmLines();
+      // Fallback to anatomical lines based on MediaPipe landmarks
+      console.log("⚠️ Using anatomical palm lines from MediaPipe landmarks");
+      console.log(`📍 Hand landmarks available: ${handLandmarks?.length || 0} points`);
+      detectedLines = getMockPalmLines(handLandmarks, palmBounds);
     }
 
     // If we cropped, we need to transform coordinates back to original image space

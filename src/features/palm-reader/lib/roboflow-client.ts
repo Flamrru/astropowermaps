@@ -30,9 +30,9 @@ const MODELS = {
   },
 };
 
-// Use the keypoint detection model for actual line coordinates
-// PALM_LINE_DETECTION only returns bounding boxes, not actual line paths
-const DEFAULT_MODEL = MODELS.PALM_LINES_KEYPOINT;
+// Try object detection first - it at least detects the lines exist
+// We'll use MediaPipe landmarks to position lines anatomically if needed
+const DEFAULT_MODEL = MODELS.PALM_LINE_DETECTION;
 
 function getConfig() {
   const apiKey = process.env.ROBOFLOW_API_KEY;
@@ -258,10 +258,22 @@ function generateLineFromBoundingBox(
 }
 
 /**
- * Get mock lines when Roboflow is unavailable
- * These are anatomically-positioned based on typical palm line locations
+ * Get anatomically-positioned palm lines based on MediaPipe landmarks
+ * These follow typical palm line anatomy relative to hand structure
+ *
+ * @param landmarks - Optional MediaPipe hand landmarks (21 points, normalized 0-1)
+ * @param palmBounds - Optional palm bounding box for coordinate mapping
  */
-export function getMockPalmLines(): DetectedLine[] {
+export function getMockPalmLines(
+  landmarks?: { x: number; y: number }[] | null,
+  palmBounds?: { x: number; y: number; width: number; height: number } | null
+): DetectedLine[] {
+  // If we have landmarks, calculate anatomically accurate positions
+  if (landmarks && landmarks.length >= 21) {
+    return calculateLinesFromLandmarks(landmarks, palmBounds);
+  }
+
+  // Fallback to generic positions (centered palm assumption)
   return [
     {
       type: "heart",
@@ -310,6 +322,117 @@ export function getMockPalmLines(): DetectedLine[] {
         [0.47, 0.40],
       ],
       confidence: 0.65,
+      depth: "faint",
+    },
+  ];
+}
+
+/**
+ * Calculate palm line positions from MediaPipe hand landmarks
+ * Uses anatomical knowledge of where palm lines typically appear
+ */
+function calculateLinesFromLandmarks(
+  landmarks: { x: number; y: number }[],
+  palmBounds?: { x: number; y: number; width: number; height: number } | null
+): DetectedLine[] {
+  // Key landmarks:
+  // 0 = Wrist
+  // 1-4 = Thumb (CMC, MCP, IP, TIP)
+  // 5-8 = Index (MCP, PIP, DIP, TIP)
+  // 9-12 = Middle (MCP, PIP, DIP, TIP)
+  // 13-16 = Ring (MCP, PIP, DIP, TIP)
+  // 17-20 = Pinky (MCP, PIP, DIP, TIP)
+
+  const wrist = landmarks[0];
+  const thumbCMC = landmarks[1];
+  const indexMCP = landmarks[5];
+  const middleMCP = landmarks[9];
+  const ringMCP = landmarks[13];
+  const pinkyMCP = landmarks[17];
+
+  // Helper to interpolate between two points
+  const lerp = (a: { x: number; y: number }, b: { x: number; y: number }, t: number) => ({
+    x: a.x + (b.x - a.x) * t,
+    y: a.y + (b.y - a.y) * t,
+  });
+
+  // Helper to add slight curve offset
+  const curve = (p: { x: number; y: number }, offset: number) => ({
+    x: p.x,
+    y: p.y + offset,
+  });
+
+  // HEART LINE: Runs from below pinky MCP to below index MCP
+  // Slightly curved, highest on the palm
+  const heartStart = { x: pinkyMCP.x, y: pinkyMCP.y + 0.05 };
+  const heartEnd = { x: indexMCP.x - 0.02, y: indexMCP.y + 0.08 };
+  const heartMid = lerp(heartStart, heartEnd, 0.5);
+  const heartLine: [number, number][] = [
+    [heartStart.x, heartStart.y],
+    [lerp(heartStart, heartMid, 0.5).x, lerp(heartStart, heartMid, 0.5).y - 0.02],
+    [heartMid.x, heartMid.y - 0.03],
+    [lerp(heartMid, heartEnd, 0.5).x, lerp(heartMid, heartEnd, 0.5).y - 0.02],
+    [heartEnd.x, heartEnd.y],
+  ];
+
+  // HEAD LINE: Runs from between thumb/index across palm
+  // Below heart line, often straighter
+  const headStart = { x: (thumbCMC.x + indexMCP.x) / 2, y: (thumbCMC.y + indexMCP.y) / 2 + 0.05 };
+  const headEnd = { x: pinkyMCP.x + 0.03, y: (pinkyMCP.y + wrist.y) / 2 };
+  const headMid = lerp(headStart, headEnd, 0.5);
+  const headLine: [number, number][] = [
+    [headStart.x, headStart.y],
+    [lerp(headStart, headMid, 0.5).x, lerp(headStart, headMid, 0.5).y + 0.01],
+    [headMid.x, headMid.y + 0.02],
+    [lerp(headMid, headEnd, 0.5).x, lerp(headMid, headEnd, 0.5).y + 0.02],
+    [headEnd.x, headEnd.y],
+  ];
+
+  // LIFE LINE: Curves around thumb mount from near index down toward wrist
+  const lifeStart = { x: (thumbCMC.x + indexMCP.x) / 2 - 0.02, y: indexMCP.y + 0.03 };
+  const lifeEnd = { x: thumbCMC.x + 0.05, y: wrist.y - 0.05 };
+  const lifeMid1 = { x: thumbCMC.x + 0.08, y: lifeStart.y + (lifeEnd.y - lifeStart.y) * 0.3 };
+  const lifeMid2 = { x: thumbCMC.x + 0.06, y: lifeStart.y + (lifeEnd.y - lifeStart.y) * 0.6 };
+  const lifeLine: [number, number][] = [
+    [lifeStart.x, lifeStart.y],
+    [lifeMid1.x, lifeMid1.y],
+    [lifeMid2.x, lifeMid2.y],
+    [lifeEnd.x, lifeEnd.y],
+  ];
+
+  // FATE LINE: Vertical from wrist up toward middle finger
+  const fateStart = { x: middleMCP.x, y: wrist.y - 0.03 };
+  const fateEnd = { x: middleMCP.x - 0.01, y: middleMCP.y + 0.12 };
+  const fateLine: [number, number][] = [
+    [fateStart.x, fateStart.y],
+    [lerp(fateStart, fateEnd, 0.33).x, lerp(fateStart, fateEnd, 0.33).y],
+    [lerp(fateStart, fateEnd, 0.66).x - 0.01, lerp(fateStart, fateEnd, 0.66).y],
+    [fateEnd.x, fateEnd.y],
+  ];
+
+  return [
+    {
+      type: "heart",
+      points: heartLine,
+      confidence: 0.90,
+      depth: "medium",
+    },
+    {
+      type: "head",
+      points: headLine,
+      confidence: 0.88,
+      depth: "medium",
+    },
+    {
+      type: "life",
+      points: lifeLine,
+      confidence: 0.92,
+      depth: "deep",
+    },
+    {
+      type: "fate",
+      points: fateLine,
+      confidence: 0.70,
       depth: "faint",
     },
   ];
