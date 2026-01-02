@@ -100,6 +100,53 @@ Transform AstroPowerMaps from a $19 one-time purchase model to a **$7.99/month s
 
 ---
 
+### 2.7 Zodiac Personalization (NEW)
+
+The user's zodiac identity should be prominent throughout the experience.
+
+#### The Big Three
+| Placement | Sign | Meaning |
+|-----------|------|---------|
+| Sun | Primary identity | "I am a Leo" - core personality |
+| Moon | Emotional self | Inner world, feelings, instincts |
+| Rising | Outer self | How others see them, first impressions |
+
+#### Dashboard Header
+```
+┌─────────────────────────────────────────┐
+│  ☀️ Leo  ·  🌙 Scorpio  ·  ⬆️ Virgo    │
+│  Welcome back, [Display Name]           │
+└─────────────────────────────────────────┘
+```
+
+#### Element-Based Theming
+Theme colors adapt to the user's **Sun sign element**:
+
+| Element | Signs | Color Palette |
+|---------|-------|---------------|
+| 🔥 Fire | Aries, Leo, Sagittarius | Warm golds, oranges, deep reds |
+| 🌍 Earth | Taurus, Virgo, Capricorn | Rich greens, warm browns, terracotta |
+| 💨 Air | Gemini, Libra, Aquarius | Silver, light blue, soft lavender |
+| 💧 Water | Cancer, Scorpio, Pisces | Deep teal, ocean blue, purple |
+
+**Implementation:**
+- CSS variables set based on user's element
+- Accent colors on cards, buttons, highlights
+- Subtle gradients in backgrounds
+- Keep core dark cosmic theme, layer element colors on top
+
+#### Where Zodiac Appears
+| Location | How It's Shown |
+|----------|----------------|
+| Dashboard header | Big Three with icons |
+| Daily Score card | "As a Leo, today's energy..." |
+| Weekly Forecast | Element-aware insights |
+| Stella Chat | "Your Scorpio Moon suggests..." |
+| Journal prompts | Sign-specific reflection questions |
+| Cards/UI | Element-colored accents |
+
+---
+
 ## 3. User Accounts & Authentication
 
 ### 3.1 Auth System
@@ -224,28 +271,73 @@ Transform AstroPowerMaps from a $19 one-time purchase model to a **$7.99/month s
 
 ### 5.3 Dashboard Layout (Mobile-First)
 ```
-┌─────────────────────────────┐
-│  Today's Power Score        │  <- Prominent top card
-│  78/100 - "Focus on..."     │
-└─────────────────────────────┘
-┌─────────────────────────────┐
-│  Weekly Forecast            │  <- Expandable card
-│  Theme: Transformation      │
-│  [Read more]                │
-└─────────────────────────────┘
-┌─────────────────────────────┐
-│  Best Days This Week        │  <- Quick view
-│  Wed: Career | Fri: Love    │
-└─────────────────────────────┘
-┌─────────────────────────────┐
-│  Today's Ritual             │  <- Journal prompt
-│  "Reflect on..."            │
-│  [Write in journal]         │
-└─────────────────────────────┘
-          ┌───────┐
-          │ Stella│  <- Floating chat button
-          │   💬  │
-          └───────┘
+┌─────────────────────────────────────────┐
+│  ☀️ Leo  ·  🌙 Scorpio  ·  ⬆️ Virgo    │  <- Big Three header
+│  Welcome back, Sarah ✨                 │
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│  🔥 Today's Power Score                 │  <- Element-colored
+│  ████████████░░░ 78                     │
+│  "Channel your Leo fire into creative   │
+│   projects today..."                    │
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│  📅 This Week's Forecast                │  <- Expandable
+│  Theme: Transformation                  │
+│  Power Days: Wed, Fri                   │
+│  [Read full forecast →]                 │
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│  ⭐ Best Days Coming Up                 │  <- Quick glance
+│  Wed 8th — Career moves                 │
+│  Fri 10th — Love & connection           │
+│  [Open Best Day Picker →]               │
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│  🌙 Today's Ritual                      │  <- Journal prompt
+│  "As a Scorpio Moon, reflect on         │
+│   what emotions surfaced today..."      │
+│  [Write in journal]                     │
+└─────────────────────────────────────────┘
+                    ┌─────────┐
+                    │  Stella │  <- Floating chat
+                    │    💬   │
+                    └─────────┘
+```
+
+### 5.4 Design Guidelines
+
+| Guideline | Requirement |
+|-----------|-------------|
+| **Approach** | Mobile-first (375px primary, max 768px) |
+| **Skill** | Always use `frontend-design` skill for UI |
+| **Theme** | Dark cosmic base + element-colored accents |
+| **Cards** | Rounded corners, subtle glow, glass-morphism |
+| **Typography** | Clear hierarchy, mystical but readable |
+| **Animations** | Subtle, purposeful (Framer Motion) |
+| **Accessibility** | Touch targets 44px+, readable contrast |
+
+**Element Color Tokens:**
+```css
+/* Fire signs (Aries, Leo, Sagittarius) */
+--element-fire-primary: #F59E0B;    /* Warm gold */
+--element-fire-secondary: #DC2626;  /* Deep red */
+--element-fire-glow: rgba(245, 158, 11, 0.3);
+
+/* Earth signs (Taurus, Virgo, Capricorn) */
+--element-earth-primary: #10B981;   /* Rich green */
+--element-earth-secondary: #92400E; /* Terracotta */
+--element-earth-glow: rgba(16, 185, 129, 0.3);
+
+/* Air signs (Gemini, Libra, Aquarius) */
+--element-air-primary: #8B5CF6;     /* Soft purple */
+--element-air-secondary: #6366F1;   /* Indigo */
+--element-air-glow: rgba(139, 92, 246, 0.3);
+
+/* Water signs (Cancer, Scorpio, Pisces) */
+--element-water-primary: #06B6D4;   /* Ocean teal */
+--element-water-secondary: #3B82F6; /* Deep blue */
+--element-water-glow: rgba(6, 182, 212, 0.3);
 ```
 
 ---
