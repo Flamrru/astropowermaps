@@ -18,6 +18,8 @@ import Link from "next/link";
 function LoginContent() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [usePassword, setUsePassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +27,7 @@ function LoginContent() {
   // Check for auth error from callback
   const authError = searchParams.get("error");
   const redirectTo = searchParams.get("redirect") || "/dashboard";
+  const isDev = process.env.NODE_ENV === "development";
 
   useEffect(() => {
     if (authError === "auth_failed") {
@@ -40,6 +43,23 @@ function LoginContent() {
     try {
       const supabase = createClient();
 
+      if (usePassword && password) {
+        // Password-based login (dev mode)
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) {
+          throw signInError;
+        }
+
+        // Redirect on success
+        window.location.href = redirectTo;
+        return;
+      }
+
+      // Magic link login
       const { error: signInError } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -207,7 +227,7 @@ function LoginContent() {
                 </AnimatePresence>
 
                 {/* Email Input */}
-                <div className="mb-6">
+                <div className="mb-4">
                   <label
                     htmlFor="email"
                     className="block text-sm font-medium text-white/70 mb-2"
@@ -232,22 +252,55 @@ function LoginContent() {
                   </div>
                 </div>
 
+                {/* Password Input (Dev Mode) */}
+                {isDev && (
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <label
+                        htmlFor="password"
+                        className="block text-sm font-medium text-white/70"
+                      >
+                        Password (Dev)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setUsePassword(!usePassword)}
+                        className="text-xs text-gold/70 hover:text-gold transition-colors"
+                      >
+                        {usePassword ? "Use magic link" : "Use password"}
+                      </button>
+                    </div>
+                    {usePassword && (
+                      <input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter password"
+                        autoComplete="current-password"
+                        className="input-glass w-full px-4 py-4 rounded-xl text-white placeholder:text-white/30 text-base"
+                        style={{ minHeight: "56px" }}
+                      />
+                    )}
+                  </div>
+                )}
+
                 {/* Submit Button */}
                 <motion.button
                   type="submit"
-                  disabled={isLoading || !email}
-                  className="gold-button-premium gold-button-shimmer w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2"
+                  disabled={isLoading || !email || (usePassword && !password)}
+                  className="gold-button-premium gold-button-shimmer w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 mt-2"
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                 >
                   {isLoading ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Sending...</span>
+                      <span>{usePassword ? "Signing in..." : "Sending..."}</span>
                     </>
                   ) : (
                     <>
-                      <span>Send Magic Link</span>
+                      <span>{usePassword ? "Sign In" : "Send Magic Link"}</span>
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}
