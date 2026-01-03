@@ -4,6 +4,8 @@ import { useEffect, useState, createContext, useContext, ReactNode } from "react
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import type { CalendarEvent } from "@/lib/dashboard-types";
+import BottomNav from "@/components/dashboard/BottomNav";
+import StellaChat from "@/components/shared/StellaChat";
 
 // ============================================
 // Calendar State Types
@@ -218,6 +220,12 @@ export default function CalendarShell({ children }: CalendarShellProps) {
             {children}
           </motion.div>
         </AnimatePresence>
+
+        {/* Stella chat button */}
+        <StellaChat />
+
+        {/* Bottom navigation */}
+        <BottomNav />
       </div>
     </CalendarContext.Provider>
   );

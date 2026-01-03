@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import type { BigThree } from "@/lib/dashboard-types";
 import { calculateBigThree } from "@/lib/astro/zodiac";
+import BottomNav from "@/components/dashboard/BottomNav";
+import StellaChat from "@/components/shared/StellaChat";
 
 // ============================================
 // Profile State Types
@@ -272,6 +274,12 @@ export default function ProfileShell({ children }: ProfileShellProps) {
             {children}
           </motion.div>
         </AnimatePresence>
+
+        {/* Stella chat button */}
+        <StellaChat />
+
+        {/* Bottom navigation */}
+        <BottomNav />
       </div>
     </ProfileContext.Provider>
   );
