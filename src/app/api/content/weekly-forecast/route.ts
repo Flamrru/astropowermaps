@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { openai, GENERATION_SETTINGS } from "@/lib/openai";
 import { getCurrentTransits, formatTransitsForPrompt } from "@/lib/astro/transits";
-import { calculateBigThree } from "@/lib/astro/zodiac";
+import { calculateFullChart, FullChart } from "@/lib/astro/chart";
 import type { BirthData } from "@/lib/astro/types";
 
 /**
@@ -67,12 +67,12 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    // 6. Calculate Big Three and current transits
-    const bigThree = calculateBigThree(birthData);
+    // 6. Calculate full chart and current transits
+    const chart = calculateFullChart(birthData);
     const transits = getCurrentTransits();
 
     // 7. Generate forecast with OpenAI
-    const prompt = buildWeeklyForecastPrompt(profile, bigThree, transits, weekStart);
+    const prompt = buildWeeklyForecastPrompt(profile, chart, transits, weekStart);
 
     const completion = await openai.chat.completions.create({
       model: GENERATION_SETTINGS.weekly.model,
@@ -164,19 +164,22 @@ function getWeekDays(weekStart: string): Array<{ day: string; date: string }> {
  */
 function buildWeeklyForecastPrompt(
   profile: { display_name?: string; birth_place?: string },
-  bigThree: ReturnType<typeof calculateBigThree>,
+  chart: FullChart,
   transits: ReturnType<typeof getCurrentTransits>,
   weekStart: string
 ): string {
   const weekDays = getWeekDays(weekStart);
   const daysList = weekDays.map((d) => `${d.day} (${d.date})`).join(", ");
+  const bigThree = chart.bigThree;
 
   return `Generate a personalized weekly forecast for ${profile.display_name || "this user"}.
 
 User's Birth Chart:
-- Sun: ${bigThree.sun.sign} (${bigThree.sun.element} element)
-- Moon: ${bigThree.moon.sign} (emotional nature)
-- Rising: ${bigThree.rising.sign} (outward expression)
+- Sun: ${bigThree.sun.sign} ${bigThree.sun.symbol} (${bigThree.sun.element} element)
+- Moon: ${bigThree.moon.sign} ${bigThree.moon.symbol} (emotional nature)
+- Rising: ${bigThree.rising.sign} ${bigThree.rising.symbol} (outward expression)
+- North Node: ${chart.nodes.northNode.formatted} (${chart.nodeThemes.northTheme})
+${chart.houses ? `- MC (Career): ${chart.houses.cusps[9].formatted}` : ""}
 
 ${formatTransitsForPrompt(transits)}
 
@@ -202,6 +205,7 @@ Guidelines:
 - Include 2-3 power days based on favorable transits to their chart
 - Reference their ${bigThree.sun.sign} Sun energy when discussing actions
 - Reference their ${bigThree.moon.sign} Moon when discussing emotions or intuition
+- Reference their North Node theme when discussing growth opportunities
 - Make the summary feel like a personal letter from their astrologer
 - The keyInsight should be quotable and specific to their chart`;
 }

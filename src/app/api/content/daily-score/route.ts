@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { openai, GENERATION_SETTINGS } from "@/lib/openai";
 import { getCurrentTransits, formatTransitsForPrompt } from "@/lib/astro/transits";
-import { calculateBigThree } from "@/lib/astro/zodiac";
+import { calculateFullChart, formatChartForPrompt, FullChart } from "@/lib/astro/chart";
+import { ASPECT_SYMBOLS, ASPECTS, AspectType } from "@/lib/astro/transit-types";
 import type { BirthData } from "@/lib/astro/types";
 
 /**
@@ -73,12 +74,15 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    // 5. Calculate Big Three and current transits
-    const bigThree = calculateBigThree(birthData);
+    // 5. Calculate full chart and current transits
+    const chart = calculateFullChart(birthData);
     const transits = getCurrentTransits();
 
-    // 6. Generate score with OpenAI
-    const prompt = buildDailyScorePrompt(profile, bigThree, transits);
+    // 6. Calculate transit aspects to natal chart
+    const transitAspects = calculateTransitAspects(chart, transits);
+
+    // 7. Generate score with OpenAI
+    const prompt = buildDailyScorePrompt(profile, chart, transits, transitAspects);
 
     const completion = await openai.chat.completions.create({
       model: GENERATION_SETTINGS.daily.model,
@@ -138,35 +142,144 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * Transit aspect info
+ */
+interface TransitAspectInfo {
+  transit: string;
+  natal: string;
+  type: AspectType;
+  orb: number;
+  nature: string;
+}
+
+/**
+ * Calculate transit aspects to natal chart
+ */
+function calculateTransitAspects(
+  chart: FullChart,
+  transits: ReturnType<typeof getCurrentTransits>
+): TransitAspectInfo[] {
+  const aspects: TransitAspectInfo[] = [];
+
+  // Transit planets to check
+  const transitPlanets = [
+    { id: "sun", lon: getTransitLongitude(transits.sun.degree, transits.sun.sign) },
+    { id: "moon", lon: getTransitLongitude(transits.moon.degree, transits.moon.sign) },
+    { id: "mercury", lon: getTransitLongitude(transits.mercury.degree, transits.mercury.sign) },
+    { id: "venus", lon: getTransitLongitude(transits.venus.degree, transits.venus.sign) },
+    { id: "mars", lon: getTransitLongitude(transits.mars.degree, transits.mars.sign) },
+  ];
+
+  // Check each transit against natal positions
+  for (const transit of transitPlanets) {
+    for (const natal of chart.planetPositions) {
+      const aspect = detectTransitAspect(transit.lon, natal.longitude);
+      if (aspect) {
+        aspects.push({
+          transit: transit.id,
+          natal: natal.id,
+          type: aspect.type,
+          orb: aspect.orb,
+          nature: ASPECTS[aspect.type].nature,
+        });
+      }
+    }
+  }
+
+  // Sort by orb (tightest first)
+  aspects.sort((a, b) => a.orb - b.orb);
+
+  return aspects.slice(0, 6); // Return top 6 aspects
+}
+
+/**
+ * Get longitude from degree and sign
+ */
+function getTransitLongitude(degree: number, sign: string): number {
+  const signOrder = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+                     "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+  const signIndex = signOrder.indexOf(sign);
+  return signIndex * 30 + degree;
+}
+
+/**
+ * Detect aspect between transit and natal longitude
+ */
+function detectTransitAspect(
+  transitLon: number,
+  natalLon: number
+): { type: AspectType; orb: number } | null {
+  let diff = Math.abs(transitLon - natalLon);
+  if (diff > 180) diff = 360 - diff;
+
+  for (const [aspectType, config] of Object.entries(ASPECTS)) {
+    const orb = Math.abs(diff - config.degrees);
+    if (orb <= config.orb) {
+      return { type: aspectType as AspectType, orb };
+    }
+  }
+  return null;
+}
+
+/**
  * Build the prompt for GPT to generate a daily score
  */
 function buildDailyScorePrompt(
   profile: { display_name?: string; birth_place?: string },
-  bigThree: ReturnType<typeof calculateBigThree>,
-  transits: ReturnType<typeof getCurrentTransits>
+  chart: FullChart,
+  transits: ReturnType<typeof getCurrentTransits>,
+  transitAspects: TransitAspectInfo[]
 ): string {
-  return `Generate a personalized daily power score for ${profile.display_name || "this user"}.
+  const name = profile.display_name || "this user";
+  const bigThree = chart.bigThree;
 
-User's Birth Chart:
-- Sun: ${bigThree.sun.sign} at ${Math.round(bigThree.sun.degree)}°
-- Moon: ${bigThree.moon.sign} at ${Math.round(bigThree.moon.degree)}°
-- Rising: ${bigThree.rising.sign}
-- Birth Location: ${profile.birth_place || "Unknown"}
+  // Format transit aspects for prompt
+  const aspectsText = transitAspects.length > 0
+    ? transitAspects.map(a => {
+        const symbol = ASPECT_SYMBOLS[a.type];
+        return `- Transit ${a.transit} ${symbol} natal ${a.natal} (${a.orb.toFixed(1)}° orb, ${a.nature})`;
+      }).join("\n")
+    : "No major transit aspects today";
+
+  // Identify challenging vs supportive aspects
+  const challengingAspects = transitAspects.filter(a =>
+    a.nature === "challenging" || a.nature === "minor-challenging"
+  );
+  const supportiveAspects = transitAspects.filter(a =>
+    a.nature === "harmonious" || a.nature === "minor-harmonious"
+  );
+
+  return `Generate a personalized daily power score for ${name}.
+
+NATAL CHART:
+- Sun: ${bigThree.sun.sign} ${bigThree.sun.symbol} at ${Math.round(bigThree.sun.degree)}°
+- Moon: ${bigThree.moon.sign} ${bigThree.moon.symbol} at ${Math.round(bigThree.moon.degree)}°
+- Rising: ${bigThree.rising.sign} ${bigThree.rising.symbol}
+- North Node: ${chart.nodes.northNode.formatted} (${chart.nodeThemes.northTheme})
+${chart.houses ? `- MC (Career): ${chart.houses.cusps[9].formatted}` : ""}
 
 ${formatTransitsForPrompt(transits)}
 
+TODAY'S TRANSIT ASPECTS TO NATAL CHART:
+${aspectsText}
+
+${challengingAspects.length > 0 ? `⚠️ Challenging aspects: ${challengingAspects.length}` : ""}
+${supportiveAspects.length > 0 ? `✨ Supportive aspects: ${supportiveAspects.length}` : ""}
+
 Generate a JSON response with this exact structure:
 {
-  "score": <number 0-100 representing today's cosmic alignment for this user>,
-  "message": "<2-3 sentences of personalized guidance referencing their ${bigThree.sun.sign} Sun, ${bigThree.moon.sign} Moon, and current transits>",
-  "avoid": "<Optional: 1 sentence warning if any challenging aspects today, or null if none>",
-  "focusAreas": ["<area1>", "<area2>"] // 2-3 relevant focus areas like "creativity", "communication", "self-care", "career", "relationships"
+  "score": <number 0-100 based on aspect balance: more supportive = higher, more challenging = lower>,
+  "message": "<2-3 sentences of personalized guidance. Reference specific transit aspects when relevant. For a ${bigThree.sun.sign} Sun with ${bigThree.moon.sign} Moon...>",
+  "avoid": "<1 sentence warning if challenging aspects present, or null if none>",
+  "focusAreas": ["<area1>", "<area2>"] // 2-3 focus areas based on which natal planets are activated
 }
 
-Make the message feel personal by:
-1. Referencing their specific signs naturally (not formulaic)
-2. Connecting current transits to their chart
-3. Giving actionable guidance they can use today
+Scoring guidance:
+- 80-100: Multiple trines/sextiles to personal planets, no challenging aspects
+- 60-79: Mixed aspects, more supportive than challenging
+- 40-59: Balanced or slightly challenging
+- 20-39: Multiple squares/oppositions to personal planets
+- 0-19: Very challenging day (rare)
 
-The score should reflect how well today's transits support their natal chart.`;
+Make the message feel personal by referencing the specific transit aspects activating their chart.`;
 }

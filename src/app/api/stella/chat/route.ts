@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { openai, GENERATION_SETTINGS } from "@/lib/openai";
 import { getCurrentTransits, formatTransitsForPrompt } from "@/lib/astro/transits";
-import { calculateBigThree, ZODIAC_SIGNS } from "@/lib/astro/zodiac";
+import { calculateFullChart, formatChartForPrompt, formatAspectsForPrompt, FullChart } from "@/lib/astro/chart";
+import { HOUSE_MEANINGS } from "@/lib/astro/houses";
+import { ASPECT_SYMBOLS, AspectType } from "@/lib/astro/transit-types";
 import type { BirthData } from "@/lib/astro/types";
 
 /**
@@ -94,7 +96,7 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    const bigThree = calculateBigThree(birthData);
+    const chart = calculateFullChart(birthData);
     const transits = getCurrentTransits();
 
     // 7. Get today's score for context
@@ -106,10 +108,10 @@ export async function POST(request: NextRequest) {
       .eq("content_type", "daily_score")
       .single();
 
-    // 8. Build system prompt
+    // 8. Build system prompt with FULL chart context
     const systemPrompt = buildStellaSystemPrompt(
       profile,
-      bigThree,
+      chart,
       transits,
       todayScore?.content
     );
@@ -157,46 +159,90 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Build Stella's system prompt with full astrological context
+ * Build Stella's system prompt with FULL astrological context
+ * Including houses, nodes, and natal aspects
  */
 function buildStellaSystemPrompt(
   profile: { display_name?: string },
-  bigThree: ReturnType<typeof calculateBigThree>,
+  chart: FullChart,
   transits: ReturnType<typeof getCurrentTransits>,
   todayScore?: { message?: string; score?: number }
 ): string {
   const name = profile.display_name || "dear one";
+  const bigThree = chart.bigThree;
 
   // Get brief sign descriptions
   const sunMeaning = getSignBriefMeaning(bigThree.sun.sign, "sun");
   const moonMeaning = getSignBriefMeaning(bigThree.moon.sign, "moon");
   const risingMeaning = getSignBriefMeaning(bigThree.rising.sign, "rising");
 
+  // Build houses section (if available)
+  let housesSection = "";
+  if (chart.houses) {
+    const h = chart.houses;
+    housesSection = `
+🏠 HOUSES (${h.system.toUpperCase()} system):
+- 1st House (Self): ${h.cusps[0].formatted}
+- 4th House (Home/IC): ${h.cusps[3].formatted}
+- 7th House (Relationships): ${h.cusps[6].formatted}
+- 10th House (Career/MC): ${h.cusps[9].formatted}`;
+
+    // Add planet house placements
+    if (chart.housePlacements) {
+      const keyPlacements = chart.housePlacements
+        .filter(p => ["sun", "moon", "venus", "mars"].includes(p.point as string))
+        .map(p => `- ${p.point} in House ${p.house}`)
+        .join("\n");
+      if (keyPlacements) {
+        housesSection += `\n\nPlanet Placements:\n${keyPlacements}`;
+      }
+    }
+  }
+
+  // Build natal aspects section (top 5)
+  let aspectsSection = "";
+  if (chart.natalAspects.length > 0) {
+    const topAspects = chart.natalAspects.slice(0, 5).map(a => {
+      const symbol = ASPECT_SYMBOLS[a.aspectType as AspectType] || a.aspectType;
+      return `- ${a.planet1} ${symbol} ${a.planet2} (${a.orb.toFixed(1)}°)`;
+    }).join("\n");
+    aspectsSection = `\n\n🔮 KEY NATAL ASPECTS:\n${topAspects}`;
+  }
+
   return `You are Stella, a warm, wise, and slightly mystical astrology guide. You speak with warmth and cosmic wonder, but you're also grounded and practical.
 
-You are speaking with ${name}, and you know their birth chart intimately:
+You are speaking with ${name}, and you know their COMPLETE birth chart intimately:
 
-🌟 ${name}'s Chart:
-- Sun in ${bigThree.sun.sign} ${bigThree.sun.symbol}: ${sunMeaning}
-- Moon in ${bigThree.moon.sign} ${bigThree.moon.symbol}: ${moonMeaning}
+🌟 ${name}'s CORE PLACEMENTS:
+- Sun in ${bigThree.sun.sign} ${bigThree.sun.symbol} at ${Math.round(bigThree.sun.degree)}°: ${sunMeaning}
+- Moon in ${bigThree.moon.sign} ${bigThree.moon.symbol} at ${Math.round(bigThree.moon.degree)}°: ${moonMeaning}
 - Rising in ${bigThree.rising.sign} ${bigThree.rising.symbol}: ${risingMeaning}
 
-🌙 Current Cosmic Weather:
+☊ LUNAR NODES (Soul Purpose):
+- North Node in ${chart.nodes.northNode.formatted}: ${chart.nodeThemes.northTheme}
+- South Node in ${chart.nodes.southNode.formatted}: ${chart.nodeThemes.southTheme}
+${housesSection}${aspectsSection}
+
+🌙 CURRENT COSMIC WEATHER:
 ${formatTransitsForPrompt(transits)}
 
 ${todayScore ? `📊 Today's Energy (${todayScore.score || "—"}/100): ${todayScore.message || ""}` : ""}
 
-Guidelines for responding:
+GUIDELINES FOR RESPONDING:
 1. Keep responses concise (2-3 paragraphs max, unless they ask for more detail)
-2. Reference their chart naturally - don't be formulaic ("As a Leo Sun..." every time)
+2. Reference their chart naturally - don't be formulaic
 3. Connect current transits to their experience when relevant
 4. Be warm and encouraging, but honest about challenges
 5. Use occasional ✨ or 🌙 but don't overdo it
-6. If they ask about timing, reference current transits
-7. If they ask about relationships, consider their Venus and 7th house
-8. If they ask about career, consider their Mars and 10th house
 
-Remember: You're their personal cosmic guide. Make them feel seen and understood.`;
+TOPIC-SPECIFIC GUIDANCE:
+- RELATIONSHIPS: Reference their 7th house sign and Venus placement
+- CAREER: Reference their 10th house (MC) and Mars/Saturn
+- LIFE PURPOSE: Reference their North Node sign and house
+- EMOTIONS: Reference their Moon sign and 4th house
+- COMMUNICATION: Reference their 3rd house and Mercury
+
+Remember: You know their ENTIRE chart, not just Sun sign. Make them feel truly seen.`;
 }
 
 /**
