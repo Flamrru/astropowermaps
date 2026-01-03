@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
 import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
 import TypingIndicator from "./TypingIndicator";
@@ -11,6 +12,15 @@ import type { ChatMessage as ChatMessageType } from "@/lib/dashboard-types";
 
 interface StellaChatDrawerProps {
   isOpen: boolean;
+}
+
+// Derive view context from pathname
+function getViewContext(pathname: string | null): string {
+  if (!pathname) return "dashboard";
+  if (pathname.startsWith("/calendar")) return "calendar";
+  if (pathname.startsWith("/profile")) return "profile";
+  if (pathname.startsWith("/map")) return "map";
+  return "dashboard";
 }
 
 /**
@@ -24,6 +34,9 @@ interface StellaChatDrawerProps {
  * - Quick reply suggestions
  */
 export default function StellaChatDrawer({ isOpen }: StellaChatDrawerProps) {
+  const pathname = usePathname();
+  const viewContext = getViewContext(pathname);
+
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [remaining, setRemaining] = useState(50);
@@ -99,7 +112,7 @@ export default function StellaChatDrawer({ isOpen }: StellaChatDrawerProps) {
       const response = await fetch("/api/stella/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: content }),
+        body: JSON.stringify({ message: content, viewContext }),
       });
 
       if (response.status === 429) {

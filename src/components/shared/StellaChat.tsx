@@ -1,18 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { X, MessageCircle } from "lucide-react";
 import StellaChatDrawer from "@/components/dashboard/stella/StellaChatDrawer";
 
 /**
+ * View context for Stella - tells her where the user currently is
+ */
+export type StellaViewContext =
+  | "dashboard"
+  | "calendar"
+  | "profile"
+  | "map";
+
+interface StellaChatProps {
+  viewContext?: StellaViewContext;
+}
+
+// Context to share view info with the chat drawer
+const StellaViewContextProvider = createContext<StellaViewContext>("dashboard");
+export const useStellaViewContext = () => useContext(StellaViewContextProvider);
+
+/**
  * StellaChat
  *
  * Standalone Stella chat component that can be used on any page.
  * Includes floating button + chat drawer.
+ * Pass viewContext to tell Stella which page the user is on.
  */
-export default function StellaChat() {
+export default function StellaChat({ viewContext = "dashboard" }: StellaChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -204,7 +222,9 @@ export default function StellaChat() {
               </div>
 
               {/* Chat content */}
-              <StellaChatDrawer isOpen={isOpen} />
+              <StellaViewContextProvider.Provider value={viewContext}>
+                <StellaChatDrawer isOpen={isOpen} />
+              </StellaViewContextProvider.Provider>
             </motion.div>
           </>
         )}

@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
     // 2. Parse request body
     const body = await request.json();
     const userMessage = body.message?.trim();
+    const viewContext = body.viewContext || "dashboard"; // Which page the user is viewing
 
     if (!userMessage) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
@@ -116,12 +117,13 @@ export async function POST(request: NextRequest) {
       .eq("content_type", "daily_score")
       .single();
 
-    // 8. Build system prompt with FULL chart context
+    // 8. Build system prompt with FULL chart context + view context
     const systemPrompt = buildStellaSystemPrompt(
       profile,
       chart,
       transits,
-      todayScore?.content
+      todayScore?.content,
+      viewContext
     );
 
     // 9. Build messages array for OpenAI
@@ -174,10 +176,20 @@ function buildStellaSystemPrompt(
   profile: { display_name?: string },
   chart: FullChart,
   transits: ReturnType<typeof getCurrentTransits>,
-  todayScore?: { message?: string; score?: number }
+  todayScore?: { message?: string; score?: number },
+  viewContext?: string
 ): string {
   const name = profile.display_name || "dear one";
   const bigThree = chart.bigThree;
+
+  // View-specific context hints
+  const viewContextHints: Record<string, string> = {
+    dashboard: "The user is on their main dashboard viewing their daily score and forecast.",
+    calendar: "The user is viewing their CALENDAR with power days and moon phases. Help them understand what specific days mean for them, why certain days are marked as power days or rest days.",
+    profile: "The user is on their PROFILE page viewing their birth data. Help them understand their chart placements and what their Big Three means.",
+    map: "The user is viewing their ASTROCARTOGRAPHY MAP. Help them understand power lines and how different locations affect their chart.",
+  };
+  const currentViewContext = viewContextHints[viewContext || "dashboard"] || viewContextHints.dashboard;
 
   // Get brief sign descriptions
   const sunMeaning = getSignBriefMeaning(bigThree.sun.sign, "sun");
@@ -218,6 +230,8 @@ function buildStellaSystemPrompt(
   }
 
   return `You are Stella, a warm, wise, and slightly mystical astrology guide. You speak with warmth and cosmic wonder, but you're also grounded and practical.
+
+📍 CURRENT VIEW: ${currentViewContext}
 
 You are speaking with ${name}, and you know their COMPLETE birth chart intimately:
 
