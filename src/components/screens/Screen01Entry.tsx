@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { useQuiz } from "@/lib/quiz-state";
 import { ArrowRight } from "lucide-react";
 
@@ -109,6 +110,27 @@ export default function Screen01Entry() {
               </span>
             </div>
           </motion.div>
+
+          {/* ================================================================
+              ⚠️⚠️⚠️ TESTING ONLY - DELETE BEFORE PRODUCTION ⚠️⚠️⚠️
+              ================================================================ */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+            className="mb-4"
+          >
+            <Link
+              href="/dashboard?dev=true"
+              className="block w-full py-4 px-8 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-500 text-white text-center font-bold text-lg shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all"
+            >
+              ⭐ Test Stella+ Dashboard
+              <span className="block text-xs font-normal opacity-80 mt-1">DEV ONLY - Delete before production</span>
+            </Link>
+          </motion.div>
+          {/* ================================================================
+              END OF TESTING BLOCK
+              ================================================================ */}
 
           {/* CTA Button with premium glow */}
           <motion.div
