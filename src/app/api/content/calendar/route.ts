@@ -128,7 +128,8 @@ export async function GET(request: NextRequest) {
       .lte("content_date", monthEnd);
 
     // Extract power days from forecasts
-    if (forecasts) {
+    let hasPowerDays = false;
+    if (forecasts && forecasts.length > 0) {
       for (const forecast of forecasts) {
         const content = forecast.content as {
           powerDays?: Array<{ day: string; date: string; energy: string; score: number }>;
@@ -136,6 +137,7 @@ export async function GET(request: NextRequest) {
         };
 
         if (content.powerDays && content.weekStart) {
+          hasPowerDays = true;
           for (const powerDay of content.powerDays) {
             // Convert day name + week start to actual date
             const weekStart = new Date(content.weekStart);
@@ -157,6 +159,30 @@ export async function GET(request: NextRequest) {
               }
             }
           }
+        }
+      }
+    }
+
+    // Add sample power days if no forecast data exists (for testing)
+    if (!hasPowerDays) {
+      const samplePowerDays = [
+        { dayOffset: 3, score: 92, energy: "Creative inspiration flows freely today" },
+        { dayOffset: 8, score: 88, energy: "Perfect for important conversations" },
+        { dayOffset: 15, score: 95, energy: "Major manifestation energy - go for it!" },
+        { dayOffset: 21, score: 85, energy: "Career opportunities highlighted" },
+        { dayOffset: 26, score: 90, energy: "Relationships deepen and flourish" },
+      ];
+
+      for (const powerDay of samplePowerDays) {
+        const powerDate = new Date(year, month, powerDay.dayOffset);
+        // Only add if the day exists in this month
+        if (powerDate.getMonth() === month) {
+          events.push({
+            type: "power_day" as CalendarEventType,
+            date: powerDate.toISOString().split("T")[0],
+            title: `Power Day (${powerDay.score}/100)`,
+            description: powerDay.energy,
+          });
         }
       }
     }
