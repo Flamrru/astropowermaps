@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { CalendarEvent, CalendarEventType } from "@/lib/dashboard-types";
+import { calculateMonthPowerDays } from "@/lib/astro/power-days";
+import { birthDataToJulianDay, calculatePlanetPosition } from "@/lib/astro/calculations";
+import { PLANET_ORDER } from "@/lib/astro/planets";
+import type { BirthData, PlanetPosition } from "@/lib/astro/types";
 
 /**
  * Calendar API
  *
  * Generates calendar events for a given month including:
- * - Power days (from weekly forecasts)
+ * - Power days (calculated from transit aspects to natal chart)
  * - Moon phases (calculated)
  * - Rest days
  *
@@ -115,92 +119,54 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 5. Get power days from weekly forecasts for this month
-    const monthStart = new Date(year, month, 1).toISOString().split("T")[0];
-    const monthEnd = new Date(year, month + 1, 0).toISOString().split("T")[0];
-
-    const { data: forecasts } = await supabaseAdmin
-      .from("daily_content")
-      .select("content")
+    // 5. Get user profile with birth data for power day calculation
+    const { data: profile } = await supabaseAdmin
+      .from("user_profiles")
+      .select("birth_date, birth_time, birth_place, birth_lat, birth_lng, birth_timezone")
       .eq("user_id", user.id)
-      .eq("content_type", "weekly_forecast")
-      .gte("content_date", monthStart)
-      .lte("content_date", monthEnd);
+      .single();
 
-    // Extract power days from forecasts
-    let hasPowerDays = false;
-    if (forecasts && forecasts.length > 0) {
-      for (const forecast of forecasts) {
-        const content = forecast.content as {
-          powerDays?: Array<{ day: string; date: string; energy: string; score: number }>;
-          weekStart?: string;
-        };
-
-        if (content.powerDays && content.weekStart) {
-          hasPowerDays = true;
-          for (const powerDay of content.powerDays) {
-            // Convert day name + week start to actual date
-            const weekStart = new Date(content.weekStart);
-            const dayIndex = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].indexOf(powerDay.day);
-
-            if (dayIndex >= 0) {
-              const powerDate = new Date(weekStart);
-              powerDate.setDate(weekStart.getDate() + dayIndex);
-              const powerDateStr = powerDate.toISOString().split("T")[0];
-
-              // Only add if in the requested month
-              if (powerDateStr >= monthStart && powerDateStr <= monthEnd) {
-                events.push({
-                  type: "power_day" as CalendarEventType,
-                  date: powerDateStr,
-                  title: `Power Day (${powerDay.score}/100)`,
-                  description: powerDay.energy,
-                });
-              }
-            }
-          }
-        }
-      }
+    if (!profile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    // Add sample power days if no forecast data exists (for testing)
-    if (!hasPowerDays) {
-      const samplePowerDays = [
-        { dayOffset: 3, score: 92, energy: "Creative inspiration flows freely today" },
-        { dayOffset: 8, score: 88, energy: "Perfect for important conversations" },
-        { dayOffset: 15, score: 95, energy: "Major manifestation energy - go for it!" },
-        { dayOffset: 21, score: 85, energy: "Career opportunities highlighted" },
-        { dayOffset: 26, score: 90, energy: "Relationships deepen and flourish" },
-      ];
+    // Convert profile to BirthData format
+    const birthData: BirthData = {
+      date: profile.birth_date,
+      time: profile.birth_time || "12:00", // Default to noon if unknown
+      timeUnknown: !profile.birth_time,
+      location: {
+        name: profile.birth_place,
+        lat: parseFloat(profile.birth_lat),
+        lng: parseFloat(profile.birth_lng),
+        timezone: profile.birth_timezone,
+      },
+    };
 
-      for (const powerDay of samplePowerDays) {
-        const powerDate = new Date(year, month, powerDay.dayOffset);
-        // Only add if the day exists in this month
-        if (powerDate.getMonth() === month) {
-          events.push({
-            type: "power_day" as CalendarEventType,
-            date: powerDate.toISOString().split("T")[0],
-            title: `Power Day (${powerDay.score}/100)`,
-            description: powerDay.energy,
-          });
-        }
-      }
-    }
+    // Calculate natal positions
+    const jd = birthDataToJulianDay(birthData);
+    const natalPositions: PlanetPosition[] = PLANET_ORDER.map((planetId) =>
+      calculatePlanetPosition(planetId, jd)
+    );
 
-    // 6. Add some rest days (days with challenging transits - simplified)
-    // For now, just mark days that aren't power days and have waning moon
-    for (const day of days) {
-      const dateStr = day.toISOString().split("T")[0];
-      const moonData = getMoonPhase(day);
-      const hasPowerDay = events.some((e) => e.date === dateStr && e.type === "power_day");
+    // Calculate power days using real transit aspects
+    const dailyScores = calculateMonthPowerDays(natalPositions, year, month + 1);
 
-      // Mark as rest day if it's a last quarter moon and not a power day
-      if (moonData.phase === "last_quarter" && !hasPowerDay) {
+    // Add power days and rest days to events
+    for (const dayScore of dailyScores) {
+      if (dayScore.dayType === "power") {
+        events.push({
+          type: "power_day" as CalendarEventType,
+          date: dayScore.date,
+          title: `Power Day (${dayScore.score}/100)`,
+          description: dayScore.description,
+        });
+      } else if (dayScore.dayType === "rest") {
         events.push({
           type: "rest_day" as CalendarEventType,
-          date: dateStr,
+          date: dayScore.date,
           title: "Rest Day",
-          description: "Take it easy - the moon suggests reflection over action",
+          description: dayScore.description,
         });
       }
     }
