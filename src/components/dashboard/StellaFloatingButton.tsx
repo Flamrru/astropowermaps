@@ -28,7 +28,7 @@ export default function StellaFloatingButton() {
         onClick={toggleChat}
         onHoverStart={() => setIsHovered(true)}
         onHoverEnd={() => setIsHovered(false)}
-        className="fixed bottom-6 right-6 z-40"
+        className="fixed bottom-24 right-5 z-50"
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.5, delay: 1, ease: [0.22, 1, 0.36, 1] }}
@@ -66,25 +66,10 @@ export default function StellaFloatingButton() {
             `,
           }}
         >
-          {/* Stella avatar */}
+          {/* Stella avatar / fallback icon */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="relative w-14 h-14 rounded-full overflow-hidden">
-              <Image
-                src="/images/stella.png"
-                alt="Stella"
-                width={56}
-                height={56}
-                className="w-full h-full object-cover object-top"
-                style={{ transform: "scale(1.3)" }}
-                onError={(e) => {
-                  // Fallback if image not found
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
-              {/* Fallback icon if no image */}
-              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-500/20 to-gold-main/20">
-                <MessageCircle size={24} className="text-gold" />
-              </div>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-purple-500/30 to-gold-main/30">
+              <MessageCircle size={22} className="text-gold-bright" strokeWidth={2} />
             </div>
           </div>
 
