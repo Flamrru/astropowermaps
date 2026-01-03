@@ -66,10 +66,17 @@ export default function StellaFloatingButton() {
             `,
           }}
         >
-          {/* Stella avatar / fallback icon */}
+          {/* Stella avatar */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-purple-500/30 to-gold-main/30">
-              <MessageCircle size={22} className="text-gold-bright" strokeWidth={2} />
+            <div className="relative w-12 h-12 rounded-full overflow-hidden">
+              <Image
+                src="/images/stella.png"
+                alt="Stella"
+                width={48}
+                height={48}
+                className="w-full h-full object-cover object-top"
+                style={{ transform: "scale(1.4)" }}
+              />
             </div>
           </div>
 
