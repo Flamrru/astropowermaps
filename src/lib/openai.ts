@@ -42,6 +42,6 @@ export const GENERATION_SETTINGS = {
   chat: {
     model: MODELS.QUALITY,
     temperature: 0.8,
-    max_completion_tokens: 800,
+    max_completion_tokens: 250, // Keep responses short for mobile chat
   },
 } as const;
