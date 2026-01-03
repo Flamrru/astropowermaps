@@ -16,6 +16,7 @@ import type {
   Element,
 } from "@/lib/dashboard-types";
 import { DEV_DASHBOARD_STATE } from "@/lib/mock-data";
+import BottomNav from "./BottomNav";
 
 // ============================================
 // Initial State
@@ -200,9 +201,12 @@ export default function DashboardShell({ children }: DashboardShellProps) {
         <div className="stars-layer" />
 
         {/* Content */}
-        <main className="relative z-10 min-h-screen pb-24">
+        <main className="relative z-10 min-h-screen pb-28">
           {children}
         </main>
+
+        {/* Bottom Navigation */}
+        <BottomNav />
       </div>
     </DashboardContext.Provider>
   );
