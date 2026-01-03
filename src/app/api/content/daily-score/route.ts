@@ -6,6 +6,7 @@ import { getCurrentTransits, formatTransitsForPrompt } from "@/lib/astro/transit
 import { calculateFullChart, formatChartForPrompt, FullChart } from "@/lib/astro/chart";
 import { ASPECT_SYMBOLS, ASPECTS, AspectType } from "@/lib/astro/transit-types";
 import type { BirthData } from "@/lib/astro/types";
+import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
 
 /**
  * Daily Power Score API
@@ -17,25 +18,32 @@ import type { BirthData } from "@/lib/astro/types";
  */
 export async function POST(request: NextRequest) {
   try {
-    // 1. Get authenticated user
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Get user ID (bypass auth for testing)
+    let userId: string;
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    if (BYPASS_AUTH) {
+      userId = TEST_USER_ID;
+    } else {
+      const supabase = await createClient();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        return NextResponse.json(
+          { error: "Unauthorized" },
+          { status: 401 }
+        );
+      }
+      userId = user.id;
     }
 
     // 2. Get user profile with birth data
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("user_profiles")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     if (profileError || !profile) {
@@ -51,7 +59,7 @@ export async function POST(request: NextRequest) {
     const { data: cached } = await supabaseAdmin
       .from("daily_content")
       .select("content")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("content_date", today)
       .eq("content_type", "daily_score")
       .single();
@@ -87,7 +95,7 @@ export async function POST(request: NextRequest) {
     const completion = await openai.chat.completions.create({
       model: GENERATION_SETTINGS.daily.model,
       temperature: GENERATION_SETTINGS.daily.temperature,
-      max_tokens: GENERATION_SETTINGS.daily.max_tokens,
+      max_completion_tokens: GENERATION_SETTINGS.daily.max_completion_tokens,
       messages: [
         {
           role: "system",
@@ -125,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     // 7. Cache the result
     await supabaseAdmin.from("daily_content").upsert({
-      user_id: user.id,
+      user_id: userId,
       content_date: today,
       content_type: "daily_score",
       content: dailyScore,

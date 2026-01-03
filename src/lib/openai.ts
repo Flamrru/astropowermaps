@@ -27,21 +27,21 @@ export const GENERATION_SETTINGS = {
   daily: {
     model: MODELS.FAST,
     temperature: 0.7,
-    max_tokens: 500,
+    max_completion_tokens: 500,
   },
   weekly: {
     model: MODELS.FAST,
     temperature: 0.7,
-    max_tokens: 1500,
+    max_completion_tokens: 1500,
   },
   ritual: {
     model: MODELS.FAST,
     temperature: 0.8,
-    max_tokens: 300,
+    max_completion_tokens: 300,
   },
   chat: {
     model: MODELS.QUALITY,
     temperature: 0.8,
-    max_tokens: 800,
+    max_completion_tokens: 800,
   },
 } as const;

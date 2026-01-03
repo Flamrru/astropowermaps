@@ -6,6 +6,7 @@ import { calculateMonthPowerDays } from "@/lib/astro/power-days";
 import { birthDataToJulianDay, calculatePlanetPosition } from "@/lib/astro/calculations";
 import { PLANET_ORDER } from "@/lib/astro/planets";
 import type { BirthData, PlanetPosition } from "@/lib/astro/types";
+import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
 
 /**
  * Calendar API
@@ -64,15 +65,22 @@ function getDaysInMonth(year: number, month: number): Date[] {
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Get authenticated user
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Get user ID (bypass auth for testing)
+    let userId: string;
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (BYPASS_AUTH) {
+      userId = TEST_USER_ID;
+    } else {
+      const supabase = await createClient();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = user.id;
     }
 
     // 2. Parse month parameter (default to current month)
@@ -123,7 +131,7 @@ export async function GET(request: NextRequest) {
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
       .select("birth_date, birth_time, birth_place, birth_lat, birth_lng, birth_timezone")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     if (!profile) {

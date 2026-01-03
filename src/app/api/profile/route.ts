@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
 
 /**
  * Profile API
@@ -9,22 +10,29 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
  */
 export async function GET() {
   try {
-    // 1. Get authenticated user
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Get user ID (bypass auth for testing)
+    let userId: string;
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (BYPASS_AUTH) {
+      userId = TEST_USER_ID;
+    } else {
+      const supabase = await createClient();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = user.id;
     }
 
     // 2. Fetch profile
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("user_profiles")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     if (profileError || !profile) {

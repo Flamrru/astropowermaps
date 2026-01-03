@@ -2,10 +2,20 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
+ * TEMPORARY: Disable auth for testing
+ * Set to false to re-enable authentication
+ */
+const BYPASS_AUTH = true;
+
+/**
  * Refreshes the user's session and handles auth redirects.
  * Called from the main middleware.ts file.
  */
 export async function updateSession(request: NextRequest) {
+  // TEMPORARY: Skip all auth checks for testing
+  if (BYPASS_AUTH) {
+    return NextResponse.next({ request });
+  }
   // Check for auth errors in URL (Supabase redirects here on magic link failures)
   const errorCode = request.nextUrl.searchParams.get("error_code");
   const error = request.nextUrl.searchParams.get("error");

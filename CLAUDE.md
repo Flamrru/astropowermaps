@@ -64,6 +64,11 @@ STRIPE_WEBHOOK_SECRET         # Stripe whsec_... (from webhook setup)
 - **NEVER deploy to production** (`vercel --prod`) without explicit approval
 - Use `vercel` (preview) only — let user promote to production manually
 
+## OpenAI API
+- **Use `max_completion_tokens`** — NOT `max_tokens` (deprecated for newer models)
+- Settings are centralized in `src/lib/openai.ts` → `GENERATION_SETTINGS`
+- Models: `gpt-5-mini` (fast/cheap content) and `gpt-5.2` (quality chat)
+
 ## Dev Mode (Testing Only)
 The reveal flow has a **dev mode** for quick testing that bypasses normal user flow:
 
@@ -75,8 +80,16 @@ The reveal flow has a **dev mode** for quick testing that bypasses normal user f
 
 **Dev mode uses hardcoded test data** — NOT real user data!
 
-### Pre-Launch Checklist (Stripe)
-Before going live, verify the **full user flow** works with real data:
+### Pre-Launch Checklist
+Before going live, complete ALL of these steps:
+
+**🔐 Auth (CRITICAL - currently bypassed for testing):**
+- [ ] Set `BYPASS_AUTH = false` in `src/lib/auth-bypass.ts`
+- [ ] Set `BYPASS_AUTH = false` in `src/lib/supabase/middleware.ts`
+- [ ] Test magic link authentication end-to-end
+- [ ] Verify Supabase redirect URLs are correct for production domain
+
+**💳 Stripe:**
 - [ ] User enters birth data (step 1) → data saved to `astro_leads`
 - [ ] User goes through onboarding (steps 2-8)
 - [ ] User reaches paywall (step 9) with their REAL email

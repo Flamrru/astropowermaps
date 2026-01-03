@@ -7,6 +7,7 @@ import { calculateFullChart, formatChartForPrompt, formatAspectsForPrompt, FullC
 import { HOUSE_MEANINGS } from "@/lib/astro/houses";
 import { ASPECT_SYMBOLS, AspectType } from "@/lib/astro/transit-types";
 import type { BirthData } from "@/lib/astro/types";
+import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
 
 /**
  * Stella Chat API
@@ -23,15 +24,22 @@ const DAILY_MESSAGE_LIMIT = 50;
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Get authenticated user
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Get user ID (bypass auth for testing)
+    let userId: string;
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (BYPASS_AUTH) {
+      userId = TEST_USER_ID;
+    } else {
+      const supabase = await createClient();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = user.id;
     }
 
     // 2. Parse request body
@@ -47,7 +55,7 @@ export async function POST(request: NextRequest) {
     const { count: todayCount } = await supabaseAdmin
       .from("stella_messages")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .gte("created_at", `${today}T00:00:00Z`);
 
     if ((todayCount || 0) >= DAILY_MESSAGE_LIMIT) {
@@ -66,7 +74,7 @@ export async function POST(request: NextRequest) {
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     if (!profile) {
@@ -77,7 +85,7 @@ export async function POST(request: NextRequest) {
     const { data: history } = await supabaseAdmin
       .from("stella_messages")
       .select("role, content")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(10);
 
@@ -103,7 +111,7 @@ export async function POST(request: NextRequest) {
     const { data: todayScore } = await supabaseAdmin
       .from("daily_content")
       .select("content")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("content_date", today)
       .eq("content_type", "daily_score")
       .single();
@@ -130,7 +138,7 @@ export async function POST(request: NextRequest) {
     const completion = await openai.chat.completions.create({
       model: GENERATION_SETTINGS.chat.model,
       temperature: GENERATION_SETTINGS.chat.temperature,
-      max_tokens: GENERATION_SETTINGS.chat.max_tokens,
+      max_completion_tokens: GENERATION_SETTINGS.chat.max_completion_tokens,
       messages,
     });
 
@@ -138,8 +146,8 @@ export async function POST(request: NextRequest) {
 
     // 11. Store both messages
     await supabaseAdmin.from("stella_messages").insert([
-      { user_id: user.id, role: "user", content: userMessage },
-      { user_id: user.id, role: "assistant", content: stellaResponse },
+      { user_id: userId, role: "user", content: userMessage },
+      { user_id: userId, role: "assistant", content: stellaResponse },
     ]);
 
     // 12. Return response with remaining count

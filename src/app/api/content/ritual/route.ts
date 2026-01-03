@@ -5,6 +5,7 @@ import { openai, GENERATION_SETTINGS } from "@/lib/openai";
 import { getCurrentTransits } from "@/lib/astro/transits";
 import { calculateBigThree } from "@/lib/astro/zodiac";
 import type { BirthData } from "@/lib/astro/types";
+import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
 
 /**
  * Ritual Prompt API
@@ -16,22 +17,29 @@ import type { BirthData } from "@/lib/astro/types";
  */
 export async function POST(request: NextRequest) {
   try {
-    // 1. Get authenticated user
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // 1. Get user ID (bypass auth for testing)
+    let userId: string;
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (BYPASS_AUTH) {
+      userId = TEST_USER_ID;
+    } else {
+      const supabase = await createClient();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = user.id;
     }
 
     // 2. Get user profile
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("user_profiles")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     if (profileError || !profile) {
@@ -44,7 +52,7 @@ export async function POST(request: NextRequest) {
     const { data: cached } = await supabaseAdmin
       .from("daily_content")
       .select("content")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("content_date", today)
       .eq("content_type", "ritual")
       .single();
@@ -76,7 +84,7 @@ export async function POST(request: NextRequest) {
     const completion = await openai.chat.completions.create({
       model: GENERATION_SETTINGS.ritual.model,
       temperature: GENERATION_SETTINGS.ritual.temperature,
-      max_tokens: GENERATION_SETTINGS.ritual.max_tokens,
+      max_completion_tokens: GENERATION_SETTINGS.ritual.max_completion_tokens,
       messages: [
         {
           role: "system",
@@ -116,7 +124,7 @@ export async function POST(request: NextRequest) {
 
     // 7. Cache the result
     await supabaseAdmin.from("daily_content").upsert({
-      user_id: user.id,
+      user_id: userId,
       content_date: today,
       content_type: "ritual",
       content: ritualPrompt,
