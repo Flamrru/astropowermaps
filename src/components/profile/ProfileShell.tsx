@@ -134,9 +134,9 @@ export default function ProfileShell({ children }: ProfileShellProps) {
       const supabase = createClient();
 
       // Check auth
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
 
-      if (authError || !user) {
+      if (!user) {
         router.push("/login?redirect=/profile");
         return;
       }

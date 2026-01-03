@@ -3,7 +3,6 @@
 import { useEffect, useState, createContext, useContext, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { createClient } from "@/lib/supabase/client";
 import type { CalendarEvent } from "@/lib/dashboard-types";
 
 // ============================================
@@ -101,11 +100,11 @@ export default function CalendarShell({ children }: CalendarShellProps) {
   });
 
   useEffect(() => {
-    checkAuthAndLoad();
+    loadCalendarData(state.currentMonthKey);
   }, []);
 
   useEffect(() => {
-    if (!state.isLoading) {
+    if (!state.isLoading && state.data) {
       loadCalendarData(state.currentMonthKey);
     }
   }, [state.currentMonthKey]);
@@ -114,23 +113,21 @@ export default function CalendarShell({ children }: CalendarShellProps) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
   }
 
-  async function checkAuthAndLoad() {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      router.push("/login?redirect=/calendar");
-      return;
-    }
-
-    await loadCalendarData(state.currentMonthKey);
-  }
-
   async function loadCalendarData(monthKey: string) {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
       const response = await fetch(`/api/content/calendar?month=${monthKey}`);
+
+      if (response.status === 401) {
+        router.push("/login?redirect=/calendar");
+        return;
+      }
+
+      if (response.status === 404) {
+        router.push("/setup");
+        return;
+      }
 
       if (!response.ok) {
         throw new Error("Failed to load calendar");
