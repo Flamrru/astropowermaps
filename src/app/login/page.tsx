@@ -26,14 +26,26 @@ function LoginContent() {
 
   // Check for auth error from callback
   const authError = searchParams.get("error");
+  const authErrorDescription = searchParams.get("error_description");
   const redirectTo = searchParams.get("redirect") || "/dashboard";
   const isDev = process.env.NODE_ENV === "development";
 
   useEffect(() => {
-    if (authError === "auth_failed") {
-      setError("Authentication failed. Please try again.");
+    if (authError) {
+      // Map error codes to user-friendly messages
+      const errorMessages: Record<string, string> = {
+        otp_expired: "Your magic link has expired. Please request a new one.",
+        access_denied: "Access was denied. Please try again.",
+        auth_failed: "Authentication failed. Please try again.",
+      };
+
+      const message = errorMessages[authError] ||
+        authErrorDescription ||
+        "Something went wrong. Please try again.";
+
+      setError(message);
     }
-  }, [authError]);
+  }, [authError, authErrorDescription]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

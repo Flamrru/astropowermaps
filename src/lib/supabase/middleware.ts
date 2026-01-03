@@ -6,6 +6,20 @@ import { NextResponse, type NextRequest } from "next/server";
  * Called from the main middleware.ts file.
  */
 export async function updateSession(request: NextRequest) {
+  // Check for auth errors in URL (Supabase redirects here on magic link failures)
+  const errorCode = request.nextUrl.searchParams.get("error_code");
+  const error = request.nextUrl.searchParams.get("error");
+
+  if (errorCode || error) {
+    // Redirect to login with error message
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = ""; // Clear all params
+    url.searchParams.set("error", errorCode || error || "auth_failed");
+    url.searchParams.set("error_description", request.nextUrl.searchParams.get("error_description") || "");
+    return NextResponse.redirect(url);
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
