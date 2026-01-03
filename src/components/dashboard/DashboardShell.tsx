@@ -17,6 +17,8 @@ import type {
 } from "@/lib/dashboard-types";
 import { DEV_DASHBOARD_STATE } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/client";
+import { calculateBigThree } from "@/lib/astro/zodiac";
+import type { BirthData } from "@/lib/astro/types";
 import BottomNav from "./BottomNav";
 
 // ============================================
@@ -145,7 +147,7 @@ export default function DashboardShell({ children }: DashboardShellProps) {
         // Check user profile status
         const { data: profile } = await supabase
           .from("user_profiles")
-          .select("account_status, display_name, birth_date, birth_lat, birth_lng, birth_timezone")
+          .select("account_status, display_name, birth_date, birth_time, birth_place, birth_lat, birth_lng, birth_timezone, created_at")
           .eq("user_id", user.id)
           .single();
 
@@ -156,14 +158,84 @@ export default function DashboardShell({ children }: DashboardShellProps) {
         }
 
         // User is authenticated and set up!
-        // For now, show a message that real data fetching is coming soon
-        // TODO: Fetch real user data based on birth chart
+        // Fetch real AI-generated content
         dispatch({ type: "SET_DEV_MODE", payload: false });
-        dispatch({ type: "SET_LOADING", payload: false });
+
+        // Set subscriber info
         dispatch({
-          type: "SET_ERROR",
-          payload: `Welcome, ${profile.display_name || "Stargazer"}! Real dashboard data coming soon.`,
+          type: "SET_SUBSCRIBER",
+          payload: {
+            id: user.id,
+            email: user.email || "",
+            displayName: profile.display_name || "Stargazer",
+            subscriptionStatus: "active", // TODO: Check actual subscription
+            createdAt: profile.created_at || new Date().toISOString(),
+          },
         });
+
+        // Fetch AI content in parallel
+        try {
+          const [scoreRes, forecastRes, ritualRes] = await Promise.all([
+            fetch("/api/content/daily-score", { method: "POST" }),
+            fetch("/api/content/weekly-forecast", { method: "POST" }),
+            fetch("/api/content/ritual", { method: "POST" }),
+          ]);
+
+          // Parse responses
+          const [dailyScore, weeklyForecast, ritual] = await Promise.all([
+            scoreRes.ok ? scoreRes.json() : null,
+            forecastRes.ok ? forecastRes.json() : null,
+            ritualRes.ok ? ritualRes.json() : null,
+          ]);
+
+          // Update state with fetched data
+          if (dailyScore) {
+            dispatch({ type: "SET_DAILY_SCORE", payload: dailyScore });
+          }
+          if (weeklyForecast) {
+            dispatch({ type: "SET_WEEKLY_FORECAST", payload: weeklyForecast });
+            // Extract best days from forecast
+            if (weeklyForecast.powerDays) {
+              dispatch({
+                type: "SET_BEST_DAYS",
+                payload: weeklyForecast.powerDays.map((day: { day: string; date: string; energy: string; score: number }) => ({
+                  date: day.date,
+                  displayDate: day.date,
+                  goal: "power" as const,
+                  score: day.score,
+                  reason: day.energy,
+                })),
+              });
+            }
+          }
+          if (ritual) {
+            dispatch({ type: "SET_TODAY_RITUAL", payload: ritual });
+          }
+
+          // Calculate Big Three from profile
+          if (profile.birth_date && profile.birth_lat && profile.birth_lng) {
+            const birthData: BirthData = {
+              date: profile.birth_date,
+              time: profile.birth_time || "12:00",
+              timeUnknown: !profile.birth_time,
+              location: {
+                name: profile.birth_place || "Unknown",
+                lat: profile.birth_lat,
+                lng: profile.birth_lng,
+                timezone: profile.birth_timezone || "UTC",
+              },
+            };
+            const bigThree = calculateBigThree(birthData);
+            dispatch({ type: "SET_BIG_THREE", payload: bigThree });
+            dispatch({ type: "SET_ELEMENT", payload: bigThree.sun.element });
+          }
+
+          dispatch({ type: "SET_LOADING", payload: false });
+        } catch (fetchError) {
+          console.error("Error fetching AI content:", fetchError);
+          // Still show dashboard but with loading states for content
+          dispatch({ type: "SET_LOADING", payload: false });
+        }
       } catch (error) {
         console.error("Dashboard init error:", error);
         dispatch({ type: "SET_LOADING", payload: false });
