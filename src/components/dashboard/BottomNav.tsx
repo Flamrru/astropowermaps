@@ -24,8 +24,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: "home", label: "Home", icon: Home, href: "/dashboard", enabled: true },
   { id: "map", label: "Map", icon: Map, href: "/map", enabled: true },
-  { id: "calendar", label: "Calendar", icon: Calendar, href: "/calendar", enabled: false },
-  { id: "profile", label: "Profile", icon: User, href: "/profile", enabled: false },
+  { id: "calendar", label: "Calendar", icon: Calendar, href: "/calendar", enabled: true },
+  { id: "profile", label: "Profile", icon: User, href: "/profile", enabled: true },
 ];
 
 export default function BottomNav() {

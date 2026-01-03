@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useDashboard } from "./DashboardShell";
 import { X, MessageCircle } from "lucide-react";
+import StellaChatDrawer from "./stella/StellaChatDrawer";
 
 /**
  * StellaFloatingButton
@@ -212,31 +213,8 @@ export default function StellaFloatingButton() {
                 </button>
               </div>
 
-              {/* Chat content placeholder */}
-              <div className="h-[60vh] flex flex-col items-center justify-center p-6 text-center">
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <div
-                    className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center"
-                    style={{
-                      background: "rgba(201, 162, 39, 0.1)",
-                      border: "1px solid rgba(201, 162, 39, 0.3)",
-                    }}
-                  >
-                    <MessageCircle size={32} className="text-gold" />
-                  </div>
-                  <h4 className="text-white font-display text-lg mb-2">
-                    Stella Chat Coming Soon
-                  </h4>
-                  <p className="text-white/50 text-sm max-w-xs mx-auto">
-                    Your personal AI astrology guide will be available here.
-                    Ask about your chart, transits, and cosmic timing.
-                  </p>
-                </motion.div>
-              </div>
+              {/* Chat content */}
+              <StellaChatDrawer isOpen={state.isChatOpen} />
             </motion.div>
           </>
         )}
