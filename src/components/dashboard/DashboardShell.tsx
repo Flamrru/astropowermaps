@@ -7,7 +7,7 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import type {
   DashboardState,
@@ -16,6 +16,7 @@ import type {
   Element,
 } from "@/lib/dashboard-types";
 import { DEV_DASHBOARD_STATE } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/client";
 import BottomNav from "./BottomNav";
 
 // ============================================
@@ -110,6 +111,7 @@ interface DashboardShellProps {
 
 export default function DashboardShell({ children }: DashboardShellProps) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [state, dispatch] = useReducer(dashboardReducer, initialDashboardState);
 
   // Check for dev mode: ?dev=true or ?d=dashboard
@@ -117,23 +119,63 @@ export default function DashboardShell({ children }: DashboardShellProps) {
     searchParams.get("dev") === "true" ||
     searchParams.get("d") === "dashboard";
 
-  // Initialize on mount
+  // Initialize on mount - check auth or load dev data
   useEffect(() => {
-    if (isDevMode) {
-      // Dev mode: Load mock data immediately
-      console.log("🧪 Dashboard Dev Mode: Loading mock data");
-      dispatch({ type: "HYDRATE_DEV_DATA", payload: DEV_DASHBOARD_STATE });
-    } else {
-      // Production: Would fetch real user data here
-      // For now, show loading then error since auth isn't implemented
-      dispatch({ type: "SET_DEV_MODE", payload: false });
-      dispatch({ type: "SET_LOADING", payload: false });
-      dispatch({
-        type: "SET_ERROR",
-        payload: "Please use ?dev=true to preview the dashboard",
-      });
-    }
-  }, [isDevMode]);
+    const initDashboard = async () => {
+      if (isDevMode) {
+        // Dev mode: Load mock data immediately
+        console.log("🧪 Dashboard Dev Mode: Loading mock data");
+        dispatch({ type: "HYDRATE_DEV_DATA", payload: DEV_DASHBOARD_STATE });
+        return;
+      }
+
+      // Production: Check for authenticated user
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          // Not authenticated, redirect to login
+          router.push("/login?redirect=/dashboard");
+          return;
+        }
+
+        // Check user profile status
+        const { data: profile } = await supabase
+          .from("user_profiles")
+          .select("account_status, display_name, birth_date, birth_lat, birth_lng, birth_timezone")
+          .eq("user_id", user.id)
+          .single();
+
+        // If no profile or pending setup, redirect to setup
+        if (!profile || profile.account_status === "pending_setup") {
+          router.push("/setup");
+          return;
+        }
+
+        // User is authenticated and set up!
+        // For now, show a message that real data fetching is coming soon
+        // TODO: Fetch real user data based on birth chart
+        dispatch({ type: "SET_DEV_MODE", payload: false });
+        dispatch({ type: "SET_LOADING", payload: false });
+        dispatch({
+          type: "SET_ERROR",
+          payload: `Welcome, ${profile.display_name || "Stargazer"}! Real dashboard data coming soon.`,
+        });
+      } catch (error) {
+        console.error("Dashboard init error:", error);
+        dispatch({ type: "SET_LOADING", payload: false });
+        dispatch({
+          type: "SET_ERROR",
+          payload: "Something went wrong. Please try again.",
+        });
+      }
+    };
+
+    initDashboard();
+  }, [isDevMode, router]);
 
   // Determine element for theming (based on Sun sign)
   const element: Element | null = state.bigThree?.sun?.element ?? null;
