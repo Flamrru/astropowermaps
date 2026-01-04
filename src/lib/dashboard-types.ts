@@ -6,9 +6,10 @@
  */
 
 import type { ZodiacSign, Element, ZodiacInfo, BigThree } from "./astro/zodiac";
+import type { BirthData } from "./astro/types";
 
 // Re-export zodiac types for convenience
-export type { ZodiacSign, Element, ZodiacInfo, BigThree };
+export type { ZodiacSign, Element, ZodiacInfo, BigThree, BirthData };
 
 // ============================================
 // User & Subscription Types
@@ -218,6 +219,7 @@ export interface DashboardState {
 
   // User
   subscriber: Subscriber | null;
+  birthData: BirthData | null;
   bigThree: BigThree | null;
   element: Element | null;
 
@@ -242,6 +244,7 @@ export type DashboardAction =
   | { type: "SET_ERROR"; payload: string | null }
   | { type: "SET_DEV_MODE"; payload: boolean }
   | { type: "SET_SUBSCRIBER"; payload: Subscriber }
+  | { type: "SET_BIRTH_DATA"; payload: BirthData }
   | { type: "SET_BIG_THREE"; payload: BigThree }
   | { type: "SET_ELEMENT"; payload: Element }
   | { type: "SET_DAILY_SCORE"; payload: DailyPowerScore }

@@ -71,24 +71,39 @@ function LoginContent() {
         return;
       }
 
-      // Magic link login
+      // Magic link login - shouldCreateUser: false prevents creating new accounts
       const { error: signInError } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback?next=${redirectTo}`,
+          // Only send if user exists (requires Supabase config)
+          shouldCreateUser: false,
         },
       });
 
       if (signInError) {
+        // Check if this is a "user not found" error
+        if (
+          signInError.message.includes("not found") ||
+          signInError.message.includes("Invalid login") ||
+          signInError.message.includes("Signups not allowed")
+        ) {
+          setError("no_account");
+          return;
+        }
         throw signInError;
       }
 
       setIsSuccess(true);
     } catch (err) {
       console.error("Login error:", err);
-      setError(
-        err instanceof Error ? err.message : "Something went wrong. Please try again."
-      );
+      if (err instanceof Error && err.message.includes("Signups not allowed")) {
+        setError("no_account");
+      } else {
+        setError(
+          err instanceof Error ? err.message : "Something went wrong. Please try again."
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -226,14 +241,42 @@ function LoginContent() {
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="mb-4 p-3 rounded-xl flex items-start gap-3"
+                      className="mb-4 p-3 rounded-xl"
                       style={{
-                        background: "rgba(220, 38, 38, 0.15)",
-                        border: "1px solid rgba(220, 38, 38, 0.3)",
+                        background: error === "no_account"
+                          ? "rgba(201, 162, 39, 0.15)"
+                          : "rgba(220, 38, 38, 0.15)",
+                        border: error === "no_account"
+                          ? "1px solid rgba(201, 162, 39, 0.3)"
+                          : "1px solid rgba(220, 38, 38, 0.3)",
                       }}
                     >
-                      <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-red-200">{error}</p>
+                      {error === "no_account" ? (
+                        <div className="text-center">
+                          <p className="text-sm text-gold mb-2">
+                            No account found for this email.
+                          </p>
+                          <p className="text-xs text-white/60 mb-3">
+                            Accounts are created when you purchase Stella+.
+                          </p>
+                          <Link
+                            href="/"
+                            className="inline-block px-4 py-2 rounded-full text-sm font-medium transition-colors"
+                            style={{
+                              background: "rgba(201, 162, 39, 0.2)",
+                              border: "1px solid rgba(201, 162, 39, 0.4)",
+                              color: "#E8C547",
+                            }}
+                          >
+                            Take the Quiz →
+                          </Link>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                          <p className="text-sm text-red-200">{error}</p>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>

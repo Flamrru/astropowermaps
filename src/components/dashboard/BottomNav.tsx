@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,20 +23,75 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: "home", label: "Home", icon: Home, href: "/dashboard", enabled: true },
-  { id: "map", label: "Map", icon: Map, href: "/map", enabled: true },
-  { id: "calendar", label: "Calendar", icon: Calendar, href: "/calendar", enabled: true },
-  { id: "profile", label: "Profile", icon: User, href: "/profile", enabled: true },
+  { id: "map", label: "Map", icon: Map, href: "/dashboard/map", enabled: true },
+  { id: "calendar", label: "Calendar", icon: Calendar, href: "/dashboard/calendar", enabled: true },
+  { id: "profile", label: "Profile", icon: User, href: "/dashboard/profile", enabled: true },
 ];
 
-export default function BottomNav() {
+interface BottomNavProps {
+  /** Enable auto-hide behavior (for map view) */
+  autoHide?: boolean;
+  /** Callback when user interacts during auto-hide mode */
+  onInteraction?: () => void;
+}
+
+export default function BottomNav({ autoHide = false, onInteraction }: BottomNavProps) {
   const pathname = usePathname();
   const [showToast, setShowToast] = useState<string | null>(null);
+  const [isVisible, setIsVisible] = useState(true);
+  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-hide logic: hide nav when user interacts with map, show after 3 seconds
+  const triggerHide = useCallback(() => {
+    if (!autoHide) return;
+
+    setIsVisible(false);
+    onInteraction?.();
+
+    // Clear any existing timeout
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+    }
+
+    // Show nav again after 3 seconds
+    hideTimeoutRef.current = setTimeout(() => {
+      setIsVisible(true);
+    }, 3000);
+  }, [autoHide, onInteraction]);
+
+  // Listen for map interactions (touch/mouse events on the map container)
+  useEffect(() => {
+    if (!autoHide) {
+      setIsVisible(true);
+      return;
+    }
+
+    const handleInteraction = () => triggerHide();
+
+    // Listen for touch and pointer events on the document
+    // Map component will be the main interactive area
+    const mapContainer = document.querySelector(".mapboxgl-canvas-container");
+    if (mapContainer) {
+      mapContainer.addEventListener("touchstart", handleInteraction, { passive: true });
+      mapContainer.addEventListener("mousedown", handleInteraction);
+    }
+
+    return () => {
+      if (mapContainer) {
+        mapContainer.removeEventListener("touchstart", handleInteraction);
+        mapContainer.removeEventListener("mousedown", handleInteraction);
+      }
+      if (hideTimeoutRef.current) {
+        clearTimeout(hideTimeoutRef.current);
+      }
+    };
+  }, [autoHide, triggerHide]);
 
   // Determine active tab based on pathname
   const getActiveTab = () => {
-    if (pathname?.startsWith("/map")) return "map";
-    if (pathname?.startsWith("/calendar")) return "calendar";
-    if (pathname?.startsWith("/profile")) return "profile";
+    if (pathname?.startsWith("/dashboard/map")) return "map";
+    if (pathname?.startsWith("/dashboard/calendar")) return "calendar";
+    if (pathname?.startsWith("/dashboard/profile")) return "profile";
     return "home";
   };
 
@@ -82,12 +137,18 @@ export default function BottomNav() {
       </AnimatePresence>
 
       {/* Navigation bar */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-40"
-        style={{
-          paddingBottom: "env(safe-area-inset-bottom, 0px)",
-        }}
-      >
+      <AnimatePresence>
+        {isVisible && (
+          <motion.nav
+            className="fixed bottom-0 left-0 right-0 z-40"
+            style={{
+              paddingBottom: "env(safe-area-inset-bottom, 0px)",
+            }}
+            initial={{ y: 0, opacity: 1 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          >
         {/* Gradient fade above nav */}
         <div
           className="absolute -top-8 left-0 right-0 h-8 pointer-events-none"
@@ -282,7 +343,9 @@ export default function BottomNav() {
             }}
           />
         </div>
-      </nav>
+          </motion.nav>
+        )}
+      </AnimatePresence>
     </>
   );
 }

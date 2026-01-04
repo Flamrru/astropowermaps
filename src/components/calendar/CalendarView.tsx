@@ -11,6 +11,7 @@ import GoalPicker, { GOAL_CONFIG } from "./GoalPicker";
 import BestDaysPanel from "./BestDaysPanel";
 import CalendarTabs, { type CalendarTabType } from "./CalendarTabs";
 import LifeTransitsView from "./LifeTransitsView";
+import Report2026View from "./Report2026View";
 import type { CalendarEvent } from "@/lib/dashboard-types";
 
 /**
@@ -37,6 +38,19 @@ export default function CalendarView() {
   const bestDayDates = useMemo(() => {
     return new Set(bestDaysForGoal.map((d) => d.date));
   }, [bestDaysForGoal]);
+
+  // If 2026 Report tab is active, render that view
+  if (activeTab === "2026") {
+    return (
+      <div className="px-4 pt-6">
+        {/* Tab switcher at top */}
+        <div className="mb-4">
+          <CalendarTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        </div>
+        <Report2026View />
+      </div>
+    );
+  }
 
   // If Life Transits tab is active, render that view
   if (activeTab === "transits") {

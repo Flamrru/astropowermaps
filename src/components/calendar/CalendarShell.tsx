@@ -445,7 +445,11 @@ export default function CalendarShell({ children }: CalendarShellProps) {
         <StellaFloatingButton
           externalContext={stellaContext}
           onContextConsumed={clearStellaContext}
-          viewHint={activeCalendarTab === "transits" ? "life-transits" : "calendar"}
+          viewHint={
+            activeCalendarTab === "transits" ? "life-transits" :
+            activeCalendarTab === "2026" ? "2026-report" :
+            "calendar"
+          }
         />
 
         {/* Bottom navigation */}

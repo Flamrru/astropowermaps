@@ -2,25 +2,21 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Layers, Eye, EyeOff, Sparkles } from "lucide-react";
+import { MapPin, Layers, Eye, EyeOff } from "lucide-react";
 import { PlanetaryLine, PlanetId } from "@/lib/astro/types";
-import { YearForecast } from "@/lib/astro/transit-types";
-// calculateAllPowerPlaces import removed - not currently used
 import {
   usePowerPlacesState,
   PowerPlacesTabs,
   PowerPlacesScrollContent,
 } from "./PowerPlacesPanel";
-import { Report2026Panel } from "./report";
 import MobileSheet from "./MobileSheet";
 
-type ActiveSheet = "places" | "forecast" | "lines" | "report" | null;
+type ActiveSheet = "places" | "lines" | null;
 
 interface MobileFloatingPillProps {
   lines: PlanetaryLine[];
   planets: { id: PlanetId; name: string; symbol: string; color: string }[];
   visiblePlanets: Set<PlanetId>;
-  forecastData: YearForecast | null;
   onTogglePlanet: (planetId: PlanetId) => void;
   onShowAllPlanets: () => void;
   onHideAllPlanets: () => void;
@@ -28,10 +24,9 @@ interface MobileFloatingPillProps {
   onReset: () => void;
 }
 
-// Color palette
+// Color palette - uses element theming when available
 const COLORS = {
-  gold: { accent: "#E8C547", glow: "rgba(232, 197, 71, 0.3)" },
-  purple: { accent: "#9B7ED9", glow: "rgba(155, 126, 217, 0.3)" },
+  gold: { accent: "var(--element-primary, #E8C547)", glow: "var(--element-glow, rgba(232, 197, 71, 0.3))" },
   pink: { accent: "#E8A4C9", glow: "rgba(232, 164, 201, 0.3)" },
 };
 
@@ -39,7 +34,6 @@ export default function MobileFloatingPill({
   lines,
   planets,
   visiblePlanets,
-  forecastData,
   onTogglePlanet,
   onShowAllPlanets,
   onHideAllPlanets,
@@ -92,41 +86,42 @@ export default function MobileFloatingPill({
             onAnimationComplete={() => {
               setHasShownOnce(true);
             }}
-            className="fixed bottom-5 left-3 right-3 z-30 md:hidden"
+            className="fixed bottom-24 left-3 right-3 z-30 md:hidden"
           >
-            {/* Main pill container */}
+            {/* Main pill container - V5 glass morphism */}
             <div
               className="relative rounded-[22px] overflow-hidden"
               style={{
-                background: "linear-gradient(135deg, rgba(18, 18, 40, 0.92) 0%, rgba(10, 10, 26, 0.95) 100%)",
-                backdropFilter: "blur(24px)",
-                WebkitBackdropFilter: "blur(24px)",
+                background: "linear-gradient(135deg, rgba(15, 15, 30, 0.9) 0%, rgba(10, 10, 25, 0.95) 100%)",
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
                 boxShadow: `
                   0 8px 40px rgba(0, 0, 0, 0.4),
-                  0 0 0 1px rgba(255, 255, 255, 0.08),
-                  0 0 80px rgba(232, 197, 71, 0.08),
+                  0 0 60px var(--element-glow, rgba(232, 197, 71, 0.1)),
                   inset 0 1px 0 rgba(255, 255, 255, 0.05)
                 `,
               }}
             >
-              {/* Top accent gradient */}
+              {/* Top accent gradient - uses element color */}
               <div
                 className="absolute top-0 left-0 right-0 h-[1px]"
                 style={{
-                  background: "linear-gradient(90deg, transparent 5%, rgba(232, 197, 71, 0.4) 50%, transparent 95%)",
+                  background: "linear-gradient(90deg, transparent 5%, var(--element-primary, rgba(232, 197, 71, 0.4)) 50%, transparent 95%)",
+                  opacity: 0.5,
                 }}
               />
 
-              {/* Ambient glow animation */}
+              {/* Ambient glow animation - uses element color */}
               <motion.div
                 animate={{
-                  opacity: [0.4, 0.7, 0.4],
-                  scale: [1, 1.05, 1],
+                  opacity: [0.3, 0.5, 0.3],
+                  scale: [1, 1.03, 1],
                 }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                 className="absolute inset-0 pointer-events-none"
                 style={{
-                  background: "radial-gradient(ellipse at 50% 100%, rgba(232, 197, 71, 0.12) 0%, transparent 60%)",
+                  background: "radial-gradient(ellipse at 50% 100%, var(--element-glow, rgba(232, 197, 71, 0.12)) 0%, transparent 60%)",
                 }}
               />
 
@@ -142,24 +137,14 @@ export default function MobileFloatingPill({
                   flex={1}
                 />
 
-                {/* Report Button - only show if forecast data exists */}
-                {forecastData && (
-                  <PillButton
-                    onClick={() => setActiveSheet("report")}
-                    icon={<Sparkles size={18} />}
-                    label="2026"
-                    sublabel="Report"
-                    color={COLORS.purple}
-                    flex={1}
-                  />
-                )}
-
-                {/* Lines Button - compact */}
+                {/* Lines Button */}
                 <PillButton
                   onClick={() => setActiveSheet("lines")}
                   icon={<Layers size={18} />}
+                  label="Lines"
+                  sublabel="Toggle"
                   color={COLORS.pink}
-                  compact
+                  flex={1}
                 />
               </div>
             </div>
@@ -191,25 +176,6 @@ export default function MobileFloatingPill({
           onFlyToCity={handleFlyToCity}
         />
       </MobileSheet>
-
-      {/* Report Sheet - The premium 2026 forecast report */}
-      {forecastData && (
-        <MobileSheet
-          isOpen={activeSheet === "report"}
-          onClose={closeSheet}
-          title="Your 2026 Report"
-          subtitle="Personal forecast & insights"
-          icon={<Sparkles size={22} />}
-          accentColor={COLORS.purple.accent}
-          glowColor={COLORS.purple.glow}
-        >
-          <Report2026Panel
-            forecast={forecastData}
-            lines={lines}
-            onFlyToCity={handleFlyToCity}
-          />
-        </MobileSheet>
-      )}
 
       {/* Lines Sheet */}
       <MobileSheet

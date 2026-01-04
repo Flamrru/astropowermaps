@@ -6,9 +6,10 @@
  */
 
 /**
- * FLIP THIS TO FALSE TO RE-ENABLE AUTH
+ * Auth bypass flag
+ * Set to false to enable real authentication
  */
-export const BYPASS_AUTH = true;
+export const BYPASS_AUTH = false;
 
 /**
  * Test user ID for bypassing auth

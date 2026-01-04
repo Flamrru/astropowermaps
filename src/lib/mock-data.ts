@@ -225,6 +225,7 @@ export const DEV_DASHBOARD_STATE: Partial<DashboardState> = {
   isLoading: false,
   error: null,
   subscriber: DEV_SUBSCRIBER,
+  birthData: DEV_BIRTH_DATA,
   bigThree: DEV_BIG_THREE,
   element: DEV_ELEMENT,
   dailyScore: DEV_DAILY_SCORE,

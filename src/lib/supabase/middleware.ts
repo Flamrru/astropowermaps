@@ -2,10 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * TEMPORARY: Disable auth for testing
- * Set to false to re-enable authentication
+ * Auth bypass flag
+ * Set to false to enable real authentication
  */
-const BYPASS_AUTH = true;
+const BYPASS_AUTH = false;
 
 /**
  * Refreshes the user's session and handles auth redirects.

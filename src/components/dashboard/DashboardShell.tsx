@@ -30,6 +30,7 @@ const initialDashboardState: DashboardState = {
   isLoading: true,
   error: null,
   subscriber: null,
+  birthData: null,
   bigThree: null,
   element: null,
   dailyScore: null,
@@ -58,6 +59,8 @@ function dashboardReducer(
       return { ...state, isDevMode: action.payload };
     case "SET_SUBSCRIBER":
       return { ...state, subscriber: action.payload };
+    case "SET_BIRTH_DATA":
+      return { ...state, birthData: action.payload };
     case "SET_BIG_THREE":
       return { ...state, bigThree: action.payload };
     case "SET_ELEMENT":
@@ -109,9 +112,17 @@ export function useDashboard() {
 
 interface DashboardShellProps {
   children: ReactNode;
+  /** Variant for different page layouts */
+  variant?: "default" | "map";
+  /** Callback when user interacts (for auto-hide nav on map) */
+  onMapInteraction?: () => void;
 }
 
-export default function DashboardShell({ children }: DashboardShellProps) {
+export default function DashboardShell({
+  children,
+  variant = "default",
+  onMapInteraction,
+}: DashboardShellProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [state, dispatch] = useReducer(dashboardReducer, initialDashboardState);
@@ -226,6 +237,7 @@ export default function DashboardShell({ children }: DashboardShellProps) {
               },
             };
             const bigThree = calculateBigThree(birthData);
+            dispatch({ type: "SET_BIRTH_DATA", payload: birthData });
             dispatch({ type: "SET_BIG_THREE", payload: bigThree });
             dispatch({ type: "SET_ELEMENT", payload: bigThree.sun.element });
           }
@@ -315,12 +327,19 @@ export default function DashboardShell({ children }: DashboardShellProps) {
         <div className="stars-layer" />
 
         {/* Content */}
-        <main className="relative z-10 min-h-screen pb-28">
+        <main
+          className={`relative z-10 min-h-screen ${
+            variant === "map" ? "" : "pb-28"
+          }`}
+        >
           {children}
         </main>
 
         {/* Bottom Navigation */}
-        <BottomNav />
+        <BottomNav
+          autoHide={variant === "map"}
+          onInteraction={onMapInteraction}
+        />
       </div>
     </DashboardContext.Provider>
   );

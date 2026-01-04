@@ -7,17 +7,25 @@ import mapboxgl from "mapbox-gl";
 import { AstrocartographyResult, PlanetId, LineType, TooltipData } from "@/lib/astro/types";
 import { getShortInterpretation } from "@/lib/astro/interpretations";
 import { calculateAllPowerPlaces, LifeCategory } from "@/lib/astro/power-places";
-import { YearForecast } from "@/lib/astro/transit-types";
-import { calculatePowerMonths, calculatePowerMonthsWithConfidence } from "@/lib/astro/power-months";
 import { MapHighlight } from "@/lib/reveal-state";
 import MapControls from "./MapControls";
-import LineTooltip from "./LineTooltip";
+import LineModal from "./LineModal";
 import CategoryFilters from "./CategoryFilters";
 import PowerPlacesPanel from "./PowerPlacesPanel";
 import MobileFloatingPill from "./MobileFloatingPill";
 import WelcomeTutorial from "./WelcomeTutorial";
-import { Report2026DesktopPanel } from "./report";
 import { useFirstVisit } from "@/lib/hooks/useFirstVisit";
+
+interface StellaContext {
+  displayMessage: string;
+  hiddenContext: string;
+}
+
+interface FlyToTarget {
+  lat: number;
+  lng: number;
+  cityName: string;
+}
 
 interface AstroMapProps {
   data: AstrocartographyResult;
@@ -32,6 +40,10 @@ interface AstroMapProps {
   showCityMarkers?: boolean | number;
   autoAnimation?: "reveal" | "none";
   onAnimationComplete?: () => void;
+  // Stella integration (for dashboard mode)
+  onAskStella?: (context: StellaContext) => void;
+  // Optional fly-to target on initial load
+  flyToOnLoad?: FlyToTarget;
 }
 
 // Category colors for city markers
@@ -404,6 +416,8 @@ export default function AstroMap({
   showCityMarkers = true,
   autoAnimation = "none",
   onAnimationComplete,
+  onAskStella,
+  flyToOnLoad,
 }: AstroMapProps) {
   const isBackgroundMode = mode === "background";
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -418,11 +432,6 @@ export default function AstroMap({
   const [showTutorial, setShowTutorial] = useState(false);
   const [powerPlacesExpanded, setPowerPlacesExpanded] = useState(false);
   const [legendExpanded, setLegendExpanded] = useState(false);
-  const [reportExpanded, setReportExpanded] = useState(true);
-
-  // Forecast state
-  const [forecastData, setForecastData] = useState<YearForecast | null>(null);
-  const [forecastLoading, setForecastLoading] = useState(false);
 
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
@@ -444,42 +453,6 @@ export default function AstroMap({
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
-
-  // Calculate 2026 forecast when birth data is available
-  useEffect(() => {
-    const calculateForecast = async () => {
-      if (!data.planets || data.planets.length === 0) return;
-
-      setForecastLoading(true);
-
-      try {
-        // Extract natal positions from the astrocartography data
-        const { calculateNatalPositions } = await import("@/lib/astro/calculations");
-        const natalPositions = calculateNatalPositions(data.birthData);
-
-        let forecast: YearForecast;
-
-        if (data.birthData.timeUnknown && data.birthData.timeWindow) {
-          // Calculate with confidence using time window sampling
-          forecast = calculatePowerMonthsWithConfidence(
-            data.birthData,
-            data.birthData.timeWindow
-          );
-        } else {
-          // Calculate with exact time
-          forecast = calculatePowerMonths(natalPositions);
-        }
-
-        setForecastData(forecast);
-      } catch (error) {
-        console.error("Error calculating forecast:", error);
-      } finally {
-        setForecastLoading(false);
-      }
-    };
-
-    calculateForecast();
-  }, [data.birthData, data.planets]);
 
   // Show tutorial on first visit after map loads
   useEffect(() => {
@@ -1040,6 +1013,18 @@ export default function AstroMap({
     []
   );
 
+  // Handle flyToOnLoad - fly to a specific city on initial load
+  useEffect(() => {
+    if (!mapLoaded || !map.current || !flyToOnLoad) return;
+
+    // Small delay to let city markers render first
+    const timer = setTimeout(() => {
+      handleFlyToCity(flyToOnLoad.lat, flyToOnLoad.lng, flyToOnLoad.cityName);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [mapLoaded, flyToOnLoad, handleFlyToCity]);
+
   // Handle tutorial close - auto-expand Power Places panel
   const handleTutorialClose = useCallback(() => {
     setShowTutorial(false);
@@ -1106,44 +1091,18 @@ export default function AstroMap({
           onHideAll={hideAllPlanets}
           onReset={onReset}
           isExpanded={legendExpanded}
-          onExpandedChange={(expanded) => {
-            setLegendExpanded(expanded);
-            // Collapse report when legend is expanded
-            if (expanded) {
-              setReportExpanded(false);
-            }
-          }}
+          onExpandedChange={setLegendExpanded}
         />
       )}
 
-      {/* Line Tooltip */}
-      {tooltip && (
-        <LineTooltip
-          planet={tooltip.planet}
-          lineType={tooltip.lineType}
-          interpretation={tooltip.interpretation}
-          position={tooltip.position}
-          onClose={() => setTooltip(null)}
-        />
-      )}
-
-      {/* 2026 Report Panel - Desktop only (left side, full mode + showPanels) */}
-      {mapLoaded && !isMobile && showPanels && !isBackgroundMode && forecastData && (
-        <Report2026DesktopPanel
-          forecast={forecastData}
-          lines={data.lines}
-          onFlyToCity={handleFlyToCity}
-          loading={forecastLoading}
-          isExpanded={reportExpanded}
-          onExpandedChange={(expanded) => {
-            setReportExpanded(expanded);
-            // Collapse legend when report is expanded
-            if (expanded) {
-              setLegendExpanded(false);
-            }
-          }}
-        />
-      )}
+      {/* Line Modal */}
+      <LineModal
+        planet={tooltip?.planet ?? "sun"}
+        lineType={tooltip?.lineType ?? "MC"}
+        isOpen={!!tooltip}
+        onClose={() => setTooltip(null)}
+        onAskStella={onAskStella}
+      />
 
       {/* Power Places Panel - Desktop only (right side, full mode + showPanels) */}
       {mapLoaded && !isMobile && showPanels && !isBackgroundMode && (
@@ -1160,7 +1119,6 @@ export default function AstroMap({
           lines={data.lines}
           planets={data.planets}
           visiblePlanets={visiblePlanets}
-          forecastData={forecastData}
           onTogglePlanet={togglePlanet}
           onShowAllPlanets={showAllPlanets}
           onHideAllPlanets={hideAllPlanets}

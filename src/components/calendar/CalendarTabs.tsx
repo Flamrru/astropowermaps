@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Calendar, Sparkles } from "lucide-react";
+import { Calendar, Sparkles, Star } from "lucide-react";
 
-export type CalendarTabType = "month" | "transits";
+export type CalendarTabType = "month" | "2026" | "transits";
 
 interface CalendarTabsProps {
   activeTab: CalendarTabType;
@@ -13,7 +13,8 @@ interface CalendarTabsProps {
 /**
  * CalendarTabs
  *
- * Elegant tab switcher between monthly calendar and life transits views.
+ * Elegant tab switcher between monthly calendar, 2026 report, and life transits.
+ * Tab order: Month (short-term) -> 2026 (year) -> Life (lifetime)
  * Features a sliding gold indicator and subtle glass morphism.
  */
 export default function CalendarTabs({
@@ -22,8 +23,16 @@ export default function CalendarTabs({
 }: CalendarTabsProps) {
   const tabs: { id: CalendarTabType; label: string; icon: typeof Calendar }[] = [
     { id: "month", label: "Calendar", icon: Calendar },
-    { id: "transits", label: "Life Transits", icon: Sparkles },
+    { id: "2026", label: "2026", icon: Sparkles },
+    { id: "transits", label: "Life", icon: Star },
   ];
+
+  // Calculate indicator position based on active tab index
+  const getIndicatorPosition = () => {
+    const index = tabs.findIndex((t) => t.id === activeTab);
+    const tabWidth = 100 / 3; // 33.33% each
+    return `calc(${index * tabWidth}% + 4px)`;
+  };
 
   return (
     <div
@@ -31,7 +40,7 @@ export default function CalendarTabs({
       style={{
         background: "rgba(255, 255, 255, 0.03)",
         border: "1px solid rgba(255, 255, 255, 0.06)",
-        maxWidth: "320px",
+        maxWidth: "400px",
       }}
     >
       {/* Sliding indicator */}
@@ -44,8 +53,8 @@ export default function CalendarTabs({
         }}
         initial={false}
         animate={{
-          left: activeTab === "month" ? "4px" : "calc(50% + 2px)",
-          width: "calc(50% - 6px)",
+          left: getIndicatorPosition(),
+          width: "calc(33.33% - 6px)",
         }}
         transition={{
           type: "spring",

@@ -146,49 +146,95 @@ export default function RevealShell({ children }: RevealShellProps) {
       // PAYMENT SUCCESS: Handle return from Stripe after successful payment
       const paymentStatus = searchParams.get("payment_status");
       if (paymentStatus === "complete") {
-        console.log("✅ Payment completed - recovering session and redirecting to map");
+        console.log("✅ Payment completed - showing confirmation screen");
 
         // Get Stripe's checkout session ID from URL
         const stripeSessionId = searchParams.get("session_id");
 
         if (!stripeSessionId) {
           console.error("Missing Stripe session_id in return URL");
-          window.location.href = "/map?payment=success";
-          return;
+          // Fallback: Still try to show confirmation with localStorage data
         }
 
-        try {
-          // 1. Look up our app_session_id from Stripe's checkout session
-          const lookupRes = await fetch(
-            `/api/stripe/lookup-session?checkout_session_id=${stripeSessionId}`
-          );
-          const lookupData = await lookupRes.json();
+        let appSessionId: string | null = null;
 
-          if (!lookupRes.ok || !lookupData.app_session_id) {
-            console.error("Failed to look up session:", lookupData.error);
-            window.location.href = "/map?payment=success";
-            return;
+        if (stripeSessionId) {
+          try {
+            // 1. Look up our app_session_id from Stripe's checkout session
+            const lookupRes = await fetch(
+              `/api/stripe/lookup-session?checkout_session_id=${stripeSessionId}`
+            );
+            const lookupData = await lookupRes.json();
+
+            if (lookupRes.ok && lookupData.app_session_id) {
+              appSessionId = lookupData.app_session_id;
+              console.log("✅ Recovered app_session_id:", appSessionId);
+            } else {
+              console.error("Failed to look up session:", lookupData.error);
+            }
+          } catch (error) {
+            console.error("Error looking up session:", error);
           }
-
-          const { app_session_id } = lookupData;
-          console.log("✅ Recovered app_session_id:", app_session_id);
-
-          // 2. Track Purchase event (client-side pixel)
-          trackMetaEvent("Purchase", {
-            value: 19.0,
-            currency: "USD",
-            content_type: "product",
-            content_name: "2026 Astro Power Map",
-          });
-
-          // 3. Redirect to map (astro data is already in localStorage from reveal flow)
-          window.location.href = "/map?payment=success";
-          return;
-        } catch (error) {
-          console.error("Error handling payment completion:", error);
-          window.location.href = "/map?payment=success";
-          return;
         }
+
+        // 2. Track Purchase event (client-side pixel)
+        trackMetaEvent("Purchase", {
+          value: 19.0,
+          currency: "USD",
+          content_type: "product",
+          content_name: "2026 Astro Power Map",
+        });
+
+        // 3. Restore state from localStorage (saved during reveal flow)
+        let sessionData = null;
+        let astroFromQuiz = null;
+        try {
+          const storedSession = localStorage.getItem("astro_quiz_session");
+          if (storedSession) {
+            sessionData = JSON.parse(storedSession);
+          }
+          const storedAstro = localStorage.getItem("astro_quiz_result");
+          if (storedAstro) {
+            astroFromQuiz = JSON.parse(storedAstro);
+          }
+        } catch {
+          console.error("Failed to restore session from localStorage");
+        }
+
+        // 4. Hydrate state with recovered data
+        if (sessionData?.birthData && astroFromQuiz) {
+          dispatch({
+            type: "HYDRATE_WITH_ASTRO",
+            payload: {
+              email: sessionData.email || "",
+              session_id: appSessionId || sessionData.session_id || "",
+              utm: sessionData.utm || {},
+              quizAnswers: sessionData.quizAnswers || { q1: null, q2: [] },
+              birthData: sessionData.birthData,
+              astroData: astroFromQuiz,
+            },
+          });
+          saveAstroData(astroFromQuiz);
+
+          // Calculate forecast data for confirmation screen
+          try {
+            const natalPositions = calculateNatalPositions(sessionData.birthData);
+            const transitForecast = calculatePowerMonths(natalPositions);
+            const revealForecast = convertToRevealForecast(transitForecast);
+            dispatch({ type: "SET_FORECAST_DATA", payload: revealForecast });
+          } catch (forecastError) {
+            console.error("Forecast calculation error:", forecastError);
+          }
+        }
+
+        // 5. Mark payment complete and show confirmation screen (step 10)
+        dispatch({ type: "SET_PAYMENT_COMPLETE", payload: { orderId: stripeSessionId || "unknown" } });
+        dispatch({ type: "SET_STEP", payload: 10 });
+
+        setIsHydrating(false);
+        setHasHydrated(true);
+        setMounted(true);
+        return;
       }
 
       // DEV MODE: Skip birth data entry, pre-fill and jump to specified step
