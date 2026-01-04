@@ -201,8 +201,42 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Deduplicate leads by email - keep the lead that purchased, or the most recent one
+    // This prevents showing the same email multiple times if user submitted form twice
+    const deduplicatedLeads = (() => {
+      const emailToLead = new Map<string, typeof leads[0]>();
+
+      leads?.forEach(lead => {
+        const existing = emailToLead.get(lead.email);
+        if (!existing) {
+          // First time seeing this email
+          emailToLead.set(lead.email, lead);
+        } else {
+          // We've seen this email before - decide which to keep
+          const existingHasPurchase = purchasedLeadIds.has(existing.id) || purchasedEmails.has(existing.email);
+          const currentHasPurchase = purchasedLeadIds.has(lead.id);
+
+          // Prefer the lead that has a direct purchase link, or the most recent one
+          if (currentHasPurchase && !purchasedLeadIds.has(existing.id)) {
+            // Current lead has direct purchase link, existing doesn't
+            emailToLead.set(lead.email, lead);
+          } else if (!existingHasPurchase && !currentHasPurchase) {
+            // Neither has purchase - keep the one with more data or most recent
+            const existingHasData = existing.birth_date || existing.quiz_q1;
+            const currentHasData = lead.birth_date || lead.quiz_q1;
+            if (currentHasData && !existingHasData) {
+              emailToLead.set(lead.email, lead);
+            }
+            // Otherwise keep existing (which is more recent since we ordered by created_at desc)
+          }
+        }
+      });
+
+      return Array.from(emailToLead.values());
+    })();
+
     // Add purchase details to leads (check by lead_id first, then by email)
-    const leadsWithPurchaseStatus = leads?.map(lead => {
+    const leadsWithPurchaseStatus = deduplicatedLeads.map(lead => {
       const purchaseById = purchasesByLeadId.get(lead.id);
       const purchaseByEmail = purchasesByEmail.get(lead.email);
       const purchase = purchaseById || purchaseByEmail;
@@ -214,7 +248,7 @@ export async function GET(request: NextRequest) {
         purchase_amount: purchase?.amount_cents || null,
         purchase_date: purchase?.completed_at || null,
       };
-    }) || [];
+    });
 
     // Calculate analytics
     const analytics = {

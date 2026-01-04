@@ -22,6 +22,56 @@ import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
 
 const DAILY_MESSAGE_LIMIT = 50;
 
+/**
+ * FAILSAFE: Aggressively strip ANY JSON-like content from a message.
+ * This is the last line of defense - users should NEVER see raw JSON.
+ *
+ * Strips:
+ * - Any {...} blocks
+ * - Any "key": patterns
+ * - Any [...] that look like JSON arrays
+ * - Leftover quotes and colons from partial JSON
+ */
+function sanitizeMessageFailsafe(message: string): string {
+  let clean = message;
+
+  // 1. Remove any complete JSON objects {...}
+  clean = clean.replace(/\{[^{}]*\}/g, "");
+
+  // 2. Remove nested JSON objects (run twice for nested structures)
+  clean = clean.replace(/\{[^{}]*\{[^{}]*\}[^{}]*\}/g, "");
+  clean = clean.replace(/\{[^{}]*\}/g, "");
+
+  // 3. Remove JSON-like key patterns: "key": or "key" :
+  clean = clean.replace(/"[a-zA-Z_]+"\s*:/g, "");
+
+  // 4. Remove JSON arrays that look like suggestions: ["...", "..."]
+  clean = clean.replace(/\[[^\[\]]*"[^\[\]]*"[^\[\]]*\]/g, "");
+
+  // 5. Remove any remaining isolated JSON artifacts
+  clean = clean.replace(/^\s*\[\s*$/, ""); // Lone [
+  clean = clean.replace(/^\s*\]\s*$/, ""); // Lone ]
+  clean = clean.replace(/^\s*\{\s*$/, ""); // Lone {
+  clean = clean.replace(/^\s*\}\s*$/, ""); // Lone }
+
+  // 6. Clean up extra whitespace and newlines left behind
+  clean = clean.replace(/\n\s*\n\s*\n/g, "\n\n"); // Max 2 newlines
+  clean = clean.replace(/\s+$/gm, ""); // Trailing spaces per line
+  clean = clean.trim();
+
+  // 7. If somehow still empty after cleanup, return a fallback
+  if (!clean || clean.length < 10) {
+    // Check if original had meaningful content before the JSON
+    const beforeJson = message.split(/\{/)[0].trim();
+    if (beforeJson && beforeJson.length >= 10) {
+      return beforeJson;
+    }
+    return "The stars are aligning... ask me again? ✨";
+  }
+
+  return clean;
+}
+
 export async function POST(request: NextRequest) {
   try {
     // 1. Get user ID (bypass auth for testing)
@@ -139,24 +189,83 @@ export async function POST(request: NextRequest) {
     // 10. Generate response
     const completion = await openai.chat.completions.create({
       model: GENERATION_SETTINGS.chat.model,
-      temperature: GENERATION_SETTINGS.chat.temperature,
+      reasoning_effort: GENERATION_SETTINGS.chat.reasoning_effort,
+      verbosity: GENERATION_SETTINGS.chat.verbosity,
       max_completion_tokens: GENERATION_SETTINGS.chat.max_completion_tokens,
       messages,
-    });
+      stream: false, // Ensure we get a non-streaming response
+    } as Parameters<typeof openai.chat.completions.create>[0]);
 
-    const stellaResponse = completion.choices[0]?.message?.content || "The stars are quiet right now. Please try again.";
+    // Type assertion: we know this is not a stream since stream: false
+    const chatCompletion = completion as { choices: Array<{ message?: { content?: string | null } }> };
+    const rawResponse = chatCompletion.choices[0]?.message?.content || "The stars are quiet right now. Please try again.";
 
-    // 11. Store both messages
+    // 11. Parse JSON response safely (user never sees raw JSON)
+    let stellaMessage: string;
+    let suggestions: string[] | null = null;
+
+    try {
+      const parsed = JSON.parse(rawResponse);
+      stellaMessage = parsed.message || rawResponse;
+      if (Array.isArray(parsed.suggestions) && parsed.suggestions.length > 0) {
+        suggestions = parsed.suggestions.slice(0, 3);
+      }
+    } catch {
+      // JSON parse failed - AI may have returned message + JSON fragment
+      // Example: "Your message here...\n{\n  \"suggestions\": [...]}\n"
+      // We need to strip any JSON-like content from the end
+
+      stellaMessage = rawResponse;
+
+      // Try to extract suggestions from malformed response
+      const suggestionsMatch = rawResponse.match(/"suggestions"\s*:\s*\[([^\]]+)\]/);
+      if (suggestionsMatch) {
+        try {
+          // Parse the suggestions array
+          const suggestionsStr = `[${suggestionsMatch[1]}]`;
+          const parsedSuggestions = JSON.parse(suggestionsStr);
+          if (Array.isArray(parsedSuggestions)) {
+            suggestions = parsedSuggestions.slice(0, 3);
+          }
+        } catch {
+          // Couldn't parse suggestions, that's okay
+        }
+      }
+
+      // Strip JSON-like content from the message
+      // Pattern: matches { followed by "suggestions" or "message" until closing }
+      stellaMessage = stellaMessage
+        .replace(/\s*\{\s*"suggestions"\s*:\s*\[[^\]]*\]\s*\}\s*$/g, "")
+        .replace(/\s*\{\s*"message"\s*:[\s\S]*$/g, "")
+        .replace(/\s*\{[^{}]*"suggestions"[^{}]*\}\s*$/g, "")
+        .trim();
+
+      // If the message still contains raw JSON markers, do a more aggressive cleanup
+      if (stellaMessage.includes('"suggestions"') || stellaMessage.includes('"message"')) {
+        // Find the last occurrence of a sentence-ending punctuation before JSON starts
+        const jsonStartMatch = stellaMessage.match(/[.!?]["']?\s*[\n\r]*\s*\{/);
+        if (jsonStartMatch && jsonStartMatch.index !== undefined) {
+          stellaMessage = stellaMessage.substring(0, jsonStartMatch.index + 1).trim();
+        }
+      }
+    }
+
+    // 12. FAILSAFE: Final sanitization - NEVER expose JSON to users
+    // This catches anything that slipped through the parsing above
+    stellaMessage = sanitizeMessageFailsafe(stellaMessage);
+
+    // 13. Store both messages (store only the message, not JSON)
     await supabaseAdmin.from("stella_messages").insert([
       { user_id: userId, role: "user", content: userMessage },
-      { user_id: userId, role: "assistant", content: stellaResponse },
+      { user_id: userId, role: "assistant", content: stellaMessage },
     ]);
 
-    // 12. Return response with remaining count
+    // 13. Return response with remaining count and suggestions
     const remaining = DAILY_MESSAGE_LIMIT - (todayCount || 0) - 1;
 
     return NextResponse.json({
-      message: stellaResponse,
+      message: stellaMessage,
+      suggestions,
       remaining,
     });
   } catch (error) {
@@ -273,7 +382,21 @@ TOPIC HINTS (pick ONE to mention, not all):
 - Purpose → North Node
 - Emotions → Moon
 
-Make them feel seen with precision, not volume.`;
+Make them feel seen with precision, not volume.
+
+RESPONSE FORMAT (CRITICAL):
+You MUST respond with valid JSON in this exact format:
+{
+  "message": "Your response text here",
+  "suggestions": ["Short question 1?", "Short question 2?", "Short question 3?"]
+}
+
+- "message": Your warm, personalized response (2-4 sentences)
+- "suggestions": Exactly 3 VERY SHORT follow-up questions (MAX 4 WORDS each!) the user might want to ask next
+
+Example suggestions: ["Best career timing?", "Tell me about Mars", "What's blocking me?", "More on Venus?", "When will love come?"]
+BAD (too long): "Should I define the relationship?" → GOOD: "Define the relationship?"
+BAD (too long): "How do I set boundaries?" → GOOD: "Setting boundaries?"`;
 }
 
 /**

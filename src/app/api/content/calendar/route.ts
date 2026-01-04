@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import type { CalendarEvent, CalendarEventType } from "@/lib/dashboard-types";
-import { calculateMonthPowerDays } from "@/lib/astro/power-days";
+import type { CalendarEvent, CalendarEventType, GoalCategory, BestDay } from "@/lib/dashboard-types";
+import { calculateMonthPowerDays, getBestDaysForGoal } from "@/lib/astro/power-days";
 import { birthDataToJulianDay, calculatePlanetPosition } from "@/lib/astro/calculations";
 import { PLANET_ORDER } from "@/lib/astro/planets";
 import type { BirthData, PlanetPosition } from "@/lib/astro/types";
 import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
+
+/** Valid goal categories for the best day picker */
+const VALID_GOALS: GoalCategory[] = ["love", "career", "creativity", "clarity", "adventure"];
 
 /**
  * Calendar API
@@ -86,6 +89,10 @@ export async function GET(request: NextRequest) {
     // 2. Parse month parameter (default to current month)
     const searchParams = request.nextUrl.searchParams;
     const monthParam = searchParams.get("month");
+    const goalParam = searchParams.get("goal") as GoalCategory | null;
+
+    // Validate goal parameter if provided
+    const validGoal = goalParam && VALID_GOALS.includes(goalParam) ? goalParam : null;
 
     let year: number;
     let month: number;
@@ -182,7 +189,13 @@ export async function GET(request: NextRequest) {
     // 7. Sort events by date
     events.sort((a, b) => a.date.localeCompare(b.date));
 
-    // 8. Format response
+    // 8. Calculate best days for goal if specified
+    let bestDaysForGoal: BestDay[] = [];
+    if (validGoal) {
+      bestDaysForGoal = getBestDaysForGoal(natalPositions, year, month + 1, validGoal, 5);
+    }
+
+    // 9. Format response
     const monthName = new Date(year, month).toLocaleDateString("en-US", {
       month: "long",
       year: "numeric",
@@ -194,6 +207,9 @@ export async function GET(request: NextRequest) {
       events,
       daysInMonth: days.length,
       firstDayOfWeek: new Date(year, month, 1).getDay(), // 0 = Sunday
+      // Best day picker data
+      selectedGoal: validGoal,
+      bestDaysForGoal,
     });
   } catch (error) {
     console.error("Calendar API error:", error);

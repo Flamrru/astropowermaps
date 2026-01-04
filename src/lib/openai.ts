@@ -22,26 +22,38 @@ export const MODELS = {
 
 /**
  * Default generation settings for content APIs.
+ *
+ * GPT-5 chat completions use flat parameters:
+ * - reasoning_effort: "none" | "low" | "medium" | "high"
+ * - verbosity: "low" | "medium" | "high"
  */
 export const GENERATION_SETTINGS = {
+  /** Daily content (scores, forecasts) - fast, concise */
   daily: {
     model: MODELS.FAST,
-    temperature: 0.7,
+    reasoning_effort: "medium" as const,
+    verbosity: "low" as const,
     max_completion_tokens: 500,
   },
+  /** Weekly forecasts - slightly more detailed */
   weekly: {
     model: MODELS.FAST,
-    temperature: 0.7,
+    reasoning_effort: "medium" as const,
+    verbosity: "medium" as const,
     max_completion_tokens: 1500,
   },
+  /** Ritual prompts - creative, concise */
   ritual: {
     model: MODELS.FAST,
-    temperature: 0.8,
+    reasoning_effort: "low" as const,
+    verbosity: "low" as const,
     max_completion_tokens: 300,
   },
+  /** Stella chat - wise, conversational, mobile-friendly */
   chat: {
     model: MODELS.QUALITY,
-    temperature: 0.8,
-    max_completion_tokens: 250, // Keep responses short for mobile chat
+    reasoning_effort: "low" as const,
+    verbosity: "low" as const,
+    max_completion_tokens: 250,
   },
 } as const;

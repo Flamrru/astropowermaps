@@ -50,6 +50,7 @@ export default function WeeklyForecastCard() {
           </div>
 
           {/* Theme badge */}
+          {weeklyForecast.theme && (
           <motion.div
             className="mb-4"
             initial={{ opacity: 0, scale: 0.9 }}
@@ -75,8 +76,10 @@ export default function WeeklyForecastCard() {
               </span>
             </div>
           </motion.div>
+          )}
 
           {/* Power days */}
+          {weeklyForecast.powerDays && weeklyForecast.powerDays.length > 0 && (
           <div className="mb-4">
             <p className="text-white/50 text-xs uppercase tracking-wider mb-2">
               Power Days
@@ -109,11 +112,14 @@ export default function WeeklyForecastCard() {
               ))}
             </div>
           </div>
+          )}
 
           {/* Key insight preview */}
+          {weeklyForecast.keyInsight && (
           <p className="text-white/70 text-sm leading-relaxed mb-4">
             {weeklyForecast.keyInsight}
           </p>
+          )}
 
           {/* Expand button */}
           <motion.button
@@ -151,6 +157,7 @@ export default function WeeklyForecastCard() {
                 className="px-5 pb-5 pt-2 border-t"
                 style={{ borderColor: "rgba(255, 255, 255, 0.06)" }}
               >
+                {weeklyForecast.summary && (
                 <div className="prose prose-sm prose-invert max-w-none">
                   {weeklyForecast.summary.split("\n\n").map((paragraph, i) => (
                     <motion.p
@@ -164,9 +171,10 @@ export default function WeeklyForecastCard() {
                     </motion.p>
                   ))}
                 </div>
+                )}
 
                 {/* Caution days */}
-                {weeklyForecast.cautionDays.length > 0 && (
+                {weeklyForecast.cautionDays && weeklyForecast.cautionDays.length > 0 && (
                   <motion.div
                     className="mt-4 p-3 rounded-xl"
                     initial={{ opacity: 0 }}

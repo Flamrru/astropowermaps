@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useDashboard } from "./DashboardShell";
@@ -16,6 +16,30 @@ import StellaChatDrawer from "./stella/StellaChatDrawer";
 export default function StellaFloatingButton() {
   const { state, dispatch } = useDashboard();
   const [isHovered, setIsHovered] = useState(false);
+  const [chatKey, setChatKey] = useState(0);
+
+  const handleNewChat = async () => {
+    // Clear history from database
+    try {
+      await fetch("/api/stella/history", { method: "DELETE" });
+    } catch {
+      // Silently fail - UI will still reset
+    }
+    // Reset UI state
+    setChatKey((prev) => prev + 1);
+  };
+
+  // Lock body scroll when chat is open
+  useEffect(() => {
+    if (state.isChatOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [state.isChatOpen]);
 
   const toggleChat = () => {
     dispatch({ type: "TOGGLE_CHAT" });
@@ -156,13 +180,13 @@ export default function StellaFloatingButton() {
 
             {/* Chat drawer */}
             <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] rounded-t-3xl overflow-hidden"
+              className="fixed bottom-0 left-0 right-0 z-50 h-[95vh] rounded-t-3xl flex flex-col"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
               style={{
-                background: "rgba(10, 10, 20, 0.95)",
+                background: "rgba(10, 10, 20, 0.98)",
                 backdropFilter: "blur(20px)",
                 WebkitBackdropFilter: "blur(20px)",
                 border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -170,12 +194,12 @@ export default function StellaFloatingButton() {
               }}
             >
               {/* Handle */}
-              <div className="flex justify-center py-3">
+              <div className="flex-shrink-0 flex justify-center py-3">
                 <div className="w-12 h-1 rounded-full bg-white/20" />
               </div>
 
               {/* Header */}
-              <div className="flex items-center justify-between px-5 pb-4 border-b border-white/10">
+              <div className="flex-shrink-0 flex items-center justify-between px-5 pb-4 border-b border-white/10">
                 <div className="flex items-center gap-3">
                   <div
                     className="w-10 h-10 rounded-full overflow-hidden"
@@ -197,16 +221,24 @@ export default function StellaFloatingButton() {
                     <p className="text-white/40 text-xs">Your cosmic guide</p>
                   </div>
                 </div>
-                <button
-                  onClick={toggleChat}
-                  className="p-2 rounded-full hover:bg-white/10 transition-colors"
-                >
-                  <X size={20} className="text-white/60" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleNewChat}
+                    className="text-xs text-white/40 hover:text-white/70 transition-colors px-2 py-1"
+                  >
+                    New chat
+                  </button>
+                  <button
+                    onClick={toggleChat}
+                    className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                  >
+                    <X size={20} className="text-white/60" />
+                  </button>
+                </div>
               </div>
 
               {/* Chat content */}
-              <StellaChatDrawer isOpen={state.isChatOpen} />
+              <StellaChatDrawer isOpen={state.isChatOpen} resetKey={chatKey} />
             </motion.div>
           </>
         )}

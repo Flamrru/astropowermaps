@@ -7,11 +7,11 @@ import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
 import TypingIndicator from "./TypingIndicator";
 import QuickReplies, { DEFAULT_QUICK_REPLIES } from "./QuickReplies";
-import RemainingCounter from "./RemainingCounter";
 import type { ChatMessage as ChatMessageType } from "@/lib/dashboard-types";
 
 interface StellaChatDrawerProps {
   isOpen: boolean;
+  resetKey?: number;
 }
 
 // Derive view context from pathname
@@ -33,7 +33,7 @@ function getViewContext(pathname: string | null): string {
  * - Rate limit display
  * - Quick reply suggestions
  */
-export default function StellaChatDrawer({ isOpen }: StellaChatDrawerProps) {
+export default function StellaChatDrawer({ isOpen, resetKey = 0 }: StellaChatDrawerProps) {
   const pathname = usePathname();
   const viewContext = getViewContext(pathname);
 
@@ -42,9 +42,19 @@ export default function StellaChatDrawer({ isOpen }: StellaChatDrawerProps) {
   const [remaining, setRemaining] = useState(50);
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<string[] | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Reset chat when resetKey changes (user clicked "New chat")
+  useEffect(() => {
+    if (resetKey > 0) {
+      setMessages([]);
+      setError(null);
+      setDynamicSuggestions(null); // Reset to default pills
+    }
+  }, [resetKey]);
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
@@ -133,6 +143,9 @@ export default function StellaChatDrawer({ isOpen }: StellaChatDrawerProps) {
 
       const data = await response.json();
 
+      // Add delay for natural feeling (Stella is "thinking")
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
       // Add assistant message
       const assistantMessage: ChatMessageType = {
         id: `assistant-${Date.now()}`,
@@ -146,6 +159,11 @@ export default function StellaChatDrawer({ isOpen }: StellaChatDrawerProps) {
       // Update remaining count
       if (typeof data.remaining === "number") {
         setRemaining(data.remaining);
+      }
+
+      // Update dynamic suggestions if available
+      if (data.suggestions && Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+        setDynamicSuggestions(data.suggestions);
       }
     } catch (err) {
       console.error("Chat error:", err);
@@ -165,8 +183,8 @@ export default function StellaChatDrawer({ isOpen }: StellaChatDrawerProps) {
   const isDisabled = remaining <= 0;
 
   return (
-    <div className="flex flex-col h-[60vh]">
-      {/* Messages area */}
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      {/* Messages area - scrollable */}
       <div
         ref={containerRef}
         className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
@@ -175,31 +193,31 @@ export default function StellaChatDrawer({ isOpen }: StellaChatDrawerProps) {
           scrollbarColor: "rgba(255,255,255,0.1) transparent",
         }}
       >
-        {/* Empty state with quick replies */}
+        {/* Empty state */}
         {isEmpty && (
-          <div className="flex flex-col items-center justify-center h-full text-center pb-8">
+          <div className="flex flex-col items-center justify-center min-h-[150px] text-center">
             <div
-              className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
+              className="w-14 h-14 rounded-full mx-auto mb-3 flex items-center justify-center"
               style={{
                 background: "rgba(201, 162, 39, 0.1)",
                 border: "1px solid rgba(201, 162, 39, 0.3)",
               }}
             >
-              <span className="text-2xl">✨</span>
+              <span className="text-xl">✨</span>
             </div>
-            <h4 className="text-white font-medium mb-1">Chat with Stella</h4>
-            <p className="text-white/50 text-sm max-w-xs mx-auto mb-6">
-              Ask about your chart, today&apos;s energy, love, career, or anything cosmic.
+            <h4 className="text-white font-medium mb-1 text-sm">Chat with Stella</h4>
+            <p className="text-white/50 text-xs max-w-[200px] mx-auto">
+              Ask about your chart, love, career, or anything cosmic.
             </p>
           </div>
         )}
 
-        {/* Messages */}
-        {messages.map((message, index) => (
+        {/* Messages - show last 5 for clean UI */}
+        {messages.slice(-5).map((message, index, arr) => (
           <ChatMessage
             key={message.id}
             message={message}
-            isLast={index === messages.length - 1}
+            isLast={index === arr.length - 1}
           />
         ))}
 
@@ -219,29 +237,46 @@ export default function StellaChatDrawer({ isOpen }: StellaChatDrawerProps) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick replies (shown when empty or after loading) */}
-      {isEmpty && !isDisabled && (
-        <QuickReplies
-          replies={DEFAULT_QUICK_REPLIES}
-          onSelect={handleQuickReply}
-          disabled={isLoading}
+      {/* Bottom section - ALL fixed elements together */}
+      <div
+        className="flex-shrink-0 pt-4 pb-20"
+        style={{
+          background: "rgba(10, 10, 20, 0.98)",
+          borderTop: "1px solid rgba(255,255,255,0.1)",
+        }}
+      >
+        {/* Quick replies - dynamic based on conversation or default */}
+        {!isDisabled && (
+          <QuickReplies
+            replies={
+              dynamicSuggestions
+                ? dynamicSuggestions.map((text, i) => ({
+                    id: `dyn-${i}`,
+                    text,
+                    prompt: text,
+                    category: "general" as const,
+                    isPersonalized: true,
+                  }))
+                : DEFAULT_QUICK_REPLIES
+            }
+            onSelect={handleQuickReply}
+            disabled={isLoading}
+            showLabel={isEmpty && !dynamicSuggestions}
+          />
+        )}
+
+        {/* Chat input */}
+        <ChatInput
+          onSend={sendMessage}
+          isLoading={isLoading}
+          disabled={isDisabled}
+          placeholder={
+            isDisabled
+              ? "Daily limit reached"
+              : "Ask Stella anything..."
+          }
         />
-      )}
-
-      {/* Remaining counter */}
-      <RemainingCounter remaining={remaining} />
-
-      {/* Input */}
-      <ChatInput
-        onSend={sendMessage}
-        isLoading={isLoading}
-        disabled={isDisabled}
-        placeholder={
-          isDisabled
-            ? "Daily limit reached"
-            : "Ask Stella anything..."
-        }
-      />
+      </div>
     </div>
   );
 }

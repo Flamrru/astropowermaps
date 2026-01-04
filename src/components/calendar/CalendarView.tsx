@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCalendar } from "./CalendarShell";
 import CalendarDay from "./CalendarDay";
 import DayDetailModal from "./DayDetailModal";
+import GoalPicker, { GOAL_CONFIG } from "./GoalPicker";
+import BestDaysPanel from "./BestDaysPanel";
 import type { CalendarEvent } from "@/lib/dashboard-types";
 
 /**
@@ -17,14 +19,19 @@ import type { CalendarEvent } from "@/lib/dashboard-types";
  */
 export default function CalendarView() {
   const router = useRouter();
-  const { state, navigateMonth, goToToday } = useCalendar();
-  const { data, isLoading } = state;
+  const { state, navigateMonth, goToToday, setSelectedGoal, bestDaysForGoal } = useCalendar();
+  const { data, isLoading, selectedGoal } = state;
 
   const [selectedDay, setSelectedDay] = useState<{
     date: string;
     dayNumber: number;
     events: CalendarEvent[];
   } | null>(null);
+
+  // Create a set of best day dates for quick lookup
+  const bestDayDates = useMemo(() => {
+    return new Set(bestDaysForGoal.map((d) => d.date));
+  }, [bestDaysForGoal]);
 
   if (!data) return null;
 
@@ -89,7 +96,7 @@ export default function CalendarView() {
     <>
       <div className="px-4 pt-6">
         {/* Header with navigation */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           {/* Back button */}
           <motion.button
             onClick={() => router.push("/dashboard")}
@@ -100,59 +107,70 @@ export default function CalendarView() {
             <span className="text-sm">Back</span>
           </motion.button>
 
-          {/* Month title */}
-          <motion.h1
-            key={data.month}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-lg font-medium"
-            style={{
-              background: "linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0.7) 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            {data.month}
-          </motion.h1>
-
-          {/* Navigation arrows */}
-          <div className="flex items-center gap-2">
+          {/* Month title + Navigation */}
+          <div className="flex items-center gap-3">
             <motion.button
               onClick={() => navigateMonth("prev")}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="p-2 rounded-full hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
               disabled={isLoading}
             >
-              <ChevronLeft size={18} className="text-white/60" />
+              <ChevronLeft size={16} className="text-white/60" />
             </motion.button>
 
-            {!isCurrentMonth && (
-              <motion.button
-                onClick={goToToday}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-3 py-1 rounded-full text-xs"
-                style={{
-                  background: "rgba(201, 162, 39, 0.2)",
-                  border: "1px solid rgba(201, 162, 39, 0.3)",
-                  color: "#E8C547",
-                }}
-              >
-                Today
-              </motion.button>
-            )}
+            <motion.h1
+              key={data.month}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-lg font-medium min-w-[140px] text-center"
+              style={{
+                background: "linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0.7) 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              {data.month}
+            </motion.h1>
 
             <motion.button
               onClick={() => navigateMonth("next")}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="p-2 rounded-full hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
               disabled={isLoading}
             >
-              <ChevronRight size={18} className="text-white/60" />
+              <ChevronRight size={16} className="text-white/60" />
             </motion.button>
           </div>
+
+          {/* Today button (only when not current month) */}
+          {!isCurrentMonth ? (
+            <motion.button
+              onClick={goToToday}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-3 py-1 rounded-full text-xs"
+              style={{
+                background: "rgba(201, 162, 39, 0.2)",
+                border: "1px solid rgba(201, 162, 39, 0.3)",
+                color: "#E8C547",
+              }}
+            >
+              Today
+            </motion.button>
+          ) : (
+            <div className="w-12" />
+          )}
+        </div>
+
+        {/* Goal Picker - separate row */}
+        <div className="flex justify-center mb-4">
+          <GoalPicker
+            selectedGoal={selectedGoal}
+            onSelectGoal={setSelectedGoal}
+            disabled={isLoading}
+          />
         </div>
 
         {/* Calendar card */}
@@ -183,7 +201,7 @@ export default function CalendarView() {
           <div className="grid grid-cols-7">
             {days.map((day, index) => (
               <CalendarDay
-                key={day.date}
+                key={`${index}-${day.date}`}
                 dayNumber={day.dayNumber}
                 date={day.date}
                 events={day.events}
@@ -199,6 +217,8 @@ export default function CalendarView() {
                   }
                 }}
                 index={index}
+                isBestForGoal={bestDayDates.has(day.date)}
+                goalCategory={selectedGoal}
               />
             ))}
           </div>
@@ -216,6 +236,15 @@ export default function CalendarView() {
             { color: "#E8C547", label: "Full Moon" },
             { color: "#94A3B8", label: "New Moon" },
             { color: "#F87171", label: "Rest Day" },
+            // Add selected goal to legend if active
+            ...(selectedGoal
+              ? [
+                  {
+                    color: GOAL_CONFIG[selectedGoal].color,
+                    label: `Best for ${GOAL_CONFIG[selectedGoal].label.split(" ")[0]}`,
+                  },
+                ]
+              : []),
           ].map((item) => (
             <div key={item.label} className="flex items-center gap-1.5">
               <div
@@ -226,6 +255,26 @@ export default function CalendarView() {
             </div>
           ))}
         </motion.div>
+
+        {/* Best Days Panel - shows when goal is selected */}
+        <AnimatePresence>
+          {selectedGoal && bestDaysForGoal.length > 0 && (
+            <BestDaysPanel
+              bestDays={bestDaysForGoal}
+              goal={selectedGoal}
+              onDayClick={(date) => {
+                const dayData = days.find((d) => d.date === date);
+                if (dayData) {
+                  setSelectedDay({
+                    date: dayData.date,
+                    dayNumber: dayData.dayNumber,
+                    events: dayData.events,
+                  });
+                }
+              }}
+            />
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Day detail modal */}

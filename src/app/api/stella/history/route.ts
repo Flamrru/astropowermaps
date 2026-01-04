@@ -6,10 +6,8 @@ import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
 /**
  * Stella Chat History API
  *
- * Retrieves the user's recent chat history with Stella.
- * Also returns remaining message count for the day.
- *
- * GET /api/stella/history
+ * GET /api/stella/history - Retrieve chat history
+ * DELETE /api/stella/history - Clear chat history (start new conversation)
  */
 
 const DAILY_MESSAGE_LIMIT = 50;
@@ -75,5 +73,46 @@ export async function GET() {
       { messages: [], remaining: DAILY_MESSAGE_LIMIT },
       { status: 200 }
     );
+  }
+}
+
+/**
+ * Clear chat history - start a new conversation
+ */
+export async function DELETE() {
+  try {
+    // 1. Get user ID
+    let userId: string;
+
+    if (BYPASS_AUTH) {
+      userId = TEST_USER_ID;
+    } else {
+      const supabase = await createClient();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = user.id;
+    }
+
+    // 2. Delete all messages for this user
+    const { error: deleteError } = await supabaseAdmin
+      .from("stella_messages")
+      .delete()
+      .eq("user_id", userId);
+
+    if (deleteError) {
+      console.error("Delete error:", deleteError);
+      return NextResponse.json({ error: "Failed to clear history" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Clear history error:", error);
+    return NextResponse.json({ error: "Failed to clear history" }, { status: 500 });
   }
 }

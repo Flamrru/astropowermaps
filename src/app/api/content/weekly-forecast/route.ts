@@ -84,7 +84,8 @@ export async function POST(request: NextRequest) {
 
     const completion = await openai.chat.completions.create({
       model: GENERATION_SETTINGS.weekly.model,
-      temperature: GENERATION_SETTINGS.weekly.temperature,
+      reasoning_effort: GENERATION_SETTINGS.weekly.reasoning_effort,
+      verbosity: GENERATION_SETTINGS.weekly.verbosity,
       max_completion_tokens: GENERATION_SETTINGS.weekly.max_completion_tokens,
       messages: [
         {

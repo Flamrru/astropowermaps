@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { CalendarEvent, CalendarEventType } from "@/lib/dashboard-types";
+import type { CalendarEvent, CalendarEventType, GoalCategory } from "@/lib/dashboard-types";
 
 interface CalendarDayProps {
   dayNumber: number;
@@ -11,7 +11,20 @@ interface CalendarDayProps {
   isCurrentMonth: boolean;
   onClick: () => void;
   index: number;
+  isBestForGoal?: boolean;
+  goalCategory?: GoalCategory | null;
 }
+
+/**
+ * Goal colors for the best day highlight
+ */
+const GOAL_COLORS: Record<GoalCategory, string> = {
+  love: "#EC4899",
+  career: "#3B82F6",
+  creativity: "#F59E0B",
+  clarity: "#8B5CF6",
+  adventure: "#10B981",
+};
 
 /**
  * CalendarDay
@@ -26,7 +39,11 @@ export default function CalendarDay({
   isCurrentMonth,
   onClick,
   index,
+  isBestForGoal = false,
+  goalCategory = null,
 }: CalendarDayProps) {
+  // Get the goal color if this day is best for a goal
+  const goalColor = goalCategory ? GOAL_COLORS[goalCategory] : null;
   // Event type colors
   const eventColors: Record<CalendarEventType, string> = {
     power_day: "#4ADE80",
@@ -86,6 +103,25 @@ export default function CalendarDay({
             ],
           }}
           transition={{ duration: 2, repeat: Infinity }}
+        />
+      )}
+
+      {/* Best for goal highlight ring */}
+      {isBestForGoal && goalColor && isCurrentMonth && !isToday && (
+        <motion.div
+          className="absolute inset-1 rounded-full"
+          style={{
+            border: `2px solid ${goalColor}80`,
+            boxShadow: `0 0 12px ${goalColor}40`,
+          }}
+          animate={{
+            boxShadow: [
+              `0 0 12px ${goalColor}40`,
+              `0 0 20px ${goalColor}50`,
+              `0 0 12px ${goalColor}40`,
+            ],
+          }}
+          transition={{ duration: 2.5, repeat: Infinity }}
         />
       )}
 

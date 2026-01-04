@@ -3,7 +3,7 @@
 import { useEffect, useState, createContext, useContext, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import type { CalendarEvent } from "@/lib/dashboard-types";
+import type { CalendarEvent, GoalCategory, BestDay } from "@/lib/dashboard-types";
 import BottomNav from "@/components/dashboard/BottomNav";
 import StellaChat from "@/components/shared/StellaChat";
 
@@ -17,6 +17,9 @@ interface CalendarData {
   events: CalendarEvent[];
   daysInMonth: number;
   firstDayOfWeek: number;
+  // Best day picker data
+  selectedGoal: GoalCategory | null;
+  bestDaysForGoal: BestDay[];
 }
 
 interface CalendarState {
@@ -24,12 +27,15 @@ interface CalendarState {
   error: string | null;
   data: CalendarData | null;
   currentMonthKey: string;
+  selectedGoal: GoalCategory | null;
 }
 
 interface CalendarContextValue {
   state: CalendarState;
   navigateMonth: (direction: "prev" | "next") => void;
   goToToday: () => void;
+  setSelectedGoal: (goal: GoalCategory | null) => void;
+  bestDaysForGoal: BestDay[];
 }
 
 const CalendarContext = createContext<CalendarContextValue | null>(null);
@@ -99,27 +105,33 @@ export default function CalendarShell({ children }: CalendarShellProps) {
     error: null,
     data: null,
     currentMonthKey: getMonthKey(new Date()),
+    selectedGoal: null,
   });
 
   useEffect(() => {
-    loadCalendarData(state.currentMonthKey);
+    loadCalendarData(state.currentMonthKey, state.selectedGoal);
   }, []);
 
   useEffect(() => {
     if (!state.isLoading && state.data) {
-      loadCalendarData(state.currentMonthKey);
+      loadCalendarData(state.currentMonthKey, state.selectedGoal);
     }
-  }, [state.currentMonthKey]);
+  }, [state.currentMonthKey, state.selectedGoal]);
 
   function getMonthKey(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
   }
 
-  async function loadCalendarData(monthKey: string) {
+  function setSelectedGoal(goal: GoalCategory | null) {
+    setState((prev) => ({ ...prev, selectedGoal: goal }));
+  }
+
+  async function loadCalendarData(monthKey: string, goal: GoalCategory | null = null) {
     setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await fetch(`/api/content/calendar?month=${monthKey}`);
+      const goalParam = goal ? `&goal=${goal}` : "";
+      const response = await fetch(`/api/content/calendar?month=${monthKey}${goalParam}`);
 
       if (response.status === 401) {
         router.push("/login?redirect=/calendar");
@@ -137,12 +149,13 @@ export default function CalendarShell({ children }: CalendarShellProps) {
 
       const data = await response.json();
 
-      setState({
+      setState((prev) => ({
+        ...prev,
         isLoading: false,
         error: null,
         data,
         currentMonthKey: monthKey,
-      });
+      }));
     } catch (error) {
       console.error("Calendar load error:", error);
       setState((prev) => ({
@@ -196,8 +209,11 @@ export default function CalendarShell({ children }: CalendarShellProps) {
     );
   }
 
+  // Get best days from the current data, or empty array if not available
+  const bestDaysForGoal = state.data?.bestDaysForGoal || [];
+
   return (
-    <CalendarContext.Provider value={{ state, navigateMonth, goToToday }}>
+    <CalendarContext.Provider value={{ state, navigateMonth, goToToday, setSelectedGoal, bestDaysForGoal }}>
       <div
         className="min-h-screen pb-24"
         style={{
