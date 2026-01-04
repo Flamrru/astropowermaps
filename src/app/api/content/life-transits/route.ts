@@ -18,7 +18,7 @@ import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
  *
  * GET /api/content/life-transits
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     // 1. Get user ID (bypass auth for testing)
     let userId: string;
@@ -53,7 +53,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 3. Build birth data object
+    // 3. Check for cached life transits (keyed by birth date - never changes)
+    const cacheKey = profile.birth_date;
+
+    const { data: cached } = await supabaseAdmin
+      .from("daily_content")
+      .select("content")
+      .eq("user_id", userId)
+      .eq("content_date", cacheKey)
+      .eq("content_type", "life_transits")
+      .single();
+
+    if (cached?.content) {
+      // Return cached data
+      return NextResponse.json(cached.content);
+    }
+
+    // 4. No cache found - build birth data object
     const birthData: BirthData = {
       date: profile.birth_date,
       time: profile.birth_time || "12:00", // Default to noon if unknown
@@ -66,19 +82,27 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    // 4. Calculate natal positions
+    // 5. Calculate natal positions
     const jd = birthDataToJulianDay(birthData);
     const natalPositions: PlanetPosition[] = PLANET_ORDER.map((planetId) =>
       calculatePlanetPosition(planetId, jd)
     );
 
-    // 5. Calculate lifetime transits
+    // 6. Calculate lifetime transits
     const report = calculateLifetimeTransits(birthData, natalPositions, {
       lifeSpanYears: 90,
       includeChiron: true,
     });
 
-    // 6. Return the report
+    // 7. Cache the result (keyed by birth date - never changes)
+    await supabaseAdmin.from("daily_content").upsert({
+      user_id: userId,
+      content_date: cacheKey,
+      content_type: "life_transits",
+      content: report,
+    });
+
+    // 8. Return the report
     return NextResponse.json(report);
   } catch (error) {
     console.error("Life transits API error:", error);

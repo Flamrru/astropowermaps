@@ -86,7 +86,7 @@ export default function MobileFloatingPill({
             onAnimationComplete={() => {
               setHasShownOnce(true);
             }}
-            className="fixed bottom-24 left-3 right-3 z-30 md:hidden"
+            className="fixed bottom-24 left-3 right-24 z-30 md:hidden"
           >
             {/* Main pill container - V5 glass morphism */}
             <div

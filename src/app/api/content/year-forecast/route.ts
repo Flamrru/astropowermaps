@@ -55,7 +55,24 @@ export async function GET(_request: NextRequest): Promise<NextResponse<YearForec
       userId = user.id;
     }
 
-    // 2. Get user profile with birth data
+    // 2. Check for cached year forecast
+    const currentYear = new Date().getFullYear();
+    const cacheKey = `${currentYear}-01-01`;
+
+    const { data: cached } = await supabaseAdmin
+      .from("daily_content")
+      .select("content")
+      .eq("user_id", userId)
+      .eq("content_date", cacheKey)
+      .eq("content_type", "year_forecast")
+      .single();
+
+    if (cached?.content) {
+      // Return cached data
+      return NextResponse.json(cached.content as YearForecastResponse);
+    }
+
+    // 3. Get user profile with birth data
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("user_profiles")
       .select("birth_date, birth_time, birth_place, birth_lat, birth_lng, birth_timezone")
@@ -106,12 +123,23 @@ export async function GET(_request: NextRequest): Promise<NextResponse<YearForec
     const astroResult = calculateAstrocartography(birthData);
     const lines = astroResult.lines;
 
-    // 7. Return combined response
-    return NextResponse.json({
+    // 7. Build response
+    const response: YearForecastResponse = {
       success: true,
       forecast,
       lines,
+    };
+
+    // 8. Cache the result for the year
+    await supabaseAdmin.from("daily_content").upsert({
+      user_id: userId,
+      content_date: cacheKey,
+      content_type: "year_forecast",
+      content: response,
     });
+
+    // 9. Return response
+    return NextResponse.json(response);
   } catch (error) {
     console.error("Year forecast API error:", error);
     return NextResponse.json(
