@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { BigThree } from "@/lib/dashboard-types";
 import { calculateBigThree } from "@/lib/astro/zodiac";
 import BottomNav from "@/components/dashboard/BottomNav";
-import StellaChat from "@/components/shared/StellaChat";
+import StellaFloatingButton from "@/components/dashboard/StellaFloatingButton";
 
 // ============================================
 // Profile State Types
@@ -276,7 +276,7 @@ export default function ProfileShell({ children }: ProfileShellProps) {
         </AnimatePresence>
 
         {/* Stella chat button */}
-        <StellaChat />
+        <StellaFloatingButton />
 
         {/* Bottom navigation */}
         <BottomNav />

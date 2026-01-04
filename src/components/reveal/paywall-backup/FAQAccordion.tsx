@@ -9,7 +9,7 @@ interface FAQItem {
   answer: string;
 }
 
-// V2 Copy - 6 FAQ items
+// PRD-specified FAQ items - exact copy
 const FAQ_ITEMS: FAQItem[] = [
   {
     question: "How accurate is this if I don't know my exact birth time?",
@@ -19,7 +19,7 @@ const FAQ_ITEMS: FAQItem[] = [
   {
     question: "Is this just generic horoscope stuff?",
     answer:
-      "No. We use VSOP87 — the same planetary algorithm NASA uses — to calculate your exact birth sky. Your 40 lines are computed to sub-degree precision. Two people born one day apart have completely different maps. This isn't 'you're a Scorpio, so...' — this is real astronomical math applied to your specific coordinates in space-time.",
+      "No. This is calculated using your exact birth data and NASA-grade ephemeris coordinates. Two people born a day apart get completely different maps.",
   },
   {
     question: "What if I can't travel to my power cities?",
@@ -29,17 +29,7 @@ const FAQ_ITEMS: FAQItem[] = [
   {
     question: "Do I get instant access?",
     answer:
-      "Yes. Immediately after purchase, everything unlocks instantly — your map, your forecast, Stella, daily scores. All of it.",
-  },
-  {
-    question: "What happens after my trial?",
-    answer:
-      "Your subscription continues at $19.99/month. Cancel anytime with one tap — no calls, no hassle.",
-  },
-  {
-    question: "Does the content update?",
-    answer:
-      "Yes. Your daily score, journal prompts, and transit tracking update every day. Stella is always available. This isn't a static PDF — it's a living tool.",
+      "Yes. Immediately after purchase, your full report unlocks. No waiting, no email delays.",
   },
 ];
 

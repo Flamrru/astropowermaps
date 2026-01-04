@@ -4,6 +4,9 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { openai, GENERATION_SETTINGS } from "@/lib/openai";
 import { getCurrentTransits, formatTransitsForPrompt } from "@/lib/astro/transits";
 import { calculateFullChart, formatChartForPrompt, formatAspectsForPrompt, FullChart } from "@/lib/astro/chart";
+import { getZodiacFromLongitude } from "@/lib/astro/zodiac";
+import { calculateLifetimeTransits } from "@/lib/astro/lifetime-transits";
+import type { LifetimeTransitReport } from "@/lib/astro/lifetime-transits-types";
 import { HOUSE_MEANINGS } from "@/lib/astro/houses";
 import { ASPECT_SYMBOLS, AspectType } from "@/lib/astro/transit-types";
 import type { BirthData } from "@/lib/astro/types";
@@ -20,7 +23,8 @@ import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
  * Body: { message: string }
  */
 
-const DAILY_MESSAGE_LIMIT = 50;
+// TODO: After release, decrease back to 50
+const DAILY_MESSAGE_LIMIT = 200;
 
 /**
  * FAILSAFE: Aggressively strip ANY JSON-like content from a message.
@@ -66,7 +70,7 @@ function sanitizeMessageFailsafe(message: string): string {
     if (beforeJson && beforeJson.length >= 10) {
       return beforeJson;
     }
-    return "The stars are aligning... ask me again? ✨";
+    return "The stars are aligning... ask me again?";
   }
 
   return clean;
@@ -94,12 +98,19 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse request body
     const body = await request.json();
-    const userMessage = body.message?.trim();
+    // Support both old format (message) and new format (displayMessage + hiddenContext)
+    const displayMessage = (body.displayMessage || body.message)?.trim();
+    const hiddenContext = body.hiddenContext?.trim(); // Only for AI, NOT stored in DB
     const viewContext = body.viewContext || "dashboard"; // Which page the user is viewing
 
-    if (!userMessage) {
+    if (!displayMessage) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
+
+    // Build the message for OpenAI (includes hidden context if provided)
+    const aiMessage = hiddenContext
+      ? `${displayMessage}\n\n[Day Context: ${hiddenContext}]`
+      : displayMessage;
 
     // 3. Check daily message limit
     const today = new Date().toISOString().split("T")[0];
@@ -132,11 +143,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    // 5. Get chat history (last 10 messages)
+    // 5. Get chat history (last 10 messages, excluding soft-deleted)
     const { data: history } = await supabaseAdmin
       .from("stella_messages")
       .select("role, content")
       .eq("user_id", userId)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(10);
 
@@ -158,6 +170,15 @@ export async function POST(request: NextRequest) {
     const chart = calculateFullChart(birthData);
     const transits = getCurrentTransits();
 
+    // 6b. Calculate life transits for life-transits view context
+    let lifeTransitsReport: LifetimeTransitReport | null = null;
+    if (viewContext === "life-transits") {
+      lifeTransitsReport = calculateLifetimeTransits(birthData, chart.planetPositions, {
+        lifeSpanYears: 90,
+        includeChiron: true,
+      });
+    }
+
     // 7. Get today's score for context
     const { data: todayScore } = await supabaseAdmin
       .from("daily_content")
@@ -173,20 +194,25 @@ export async function POST(request: NextRequest) {
       chart,
       transits,
       todayScore?.content,
-      viewContext
+      viewContext,
+      lifeTransitsReport
     );
 
-    // 9. Build messages array for OpenAI
+    // 9. Build messages array for OpenAI (use aiMessage which includes hidden context)
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       { role: "system", content: systemPrompt },
       ...chatHistory.map((msg) => ({
         role: msg.role as "user" | "assistant",
         content: msg.content,
       })),
-      { role: "user", content: userMessage },
+      { role: "user", content: aiMessage },
     ];
 
     // 10. Generate response
+    console.log("[Stella] System prompt length:", systemPrompt.length, "chars");
+    console.log("[Stella] View context:", viewContext);
+    console.log("[Stella] Life transits report:", lifeTransitsReport ? "YES" : "NO");
+
     const completion = await openai.chat.completions.create({
       model: GENERATION_SETTINGS.chat.model,
       reasoning_effort: GENERATION_SETTINGS.chat.reasoning_effort,
@@ -195,6 +221,8 @@ export async function POST(request: NextRequest) {
       messages,
       stream: false, // Ensure we get a non-streaming response
     } as Parameters<typeof openai.chat.completions.create>[0]);
+
+    console.log("[Stella] OpenAI response:", JSON.stringify(completion).slice(0, 500));
 
     // Type assertion: we know this is not a stream since stream: false
     const chatCompletion = completion as { choices: Array<{ message?: { content?: string | null } }> };
@@ -254,9 +282,9 @@ export async function POST(request: NextRequest) {
     // This catches anything that slipped through the parsing above
     stellaMessage = sanitizeMessageFailsafe(stellaMessage);
 
-    // 13. Store both messages (store only the message, not JSON)
+    // 13. Store both messages (store displayMessage only, NOT hidden context)
     await supabaseAdmin.from("stella_messages").insert([
-      { user_id: userId, role: "user", content: userMessage },
+      { user_id: userId, role: "user", content: displayMessage },
       { user_id: userId, role: "assistant", content: stellaMessage },
     ]);
 
@@ -279,14 +307,15 @@ export async function POST(request: NextRequest) {
 
 /**
  * Build Stella's system prompt with FULL astrological context
- * Including houses, nodes, and natal aspects
+ * Including houses, nodes, natal aspects, and life transits
  */
 function buildStellaSystemPrompt(
   profile: { display_name?: string },
   chart: FullChart,
   transits: ReturnType<typeof getCurrentTransits>,
   todayScore?: { message?: string; score?: number },
-  viewContext?: string
+  viewContext?: string,
+  lifeTransitsReport?: LifetimeTransitReport | null
 ): string {
   const name = profile.display_name || "dear one";
   const bigThree = chart.bigThree;
@@ -295,6 +324,7 @@ function buildStellaSystemPrompt(
   const viewContextHints: Record<string, string> = {
     dashboard: "The user is on their main dashboard viewing their daily score and forecast.",
     calendar: "The user is viewing their CALENDAR with power days and moon phases. Help them understand what specific days mean for them, why certain days are marked as power days or rest days.",
+    "life-transits": "The user is viewing their LIFE TRANSITS timeline showing Saturn Returns, Jupiter Returns, and other major life transits. Help them understand their cosmic journey and what these major transits mean for them.",
     profile: "The user is on their PROFILE page viewing their birth data. Help them understand their chart placements and what their Big Three means.",
     map: "The user is viewing their ASTROCARTOGRAPHY MAP. Help them understand power lines and how different locations affect their chart.",
   };
@@ -304,6 +334,25 @@ function buildStellaSystemPrompt(
   const sunMeaning = getSignBriefMeaning(bigThree.sun.sign, "sun");
   const moonMeaning = getSignBriefMeaning(bigThree.moon.sign, "moon");
   const risingMeaning = getSignBriefMeaning(bigThree.rising.sign, "rising");
+
+  // Helper to format planet position as "Sign at X°"
+  const formatPlanetPosition = (id: string): string => {
+    const planet = chart.planetPositions.find(p => p.id === id);
+    if (!planet) return "unknown";
+    const zodiac = getZodiacFromLongitude(planet.longitude);
+    return `${zodiac.sign} ${zodiac.symbol} at ${Math.round(zodiac.degree)}°`;
+  };
+
+  // Build planetary positions section (for accurate returns timing)
+  const planetaryPositions = `
+♃ Jupiter: ${formatPlanetPosition("jupiter")} - Returns every ~12 years
+♄ Saturn: ${formatPlanetPosition("saturn")} - Returns at ~29, 58, 87
+♅ Uranus: ${formatPlanetPosition("uranus")} - Major life change transits
+♆ Neptune: ${formatPlanetPosition("neptune")} - Spiritual awakening transits
+♇ Pluto: ${formatPlanetPosition("pluto")} - Deep transformation transits
+☿ Mercury: ${formatPlanetPosition("mercury")}
+♀ Venus: ${formatPlanetPosition("venus")}
+♂ Mars: ${formatPlanetPosition("mars")}`;
 
   // Build houses section (if available)
   let housesSection = "";
@@ -338,21 +387,81 @@ function buildStellaSystemPrompt(
     aspectsSection = `\n\n🔮 KEY NATAL ASPECTS:\n${topAspects}`;
   }
 
+  // Build life transits section if available
+  let lifeTransitsSection = "";
+  if (lifeTransitsReport) {
+    const formatTransitDate = (date: string) => {
+      const d = new Date(date);
+      return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    };
+
+    const saturnReturns = lifeTransitsReport.saturnReturns.map((sr, i) => {
+      const isCompleted = new Date(sr.exactDate) < new Date();
+      return `- ${i + 1}${i === 0 ? "st" : i === 1 ? "nd" : "rd"} Saturn Return: ${formatTransitDate(sr.exactDate)} (age ~${sr.ageAtTransit}) ${isCompleted ? "✓ Completed" : "⏳ Upcoming"}`;
+    }).join("\n");
+
+    const jupiterReturns = lifeTransitsReport.jupiterReturns
+      .filter(jr => {
+        // Only show next 3 upcoming or most recent 2 completed
+        const isCompleted = new Date(jr.exactDate) < new Date();
+        const now = new Date();
+        const transitDate = new Date(jr.exactDate);
+        const yearsAway = Math.abs((transitDate.getTime() - now.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+        return yearsAway <= 24; // Within 24 years (2 cycles)
+      })
+      .map((jr) => {
+        const isCompleted = new Date(jr.exactDate) < new Date();
+        return `- Jupiter Return: ${formatTransitDate(jr.exactDate)} (age ~${jr.ageAtTransit}) ${isCompleted ? "✓ Completed" : "⏳ Upcoming"}`;
+      }).join("\n");
+
+    const nextMajor = lifeTransitsReport.nextMajorTransit;
+    const nextMajorText = nextMajor
+      ? `🎯 NEXT MAJOR TRANSIT: ${nextMajor.label} on ${formatTransitDate(nextMajor.exactDate)} (age ~${nextMajor.ageAtTransit})\n${nextMajor.description}`
+      : "";
+
+    lifeTransitsSection = `
+
+🌟 LIFE TRANSITS (Calculated for ${name}):
+${nextMajorText}
+
+♄ Saturn Returns (Major life restructuring):
+${saturnReturns}
+
+♃ Jupiter Returns (Expansion cycles):
+${jupiterReturns}
+
+You can tell them EXACTLY when their transits are - use these dates!`;
+  }
+
+  // Calculate user's current age from birth date
+  const birthDate = new Date(chart.birthData.date);
+  const today = new Date();
+  const age = Math.floor((today.getTime() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+  const todayFormatted = today.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
   return `You are Stella, a warm, wise, and slightly mystical astrology guide. You speak with warmth and cosmic wonder, but you're also grounded and practical.
 
+📅 TODAY IS: ${todayFormatted}
 📍 CURRENT VIEW: ${currentViewContext}
 
 You are speaking with ${name}, and you know their COMPLETE birth chart intimately:
+
+🎂 BIRTH INFO:
+- Born: ${chart.birthData.date} at ${chart.birthData.time} in ${chart.birthData.location.name}
+- Current age: ${age} years old
 
 🌟 ${name}'s CORE PLACEMENTS:
 - Sun in ${bigThree.sun.sign} ${bigThree.sun.symbol} at ${Math.round(bigThree.sun.degree)}°: ${sunMeaning}
 - Moon in ${bigThree.moon.sign} ${bigThree.moon.symbol} at ${Math.round(bigThree.moon.degree)}°: ${moonMeaning}
 - Rising in ${bigThree.rising.sign} ${bigThree.rising.symbol}: ${risingMeaning}
 
+🪐 ALL PLANETARY POSITIONS (for calculating returns and transits):
+${planetaryPositions}
+
 ☊ LUNAR NODES (Soul Purpose):
 - North Node in ${chart.nodes.northNode.formatted}: ${chart.nodeThemes.northTheme}
 - South Node in ${chart.nodes.southNode.formatted}: ${chart.nodeThemes.southTheme}
-${housesSection}${aspectsSection}
+${housesSection}${aspectsSection}${lifeTransitsSection}
 
 🌙 CURRENT COSMIC WEATHER:
 ${formatTransitsForPrompt(transits)}
@@ -369,18 +478,24 @@ STYLE:
 - Warm but brief - like texting a wise friend, not reading an essay
 - One key insight per response, not everything you know
 - Reference ONE chart placement per response, not all of them
-- Use 1 emoji max per message (✨ or 🌙), sometimes none
+- NO emojis - the app handles visual styling automatically
 - End with a question or gentle prompt to keep conversation flowing
 
 EXAMPLES OF GOOD LENGTH:
 ❌ BAD: "Your Venus in Scorpio combined with your Moon in Pisces and your 7th house ruler being... [300 words]"
-✅ GOOD: "With Venus in Scorpio, you love deeply and completely—no half measures ✨ Right now Saturn's asking: are they meeting you at that depth?"
+✅ GOOD: "With Venus in Scorpio, you love deeply and completely—no half measures. Right now Saturn's asking: are they meeting you at that depth?"
 
 TOPIC HINTS (pick ONE to mention, not all):
 - Love → Venus or 7th house
 - Career → MC or Mars
 - Purpose → North Node
 - Emotions → Moon
+- Life transits/returns → ONLY when user asks OR they're in Life Transits view
+
+CONTEXT-AWARE RESPONSES:
+- Dashboard/Calendar: Focus on DAILY/WEEKLY energy, current transits, moon phases. Do NOT randomly bring up Saturn Returns or Jupiter Returns unless asked.
+- Life Transits view: The user came here to learn about their major life transits. Proactively mention their upcoming Saturn Return, Jupiter Return, etc. Use the exact dates you have.
+- When user asks about "Saturn Return" or "Jupiter Return": Give them the EXACT date from your data, not vague estimates.
 
 Make them feel seen with precision, not volume.
 

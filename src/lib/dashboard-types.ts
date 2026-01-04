@@ -155,6 +155,58 @@ export interface CalendarSettings {
 }
 
 // ============================================
+// Enhanced Day Detail
+// ============================================
+
+export type AspectType =
+  | "conjunction"
+  | "sextile"
+  | "square"
+  | "trine"
+  | "opposition";
+
+export interface DayTransit {
+  planet1: string;          // "sun" (transiting planet)
+  aspect: AspectType;       // "trine"
+  planet2: string;          // "jupiter" (natal planet)
+  isNatal: boolean;         // true if hitting user's natal planet
+  symbol: string;           // "☉ △ ♃"
+  label: string;            // "Sun trine your Jupiter"
+  shortText: string;        // 1 sentence interpretation
+  fullText: string;         // 3-4 sentences (expanded view)
+  significance: number;     // 1-10 for sorting (higher = more important)
+}
+
+export interface MoonInfo {
+  phase: string;            // "Waxing Gibbous"
+  sign: string;             // "Scorpio"
+  meaning: string;          // "Deep emotions, transformation"
+  illumination: number;     // 0-100 percentage
+}
+
+export interface DayRitual {
+  title: string;            // "Jupiter Expansion Ritual"
+  context: string;          // Why this ritual today
+  steps: string[];          // Actionable steps
+  timing: string;           // "Morning, facing sunlight"
+}
+
+export interface EnhancedDayData {
+  date: string;
+  score: number;            // 0-100
+  scoreLabel: "power" | "balanced" | "rest";
+  summary: string;          // 1-2 sentence personalized overview
+
+  moon: MoonInfo;
+  transits: DayTransit[];
+  bestFor: string[];        // 3-4 activities
+  avoid: string[];          // 2-3 cautions
+
+  ritual?: DayRitual;
+  journalPrompt?: string;
+}
+
+// ============================================
 // Dashboard State
 // ============================================
 

@@ -138,6 +138,7 @@ export default function BottomNav() {
           {/* Floating orb indicator */}
           <motion.div
             className="absolute top-2 h-12 pointer-events-none"
+            style={{ width: "64px" }}
             initial={false}
             animate={{
               left: `${activeIndex * 25 + 12.5}%`,
@@ -151,12 +152,13 @@ export default function BottomNav() {
           >
             {/* Outer glow */}
             <div
-              className="absolute inset-0 rounded-2xl"
+              className="absolute rounded-2xl"
               style={{
                 background: `radial-gradient(ellipse at center, var(--element-glow, rgba(201, 162, 39, 0.4)) 0%, transparent 70%)`,
                 width: "80px",
                 height: "48px",
-                left: "-16px",
+                left: "50%",
+                transform: "translateX(-50%)",
                 top: "0",
                 filter: "blur(8px)",
               }}
@@ -168,7 +170,8 @@ export default function BottomNav() {
                 background: `linear-gradient(180deg, var(--element-primary, #E8C547)15 0%, transparent 100%)`,
                 width: "48px",
                 height: "32px",
-                left: "0",
+                left: "50%",
+                transform: "translateX(-50%)",
                 top: "4px",
                 opacity: 0.5,
               }}

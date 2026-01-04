@@ -9,6 +9,8 @@ import CalendarDay from "./CalendarDay";
 import DayDetailModal from "./DayDetailModal";
 import GoalPicker, { GOAL_CONFIG } from "./GoalPicker";
 import BestDaysPanel from "./BestDaysPanel";
+import CalendarTabs, { type CalendarTabType } from "./CalendarTabs";
+import LifeTransitsView from "./LifeTransitsView";
 import type { CalendarEvent } from "@/lib/dashboard-types";
 
 /**
@@ -16,22 +18,38 @@ import type { CalendarEvent } from "@/lib/dashboard-types";
  *
  * Monthly calendar grid with cosmic styling.
  * Shows power days, moon phases, and rest days.
+ * Includes tabs to switch between monthly view and life transits.
  */
 export default function CalendarView() {
   const router = useRouter();
-  const { state, navigateMonth, goToToday, setSelectedGoal, bestDaysForGoal } = useCalendar();
+  const { state, navigateMonth, goToToday, setSelectedGoal, bestDaysForGoal, openStellaWithContext, activeCalendarTab, setActiveCalendarTab } = useCalendar();
   const { data, isLoading, selectedGoal } = state;
 
+  // Use tab state from context (lifted for Stella awareness)
+  const activeTab = activeCalendarTab;
+  const setActiveTab = setActiveCalendarTab;
   const [selectedDay, setSelectedDay] = useState<{
     date: string;
     dayNumber: number;
-    events: CalendarEvent[];
   } | null>(null);
 
   // Create a set of best day dates for quick lookup
   const bestDayDates = useMemo(() => {
     return new Set(bestDaysForGoal.map((d) => d.date));
   }, [bestDaysForGoal]);
+
+  // If Life Transits tab is active, render that view
+  if (activeTab === "transits") {
+    return (
+      <div className="px-4 pt-6">
+        {/* Tab switcher at top */}
+        <div className="mb-4">
+          <CalendarTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        </div>
+        <LifeTransitsView />
+      </div>
+    );
+  }
 
   if (!data) return null;
 
@@ -95,6 +113,11 @@ export default function CalendarView() {
   return (
     <>
       <div className="px-4 pt-6">
+        {/* Tab switcher - at the very top */}
+        <div className="mb-4">
+          <CalendarTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        </div>
+
         {/* Header with navigation */}
         <div className="flex items-center justify-between mb-4">
           {/* Back button */}
@@ -212,7 +235,6 @@ export default function CalendarView() {
                     setSelectedDay({
                       date: day.date,
                       dayNumber: day.dayNumber,
-                      events: day.events,
                     });
                   }
                 }}
@@ -268,7 +290,6 @@ export default function CalendarView() {
                   setSelectedDay({
                     date: dayData.date,
                     dayNumber: dayData.dayNumber,
-                    events: dayData.events,
                   });
                 }
               }}
@@ -283,8 +304,8 @@ export default function CalendarView() {
           <DayDetailModal
             date={selectedDay.date}
             dayNumber={selectedDay.dayNumber}
-            events={selectedDay.events}
             onClose={() => setSelectedDay(null)}
+            onAskStella={openStellaWithContext}
           />
         )}
       </AnimatePresence>

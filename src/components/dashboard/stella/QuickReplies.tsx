@@ -97,3 +97,85 @@ export const DEFAULT_QUICK_REPLIES: QuickReply[] = [
     isPersonalized: true,
   },
 ];
+
+/**
+ * Calendar-specific quick replies when Stella is opened from the calendar
+ */
+export const CALENDAR_QUICK_REPLIES: QuickReply[] = [
+  {
+    id: "best-days",
+    text: "Best days this month",
+    prompt: "Which are my best days this month and why?",
+    category: "general",
+    isPersonalized: true,
+  },
+  {
+    id: "power-days",
+    text: "Power days explained",
+    prompt: "What makes a day a 'power day' for me?",
+    category: "general",
+    isPersonalized: true,
+  },
+  {
+    id: "moon-phases",
+    text: "Moon phases",
+    prompt: "How do the moon phases this month affect my energy?",
+    category: "general",
+    isPersonalized: true,
+  },
+  {
+    id: "plan-week",
+    text: "Plan my week",
+    prompt: "Help me plan my week based on the cosmic calendar.",
+    category: "general",
+    isPersonalized: true,
+  },
+  {
+    id: "rest-days",
+    text: "Rest days",
+    prompt: "Why do I have rest days and how should I use them?",
+    category: "general",
+    isPersonalized: true,
+  },
+];
+
+/**
+ * Life Transits-specific quick replies when Stella is opened from the Life Transits tab
+ */
+export const LIFE_TRANSITS_QUICK_REPLIES: QuickReply[] = [
+  {
+    id: "saturn-return",
+    text: "My Saturn Return",
+    prompt: "Tell me about my Saturn Return - when is it and what should I expect?",
+    category: "general",
+    isPersonalized: true,
+  },
+  {
+    id: "jupiter-return",
+    text: "Jupiter Return",
+    prompt: "What is a Jupiter Return and when is my next one?",
+    category: "general",
+    isPersonalized: true,
+  },
+  {
+    id: "next-transit",
+    text: "My next big transit",
+    prompt: "What's my next major life transit and how should I prepare for it?",
+    category: "general",
+    isPersonalized: true,
+  },
+  {
+    id: "chiron-return",
+    text: "Chiron Return",
+    prompt: "What is the Chiron Return and what does it mean for my healing journey?",
+    category: "general",
+    isPersonalized: true,
+  },
+  {
+    id: "outer-planets",
+    text: "Outer planet transits",
+    prompt: "How do outer planet transits like Uranus, Neptune, and Pluto affect my life?",
+    category: "general",
+    isPersonalized: true,
+  },
+];

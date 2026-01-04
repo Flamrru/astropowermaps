@@ -6,12 +6,23 @@ import { usePathname } from "next/navigation";
 import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
 import TypingIndicator from "./TypingIndicator";
-import QuickReplies, { DEFAULT_QUICK_REPLIES } from "./QuickReplies";
+import QuickReplies, { DEFAULT_QUICK_REPLIES, CALENDAR_QUICK_REPLIES, LIFE_TRANSITS_QUICK_REPLIES } from "./QuickReplies";
 import type { ChatMessage as ChatMessageType } from "@/lib/dashboard-types";
 
 interface StellaChatDrawerProps {
   isOpen: boolean;
   resetKey?: number;
+  /** Pre-filled data from "Ask Stella about this day" */
+  prefillContext?: {
+    /** Friendly message shown to user (e.g., "Tell me about January 5th") */
+    displayMessage: string;
+    /** Technical context for AI (score, transits, moon) - not shown to user */
+    hiddenContext: string;
+  } | null;
+  /** Callback when prefill context has been consumed */
+  onPrefillConsumed?: () => void;
+  /** Override view context (e.g., "life-transits" from calendar tab) */
+  viewHint?: string;
 }
 
 // Derive view context from pathname
@@ -33,9 +44,16 @@ function getViewContext(pathname: string | null): string {
  * - Rate limit display
  * - Quick reply suggestions
  */
-export default function StellaChatDrawer({ isOpen, resetKey = 0 }: StellaChatDrawerProps) {
+export default function StellaChatDrawer({
+  isOpen,
+  resetKey = 0,
+  prefillContext,
+  onPrefillConsumed,
+  viewHint,
+}: StellaChatDrawerProps) {
   const pathname = usePathname();
-  const viewContext = getViewContext(pathname);
+  // Use viewHint if provided (from parent), otherwise derive from pathname
+  const viewContext = viewHint || getViewContext(pathname);
 
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +64,9 @@ export default function StellaChatDrawer({ isOpen, resetKey = 0 }: StellaChatDra
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Stable boolean for dependency arrays (avoids array size changes)
+  const hasPrefillContext = !!prefillContext;
 
   // Reset chat when resetKey changes (user clicked "New chat")
   useEffect(() => {
@@ -68,23 +89,44 @@ export default function StellaChatDrawer({ isOpen, resetKey = 0 }: StellaChatDra
   }, [messages, scrollToBottom]);
 
   // Load chat history when drawer opens (if not already loaded)
+  // Always load history to get the remaining count, even with prefillContext
   useEffect(() => {
     if (isOpen && !hasLoadedHistory) {
-      loadChatHistory();
+      // When prefillContext is provided, skip loading old messages (fresh start)
+      // but still fetch the remaining count for rate limiting
+      loadChatHistory(hasPrefillContext);
     }
-  }, [isOpen, hasLoadedHistory]);
+  }, [isOpen, hasLoadedHistory, hasPrefillContext]);
+
+  // Auto-send prefill context when provided (e.g., "Ask Stella about this day")
+  useEffect(() => {
+    if (prefillContext && isOpen && hasLoadedHistory && !isLoading) {
+      // Clear suggestions for fresh experience
+      setDynamicSuggestions(null);
+      // Send with hidden context for AI, but show friendly message to user
+      // Pass clearFirst=true to start with a clean slate
+      sendMessageWithContext(prefillContext.displayMessage, prefillContext.hiddenContext, true);
+      // Defer consuming context to next frame so React can render the message first
+      requestAnimationFrame(() => {
+        onPrefillConsumed?.();
+      });
+    }
+  }, [prefillContext, isOpen, hasLoadedHistory, isLoading]);
 
   /**
    * Load chat history from the database
+   * @param skipMessages - If true, only load remaining count (for "Ask Stella about this day")
    */
-  const loadChatHistory = async () => {
+  const loadChatHistory = async (skipMessages = false) => {
     try {
       const response = await fetch("/api/stella/history");
       if (response.ok) {
         const data = await response.json();
-        if (data.messages && data.messages.length > 0) {
+        // Only set messages if we're not skipping them (normal chat opening)
+        if (!skipMessages && data.messages && data.messages.length > 0) {
           setMessages(data.messages);
         }
+        // Always get remaining count
         if (typeof data.remaining === "number") {
           setRemaining(data.remaining);
         }
@@ -101,28 +143,48 @@ export default function StellaChatDrawer({ isOpen, resetKey = 0 }: StellaChatDra
    * Send a message to Stella
    */
   const sendMessage = async (content: string) => {
+    return sendMessageWithContext(content);
+  };
+
+  /**
+   * Send a message with optional hidden context (for "Ask Stella about this day")
+   * Shows displayMessage to user, but passes hiddenContext to API for better responses
+   * @param clearFirst - If true, clears previous messages before adding new one (for fresh day questions)
+   */
+  const sendMessageWithContext = async (displayMessage: string, hiddenContext?: string, clearFirst?: boolean) => {
     if (isLoading || remaining <= 0) return;
 
     // Clear any previous error
     setError(null);
 
-    // Create user message
+    // Create user message (what the user sees)
     const userMessage: ChatMessageType = {
       id: `user-${Date.now()}`,
       role: "user",
-      content,
+      content: displayMessage,
       createdAt: new Date().toISOString(),
     };
 
     // Add user message immediately (optimistic update)
-    setMessages((prev) => [...prev, userMessage]);
+    // If clearFirst is true, start fresh with just this message
+    if (clearFirst) {
+      setMessages([userMessage]);
+    } else {
+      setMessages((prev) => [...prev, userMessage]);
+    }
     setIsLoading(true);
 
     try {
+      // Send displayMessage and hiddenContext as separate fields
+      // API stores only displayMessage, uses hiddenContext for AI prompt
       const response = await fetch("/api/stella/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: content, viewContext }),
+        body: JSON.stringify({
+          displayMessage,
+          hiddenContext,
+          viewContext,
+        }),
       });
 
       if (response.status === 429) {
@@ -245,7 +307,7 @@ export default function StellaChatDrawer({ isOpen, resetKey = 0 }: StellaChatDra
           borderTop: "1px solid rgba(255,255,255,0.1)",
         }}
       >
-        {/* Quick replies - dynamic based on conversation or default */}
+        {/* Quick replies - context-aware based on page and conversation */}
         {!isDisabled && (
           <QuickReplies
             replies={
@@ -257,7 +319,11 @@ export default function StellaChatDrawer({ isOpen, resetKey = 0 }: StellaChatDra
                     category: "general" as const,
                     isPersonalized: true,
                   }))
-                : DEFAULT_QUICK_REPLIES
+                : viewContext === "life-transits"
+                  ? LIFE_TRANSITS_QUICK_REPLIES
+                  : viewContext === "calendar"
+                    ? CALENDAR_QUICK_REPLIES
+                    : DEFAULT_QUICK_REPLIES
             }
             onSelect={handleQuickReply}
             disabled={isLoading}

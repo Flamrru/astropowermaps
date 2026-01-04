@@ -3,20 +3,40 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { useDashboard } from "./DashboardShell";
-import { X, MessageCircle } from "lucide-react";
+import { X } from "lucide-react";
 import StellaChatDrawer from "./stella/StellaChatDrawer";
+
+interface StellaContext {
+  displayMessage: string;
+  hiddenContext: string;
+}
+
+interface StellaFloatingButtonProps {
+  /** Pre-filled context from "Ask Stella about this day" */
+  externalContext?: StellaContext | null;
+  /** Callback when context has been consumed */
+  onContextConsumed?: () => void;
+  /** Override view context (e.g., "life-transits" when on Life Transits tab) */
+  viewHint?: string;
+}
 
 /**
  * StellaFloatingButton
  *
- * Floating chat button that opens a chat modal/drawer for Stella AI.
- * Uses the Stella avatar from the palm-reader branch.
+ * Self-contained floating chat button that works in any page.
+ * Opens a full-height drawer with the Stella AI chat interface.
+ *
+ * Can be triggered externally via externalContext prop (e.g., from Day Detail Modal).
  */
-export default function StellaFloatingButton() {
-  const { state, dispatch } = useDashboard();
+export default function StellaFloatingButton({
+  externalContext,
+  onContextConsumed,
+  viewHint,
+}: StellaFloatingButtonProps = {}) {
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [chatKey, setChatKey] = useState(0);
+  const [pendingContext, setPendingContext] = useState<StellaContext | null>(null);
 
   const handleNewChat = async () => {
     // Clear history from database
@@ -29,9 +49,19 @@ export default function StellaFloatingButton() {
     setChatKey((prev) => prev + 1);
   };
 
+  // Auto-open when external context is provided (e.g., "Ask Stella about this day")
+  useEffect(() => {
+    if (externalContext) {
+      setPendingContext(externalContext);
+      setIsChatOpen(true);
+      // Clear the external context so it doesn't re-trigger
+      onContextConsumed?.();
+    }
+  }, [externalContext, onContextConsumed]);
+
   // Lock body scroll when chat is open
   useEffect(() => {
-    if (state.isChatOpen) {
+    if (isChatOpen) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "";
@@ -39,10 +69,10 @@ export default function StellaFloatingButton() {
     return () => {
       document.body.style.overflow = "";
     };
-  }, [state.isChatOpen]);
+  }, [isChatOpen]);
 
   const toggleChat = () => {
-    dispatch({ type: "TOGGLE_CHAT" });
+    setIsChatOpen((prev) => !prev);
   };
 
   return (
@@ -165,22 +195,22 @@ export default function StellaFloatingButton() {
         />
       </motion.button>
 
-      {/* Chat Modal Placeholder */}
+      {/* Chat drawer */}
       <AnimatePresence>
-        {state.isChatOpen && (
+        {isChatOpen && (
           <>
-            {/* Backdrop */}
+            {/* Backdrop - z-50 to appear above BottomNav (z-40) */}
             <motion.div
-              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={toggleChat}
             />
 
-            {/* Chat drawer */}
+            {/* Chat drawer - z-[60] to appear above backdrop */}
             <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50 h-[95vh] rounded-t-3xl flex flex-col"
+              className="fixed bottom-0 left-0 right-0 z-[60] h-[95vh] rounded-t-3xl flex flex-col"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -238,7 +268,13 @@ export default function StellaFloatingButton() {
               </div>
 
               {/* Chat content */}
-              <StellaChatDrawer isOpen={state.isChatOpen} resetKey={chatKey} />
+              <StellaChatDrawer
+                isOpen={isChatOpen}
+                resetKey={chatKey}
+                prefillContext={pendingContext}
+                onPrefillConsumed={() => setPendingContext(null)}
+                viewHint={viewHint}
+              />
             </motion.div>
           </>
         )}

@@ -10,7 +10,8 @@ import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
  * DELETE /api/stella/history - Clear chat history (start new conversation)
  */
 
-const DAILY_MESSAGE_LIMIT = 50;
+// TODO: After release, decrease back to 50
+const DAILY_MESSAGE_LIMIT = 200;
 
 export async function GET() {
   try {
@@ -32,11 +33,12 @@ export async function GET() {
       userId = user.id;
     }
 
-    // 2. Get chat history (last 50 messages)
+    // 2. Get chat history (last 50 messages, excluding soft-deleted)
     const { data: messages, error: historyError } = await supabaseAdmin
       .from("stella_messages")
       .select("id, role, content, created_at")
       .eq("user_id", userId)
+      .is("deleted_at", null)
       .order("created_at", { ascending: true })
       .limit(50);
 
@@ -78,6 +80,7 @@ export async function GET() {
 
 /**
  * Clear chat history - start a new conversation
+ * Uses SOFT DELETE: messages are marked as deleted but preserved in database
  */
 export async function DELETE() {
   try {
@@ -99,14 +102,15 @@ export async function DELETE() {
       userId = user.id;
     }
 
-    // 2. Delete all messages for this user
+    // 2. Soft delete: mark messages as deleted (preserves all data)
     const { error: deleteError } = await supabaseAdmin
       .from("stella_messages")
-      .delete()
-      .eq("user_id", userId);
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .is("deleted_at", null); // Only mark currently visible messages
 
     if (deleteError) {
-      console.error("Delete error:", deleteError);
+      console.error("Soft delete error:", deleteError);
       return NextResponse.json({ error: "Failed to clear history" }, { status: 500 });
     }
 

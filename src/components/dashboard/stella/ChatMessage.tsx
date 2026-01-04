@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import type { ChatMessage as ChatMessageType } from "@/lib/dashboard-types";
+import RichMessageRenderer from "./RichMessageRenderer";
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -64,14 +65,18 @@ export default function ChatMessage({ message, isLast }: ChatMessageProps) {
               }
         }
       >
-        <p
+        <div
           className="text-sm leading-relaxed whitespace-pre-wrap"
           style={{
             color: isUser ? "rgba(232, 197, 71, 0.95)" : "rgba(255, 255, 255, 0.9)",
           }}
         >
-          {message.content}
-        </p>
+          {isUser ? (
+            message.content
+          ) : (
+            <RichMessageRenderer content={message.content} />
+          )}
+        </div>
       </div>
     </motion.div>
   );

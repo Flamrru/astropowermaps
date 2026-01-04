@@ -38,29 +38,74 @@ export interface DailyScore {
 
 /** Thresholds for day classification */
 const POWER_THRESHOLD = 70; // Score 70+ = Power Day
-const REST_THRESHOLD = 25; // Score 25- = Rest Day
+const REST_THRESHOLD = 30; // Score 30- = Rest Day
 
-/** Nature modifiers - how much each aspect type contributes */
-function getNatureModifier(aspectType: AspectType): number {
-  const nature = ASPECTS[aspectType].nature;
-  switch (nature) {
-    case "harmonious":
-      return 1.0; // Trines, sextiles - full power
-    case "major":
-      return 0.9; // Conjunctions - powerful but depends on planets
-    case "awareness":
-      return 0.7; // Oppositions - tension but awareness
-    case "challenging":
-      return 0.5; // Squares - still count but reduced
-    case "minor-harmonious":
-      return 0.6; // Semi-sextiles
-    case "adjustment":
-      return 0.4; // Quincunx
-    case "minor-challenging":
-      return 0.3; // Semi-square, sesquiquadrate
-    default:
-      return 0.5;
+// ============================================
+// Flow Score Constants (Variation F)
+// ============================================
+
+/** Aspect types by nature */
+const HARMONIOUS_ASPECTS: AspectType[] = ["trine", "sextile"];
+const CHALLENGING_ASPECTS: AspectType[] = ["square", "opposition"];
+const CONJUNCTION_ASPECT: AspectType = "conjunction";
+
+/** Planet categories for weighting */
+const LUMINARIES: PlanetId[] = ["sun", "moon"];
+const PERSONAL_PLANETS: PlanetId[] = ["mercury", "venus", "mars"];
+const BENEFIC_PLANETS: PlanetId[] = ["venus", "jupiter"];
+const MALEFIC_PLANETS: PlanetId[] = ["mars", "saturn"];
+
+/**
+ * Determine if a conjunction is harmonious based on planets involved
+ * Benefics (Venus, Jupiter) create harmonious conjunctions
+ */
+function isConjunctionHarmonious(aspect: PlanetaryAspect): boolean {
+  return (
+    BENEFIC_PLANETS.includes(aspect.transitPlanet) ||
+    BENEFIC_PLANETS.includes(aspect.natalPlanet)
+  );
+}
+
+/**
+ * Determine if a conjunction is challenging based on planets involved
+ * Malefics (Mars, Saturn) create challenging conjunctions
+ */
+function isConjunctionChallenging(aspect: PlanetaryAspect): boolean {
+  return (
+    MALEFIC_PLANETS.includes(aspect.transitPlanet) ||
+    MALEFIC_PLANETS.includes(aspect.natalPlanet)
+  );
+}
+
+/**
+ * Get planet weight based on category
+ * Luminaries (Sun/Moon) = 2.0x, Personal (Mercury/Venus/Mars) = 1.5x, Outer = 1.0x
+ */
+function getPlanetWeight(aspect: PlanetaryAspect): number {
+  if (
+    LUMINARIES.includes(aspect.transitPlanet) ||
+    LUMINARIES.includes(aspect.natalPlanet)
+  ) {
+    return 2.0;
   }
+  if (
+    PERSONAL_PLANETS.includes(aspect.transitPlanet) ||
+    PERSONAL_PLANETS.includes(aspect.natalPlanet)
+  ) {
+    return 1.5;
+  }
+  return 1.0;
+}
+
+/**
+ * Get orb bonus - tighter aspects are exponentially more powerful
+ */
+function getOrbBonus(orb: number): number {
+  if (orb < 1) return 2.5;
+  if (orb < 2) return 2.0;
+  if (orb < 3) return 1.5;
+  if (orb < 5) return 1.0;
+  return 0.5;
 }
 
 /** Aspect meaning descriptions for UI */
@@ -81,7 +126,14 @@ const ASPECT_MEANINGS: Record<AspectType, string> = {
 // ============================================
 
 /**
- * Calculate daily energy score (0-100) based on transit aspects
+ * Calculate daily energy score (0-100) using Flow Score formula
+ *
+ * Flow Score measures the BALANCE between harmonious and challenging aspects,
+ * not just the total quantity. This creates natural variation in scores.
+ *
+ * High score (70+) = Day flows with ease (more trines, sextiles)
+ * Low score (30-) = Day requires extra effort (more squares, oppositions)
+ * Middle (31-69) = Balanced energy, neutral day
  *
  * @param natalPositions - User's natal planet positions
  * @param date - ISO date string "2026-01-15"
@@ -96,47 +148,82 @@ export function calculateDailyScore(
   const cache = transitCache || get2026Transits();
   const aspects = findAspectsOnDate(natalPositions, date, cache);
 
-  let totalPower = 0;
+  // Track harmonious vs challenging power separately
+  let harmonious = 0;
+  let challenging = 0;
   const significantAspects: PlanetaryAspect[] = [];
 
+  // Only consider major aspects for Flow Score
+  const majorAspects: AspectType[] = [
+    "conjunction",
+    "trine",
+    "sextile",
+    "square",
+    "opposition",
+  ];
+
   for (const aspect of aspects) {
-    // Base power from aspect type (1-10)
+    if (!majorAspects.includes(aspect.aspectType)) continue;
+
     const basePower = ASPECTS[aspect.aspectType].power;
-
-    // Orb tightness multiplier (tighter = exponentially stronger)
-    const maxOrb = ASPECTS[aspect.aspectType].orb;
-    const orbTightness = Math.max(0, 1 - aspect.orb / maxOrb);
-    const orbMultiplier = Math.pow(orbTightness, 1.5);
-
-    // Applying bonus (aspects getting closer are stronger)
+    const orbBonus = getOrbBonus(aspect.orb);
     const applyingBonus = aspect.isApplying ? 1.2 : 1.0;
+    const planetWeight = getPlanetWeight(aspect);
 
-    // Nature modifier (harmonious vs challenging)
-    const natureModifier = getNatureModifier(aspect.aspectType);
+    const power = basePower * orbBonus * applyingBonus * planetWeight;
 
-    // Calculate aspect's contribution
-    const aspectPower = basePower * orbMultiplier * applyingBonus * natureModifier;
-    totalPower += aspectPower;
+    // Categorize by aspect nature
+    if (HARMONIOUS_ASPECTS.includes(aspect.aspectType)) {
+      harmonious += power;
+    } else if (CHALLENGING_ASPECTS.includes(aspect.aspectType)) {
+      challenging += power;
+    } else if (aspect.aspectType === CONJUNCTION_ASPECT) {
+      // Conjunctions: benefics are harmonious, malefics are challenging
+      if (isConjunctionHarmonious(aspect)) {
+        harmonious += power;
+      } else if (isConjunctionChallenging(aspect)) {
+        challenging += power;
+      } else {
+        // Neutral conjunctions (Mercury, Uranus, Neptune, Pluto)
+        // Split 60/40 toward harmonious (conjunctions are generally unifying)
+        harmonious += power * 0.6;
+        challenging += power * 0.4;
+      }
+    }
 
-    // Track significant aspects for description
-    if (aspectPower > 2) {
+    // Track all significant aspects
+    if (power > 5) {
       significantAspects.push(aspect);
     }
   }
 
+  // Calculate Flow Score
+  const total = harmonious + challenging;
+  let score: number;
+
+  if (total === 0) {
+    // No major aspects = neutral day
+    score = 50;
+  } else {
+    // Base score from harmonious ratio (0-100)
+    const harmRatio = harmonious / total;
+    const baseScore = harmRatio * 100;
+
+    // Magnitude effect: stronger days push further from 50
+    // sqrt(total)/10 gives gentle scaling
+    // (harmRatio - 0.5) determines direction from center
+    const magnitude = Math.sqrt(total) / 10;
+    const magnitudeEffect = (harmRatio - 0.5) * magnitude * 20;
+
+    score = Math.max(0, Math.min(100, Math.round(baseScore + magnitudeEffect)));
+  }
+
   // Sort significant aspects by power contribution
   significantAspects.sort((a, b) => {
-    const powerA =
-      ASPECTS[a.aspectType].power * (1 - a.orb / ASPECTS[a.aspectType].orb);
-    const powerB =
-      ASPECTS[b.aspectType].power * (1 - b.orb / ASPECTS[b.aspectType].orb);
+    const powerA = ASPECTS[a.aspectType].power * getOrbBonus(a.orb);
+    const powerB = ASPECTS[b.aspectType].power * getOrbBonus(b.orb);
     return powerB - powerA;
   });
-
-  // Normalize to 0-100 scale using diminishing returns (Option A)
-  // This creates natural differentiation: prevents all days from hitting 100
-  // Using 50 as divisor (higher than goal-specific) since all planets count here
-  const score = Math.round((totalPower / (totalPower + 50)) * 100);
 
   // Classify day type
   const dayType = classifyDay(score);

@@ -89,18 +89,29 @@ Before going live, complete ALL of these steps:
 - [ ] Test magic link authentication end-to-end
 - [ ] Verify Supabase redirect URLs are correct for production domain
 
-**💳 Stripe:**
+**💳 Stripe (SUBSCRIPTION MODEL - needs setup):**
 - [ ] User enters birth data (step 1) → data saved to `astro_leads`
 - [ ] User goes through onboarding (steps 2-8)
 - [ ] User reaches paywall (step 9) with their REAL email
 - [ ] Payment completes → `astro_purchases` updated, `has_purchased` = true
 - [ ] User redirected to `/map` with their actual birth chart
-- [ ] **Change price from test ($0.70) to production ($19):**
-  - [ ] `src/app/api/stripe/create-checkout-session/route.ts` → `PRICE_CENTS = 1900`
-  - [ ] `src/components/reveal/StripeCheckout.tsx` → `value: 19.0`
-  - [ ] `src/components/reveal/RevealShell.tsx` → `value: 19.0` (line ~145)
+- [ ] **⚠️ CONVERT TO SUBSCRIPTION MODEL (UI ready, backend needs update):**
+  - [ ] Create Stripe Product "Stella+ Monthly" in Stripe Dashboard
+  - [ ] Create 3 Stripe Prices with trial periods:
+    - `price_3day`: $2.99 for 3-day trial → then $19.99/month
+    - `price_7day`: $5.99 for 7-day trial → then $19.99/month
+    - `price_14day`: $9.99 for 14-day trial → then $19.99/month
+  - [ ] Update `src/app/api/stripe/create-checkout-session/route.ts`:
+    - Change `mode: "payment"` → `mode: "subscription"`
+    - Accept `planId` from request body
+    - Use Stripe Price IDs instead of inline `price_data`
+  - [ ] Update `src/app/api/stripe/webhook/route.ts`:
+    - Add handlers for `customer.subscription.created/updated/deleted`
+  - [ ] Update `src/components/reveal/StripeCheckout.tsx`:
+    - Pass `selectedPlan` to checkout session API
+  - [ ] Create `src/lib/subscription-plans.ts` with Stripe Price ID mapping
 - [ ] Switch Stripe keys from `pk_test_`/`sk_test_` to `pk_live_`/`sk_live_`
-- [ ] Set up production webhook in Stripe Dashboard
+- [ ] Set up production webhook in Stripe Dashboard (add subscription events)
 - [ ] Add live Stripe keys to Vercel environment variables
 
 ## 🚨 CRITICAL: Branch Protection (ABSOLUTE RULE)

@@ -8,14 +8,8 @@ interface Testimonial {
   location: string;
 }
 
-// V2 Copy - exact testimonials
+// PRD-specified testimonials - exact copy
 const TESTIMONIALS: Testimonial[] = [
-  {
-    quote:
-      "I was about to send a resignation email on a 19-score day. Stella told me to wait. Sent it on a 78-score day instead — got a counteroffer I didn't expect. Same email. Different day. Different outcome.",
-    author: "Marcus L.",
-    location: "Chicago",
-  },
   {
     quote:
       "Booked a trip to my #1 power city on a whim. Met my now-business partner in a hotel lobby. I'm not saying it's magic — but I'm not saying it isn't.",
@@ -27,6 +21,12 @@ const TESTIMONIALS: Testimonial[] = [
       "My 'worst month' was March. I had already planned to launch then. Pushed it to May — my #2 power month. Best decision I made all year.",
     author: "James T.",
     location: "Toronto",
+  },
+  {
+    quote:
+      "Honestly was skeptical. But my power city was Lisbon — a place I'd been thinking about for years. Finally went. Came back with so much clarity. Coincidence? Maybe. But I'm planning 2026 around this now.",
+    author: "Emma K.",
+    location: "Sydney",
   },
 ];
 
