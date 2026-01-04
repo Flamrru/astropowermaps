@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
-import { MapPin, Search, X } from "lucide-react";
+import { MapPin, X, Loader2 } from "lucide-react";
 import { BirthLocation } from "@/lib/astro/types";
 
 interface LocationSearchProps {
@@ -16,9 +14,12 @@ interface GeocodingResult {
   id: string;
   place_name: string;
   center: [number, number]; // [lng, lat]
-  context?: Array<{ id: string; text: string }>;
 }
 
+/**
+ * LocationSearch - Inline dropdown city search
+ * Simple approach: dropdown renders directly below input (no portal)
+ */
 export default function LocationSearch({
   value,
   onChange,
@@ -28,55 +29,17 @@ export default function LocationSearch({
   const [results, setResults] = useState<GeocodingResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
 
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Client-side only for portal
+  // Sync query with value
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Update dropdown position when open
-  useEffect(() => {
-    if (!isOpen || !inputRef.current) return;
-
-    const updatePosition = () => {
-      if (!inputRef.current) return;
-      const rect = inputRef.current.getBoundingClientRect();
-      setDropdownPos({
-        top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
-      });
-    };
-
-    // Initial position
-    updatePosition();
-
-    // Update on scroll/resize
-    window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("resize", updatePosition);
-
-    // Update on keyboard (iOS)
-    const vv = window.visualViewport;
-    if (vv) {
-      vv.addEventListener("resize", updatePosition);
-      vv.addEventListener("scroll", updatePosition);
+    if (value?.name) {
+      setQuery(value.name);
     }
-
-    return () => {
-      window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("resize", updatePosition);
-      if (vv) {
-        vv.removeEventListener("resize", updatePosition);
-        vv.removeEventListener("scroll", updatePosition);
-      }
-    };
-  }, [isOpen]);
+  }, [value]);
 
   // Debounced search
   useEffect(() => {
@@ -107,7 +70,7 @@ export default function LocationSearch({
         const response = await fetch(
           `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
             query
-          )}.json?access_token=${token}&types=place,locality,region&limit=2`
+          )}.json?access_token=${token}&types=place,locality,region&limit=3`
         );
 
         if (!response.ok) throw new Error("Geocoding failed");
@@ -132,17 +95,13 @@ export default function LocationSearch({
     };
   }, [query, value]);
 
-  // Close dropdown when clicking/tapping outside
+  // Close dropdown when clicking outside
   useEffect(() => {
     if (!isOpen) return;
 
     function handleClickOutside(event: MouseEvent | TouchEvent) {
-      const target = event.target as Node;
-      if (containerRef.current && !containerRef.current.contains(target)) {
-        const dropdown = document.getElementById("location-dropdown-portal");
-        if (!dropdown || !dropdown.contains(target)) {
-          setIsOpen(false);
-        }
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
       }
     }
 
@@ -159,17 +118,13 @@ export default function LocationSearch({
     const lng = result.center[0];
 
     // Fetch timezone from our API
-    let timezone = 'UTC';
+    let timezone = "UTC";
     try {
       const response = await fetch(`/api/timezone?lat=${lat}&lng=${lng}`);
       const data = await response.json();
-      timezone = data.timezone;
-
-      if (data.error) {
-        console.warn('Timezone lookup warning:', data.error);
-      }
+      timezone = data.timezone || "UTC";
     } catch (error) {
-      console.error('Timezone lookup failed, using UTC:', error);
+      console.error("Timezone lookup failed, using UTC:", error);
     }
 
     const location: BirthLocation = {
@@ -191,64 +146,15 @@ export default function LocationSearch({
     setIsOpen(false);
   };
 
-  // Dropdown via portal (escapes stacking contexts)
-  const dropdown = isOpen && results.length > 0 && mounted && createPortal(
-    <div
-      id="location-dropdown-portal"
-      style={{
-        position: "fixed",
-        top: dropdownPos.top,
-        left: dropdownPos.left,
-        width: dropdownPos.width,
-        zIndex: 99999,
-        backgroundColor: "#0a0a1e",
-        border: "1px solid rgba(255, 255, 255, 0.2)",
-        borderRadius: "0.75rem",
-        boxShadow: "0 10px 40px rgba(0,0,0,0.8)",
-        overflow: "hidden",
-      }}
-    >
-      {results.map((result) => (
-        <button
-          key={result.id}
-          type="button"
-          onClick={() => handleSelect(result)}
-          onTouchEnd={(e) => {
-            e.preventDefault();
-            handleSelect(result);
-          }}
-          className="
-            w-full px-4 py-3 text-left
-            flex items-center gap-3
-            text-white/80 hover:text-white hover:bg-[#15152a]
-            active:bg-[#15152a]
-            border-b border-white/5 last:border-b-0
-            transition-colors
-          "
-          style={{ backgroundColor: "#0a0a1e" }}
-        >
-          <MapPin size={16} className="text-[#C9A227] flex-shrink-0" />
-          <span className="truncate">{result.place_name}</span>
-        </button>
-      ))}
-    </div>,
-    document.body
-  );
-
   return (
     <div ref={containerRef} className="relative w-full">
       {/* Input Field */}
       <div className="relative">
         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
           {isLoading ? (
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            >
-              <Search size={20} />
-            </motion.div>
+            <Loader2 size={18} className="animate-spin text-[#E8C547]/60" />
           ) : (
-            <MapPin size={20} />
+            <MapPin size={18} />
           )}
         </div>
 
@@ -260,19 +166,18 @@ export default function LocationSearch({
           onFocus={() => results.length > 0 && setIsOpen(true)}
           placeholder={placeholder}
           className="
-            w-full py-4 rounded-xl
-            bg-white/10
-            border border-white/20
-            text-white placeholder:text-white/40
-            text-[16px] leading-normal
-            focus:outline-none focus:border-[#C9A227]/50
-            focus:shadow-[0_0_20px_rgba(201,162,39,0.15)]
-            transition-all duration-300
+            w-full px-4 py-3 rounded-xl
+            bg-white/[0.06]
+            border border-white/10
+            text-white placeholder:text-white/30
+            text-[14px] leading-normal
+            focus:outline-none focus:border-gold/40 focus:bg-white/[0.08]
+            transition-all duration-200
           "
           style={{
             paddingLeft: 44,
-            paddingRight: 40,
-            WebkitAppearance: 'none',
+            paddingRight: query ? 40 : 16,
+            WebkitAppearance: "none",
           }}
         />
 
@@ -281,15 +186,55 @@ export default function LocationSearch({
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-white/40 hover:text-white/70 transition-colors"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         )}
       </div>
 
-      {/* Dropdown rendered via portal */}
-      {dropdown}
+      {/* Inline Dropdown - positioned relative to container */}
+      {isOpen && results.length > 0 && (
+        <div
+          className="absolute left-0 right-0 mt-2 z-50 rounded-xl overflow-hidden"
+          style={{
+            background: "linear-gradient(180deg, rgba(15, 15, 30, 0.98) 0%, rgba(10, 10, 25, 0.99) 100%)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            boxShadow: "0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)",
+          }}
+        >
+          {results.map((result, index) => (
+            <button
+              key={result.id}
+              type="button"
+              onClick={() => handleSelect(result)}
+              className="
+                w-full px-4 py-3 text-left
+                flex items-center gap-3
+                hover:bg-white/[0.06]
+                active:bg-white/[0.08]
+                transition-colors duration-150
+                group
+              "
+              style={{
+                borderBottom: index < results.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+              }}
+            >
+              {/* Gold dot indicator */}
+              <div
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0 transition-transform duration-200 group-hover:scale-150"
+                style={{
+                  background: "linear-gradient(135deg, #E8C547 0%, #C9A227 100%)",
+                  boxShadow: "0 0 6px rgba(232, 197, 71, 0.5)",
+                }}
+              />
+              <span className="text-white/80 text-[13px] truncate group-hover:text-white/95 transition-colors">
+                {result.place_name}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
