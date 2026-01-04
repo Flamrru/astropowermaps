@@ -118,14 +118,21 @@ export default function Screen01Entry() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4, delay: 0.3 }}
-            className="mb-4"
+            className="flex gap-3 mb-4"
           >
             <Link
               href="/dashboard?dev=true"
-              className="block w-full py-4 px-8 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-500 text-white text-center font-bold text-lg shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all"
+              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-500 text-white text-center font-bold text-sm shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all"
             >
-              ⭐ Test Stella+ Dashboard
-              <span className="block text-xs font-normal opacity-80 mt-1">DEV ONLY - Delete before production</span>
+              ⭐ Stella+
+              <span className="block text-[10px] font-normal opacity-80 mt-0.5">DEV ONLY</span>
+            </Link>
+            <Link
+              href="/reveal?d=9"
+              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-center font-bold text-sm shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transition-all"
+            >
+              💳 Paywall
+              <span className="block text-[10px] font-normal opacity-80 mt-0.5">DEV ONLY</span>
             </Link>
           </motion.div>
           {/* ================================================================
