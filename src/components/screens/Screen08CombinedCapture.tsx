@@ -333,6 +333,25 @@ export default function Screen08CombinedCapture() {
                 )}
               </div>
 
+              {/* Birth City - moved up so dropdown has room below */}
+              <div className="relative mb-3">
+                <label className="flex items-center gap-2 text-white/80 text-[12px] font-medium mb-1.5">
+                  <MapPin size={13} className="text-gold" />
+                  Birth City
+                </label>
+                <LocationSearch
+                  value={location}
+                  onChange={(loc) => {
+                    setLocation(loc);
+                    if (errors.location) setErrors((prev) => ({ ...prev, location: "" }));
+                  }}
+                  placeholder="Search for your birth city..."
+                />
+                {errors.location && (
+                  <p className="text-red-400 text-[12px] mt-1.5">{errors.location}</p>
+                )}
+              </div>
+
               {/* Birth Date */}
               <div className="mb-3">
                 <label className="flex items-center gap-2 text-white/80 text-[12px] font-medium mb-1.5">
@@ -455,25 +474,6 @@ export default function Screen08CombinedCapture() {
 
                 {errors.time && (
                   <p className="text-red-400 text-[12px] mt-2">{errors.time}</p>
-                )}
-              </div>
-
-              {/* Birth City */}
-              <div className="relative">
-                <label className="flex items-center gap-2 text-white/80 text-[12px] font-medium mb-1.5">
-                  <MapPin size={13} className="text-gold" />
-                  Birth City
-                </label>
-                <LocationSearch
-                  value={location}
-                  onChange={(loc) => {
-                    setLocation(loc);
-                    if (errors.location) setErrors((prev) => ({ ...prev, location: "" }));
-                  }}
-                  placeholder="Search for your birth city..."
-                />
-                {errors.location && (
-                  <p className="text-red-400 text-[12px] mt-1.5">{errors.location}</p>
                 )}
               </div>
 
