@@ -65,9 +65,12 @@ export default function TestimonialCards() {
         initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="text-center text-white/70 text-lg font-medium mb-6"
+        className="text-center text-white text-2xl font-bold mb-10"
+        style={{
+          textShadow: "0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 255, 255, 0.3)",
+        }}
       >
-        What people are saying
+        What People Are Saying
       </motion.h3>
 
       <div className="space-y-4 max-w-md mx-auto">
