@@ -57,14 +57,8 @@ function AccountSetupContent() {
         throw new Error(data.error || "Failed to create account");
       }
 
-      // Redirect to map
-      if (isDevMode) {
-        window.location.href = "/map?d=1";
-      } else if (sessionId) {
-        window.location.href = `/map?sid=${sessionId}`;
-      } else {
-        window.location.href = "/map?d=1";
-      }
+      // Redirect to dashboard map (full app with navigation)
+      window.location.href = "/dashboard/map";
     } catch (err) {
       console.error("Account creation error:", err);
       setError(err instanceof Error ? err.message : "Failed to create account");
@@ -73,13 +67,8 @@ function AccountSetupContent() {
   };
 
   const handleSkip = () => {
-    if (isDevMode) {
-      window.location.href = "/map?d=1";
-    } else if (sessionId) {
-      window.location.href = `/map?sid=${sessionId}`;
-    } else {
-      window.location.href = "/map?d=1";
-    }
+    // Redirect to dashboard map (full app with navigation)
+    window.location.href = "/dashboard/map";
   };
 
   return (

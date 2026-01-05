@@ -139,16 +139,8 @@ export default function StripeCheckout({
         throw new Error(data.error || "Failed to create account");
       }
 
-      // Check if we're in dev mode
-      const urlParams = new URLSearchParams(window.location.search);
-      const isDevMode = urlParams.has("d");
-
-      // Redirect to map
-      if (isDevMode) {
-        window.location.href = "/map?d=1";
-      } else {
-        window.location.href = `/map?sid=${sessionId}`;
-      }
+      // Redirect to dashboard map (full app with navigation)
+      window.location.href = "/dashboard/map";
     } catch (err) {
       console.error("Account creation error:", err);
       setPasswordError(err instanceof Error ? err.message : "Failed to create account");
@@ -156,16 +148,9 @@ export default function StripeCheckout({
     }
   };
 
-  // Skip password and go directly to map
+  // Skip password and go directly to dashboard map
   const handleSkipPassword = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const isDevMode = urlParams.has("d");
-
-    if (isDevMode) {
-      window.location.href = "/map?d=1";
-    } else {
-      window.location.href = `/map?sid=${sessionId}`;
-    }
+    window.location.href = "/dashboard/map";
   };
 
   const stripePromise = getStripe();
