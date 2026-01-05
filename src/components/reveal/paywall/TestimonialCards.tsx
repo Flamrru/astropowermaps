@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { CheckCircle } from "lucide-react";
 
 interface Testimonial {
   quote: string;
@@ -8,6 +9,7 @@ interface Testimonial {
   location: string;
   initials: string;
   color: string;
+  image?: string;
 }
 
 // V2.5 Copy - testimonials with avatar colors
@@ -15,18 +17,20 @@ const TESTIMONIALS: Testimonial[] = [
   {
     quote:
       "I was about to send a resignation email on a 19-score day. Stella told me to wait. Sent it on a 78-score day instead — got a counteroffer I didn't expect. Same email. Different day. Different outcome.",
-    author: "Marcus L.",
+    author: "Sarah K.",
     location: "Chicago",
-    initials: "ML",
+    initials: "SK",
     color: "from-blue-500 to-blue-700",
+    image: "/testimonial-1.png",
   },
   {
     quote:
       "Booked a trip to my #1 power city on a whim. Met my now-business partner in a hotel lobby. I'm not saying it's magic — but I'm not saying it isn't.",
-    author: "Sarah M.",
+    author: "Marcus L.",
     location: "London",
-    initials: "SM",
+    initials: "ML",
     color: "from-pink-500 to-rose-600",
+    image: "/testimonial-2.png",
   },
   {
     quote:
@@ -35,6 +39,7 @@ const TESTIMONIALS: Testimonial[] = [
     location: "Toronto",
     initials: "JT",
     color: "from-emerald-500 to-teal-600",
+    image: "/testimonial-3.png",
   },
 ];
 
@@ -48,7 +53,16 @@ function StarRating() {
   );
 }
 
-function Avatar({ initials, color }: { initials: string; color: string }) {
+function Avatar({ initials, color, image }: { initials: string; color: string; image?: string }) {
+  if (image) {
+    return (
+      <img
+        src={image}
+        alt={initials}
+        className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+      />
+    );
+  }
   return (
     <div
       className={`w-10 h-10 rounded-full bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}
@@ -88,14 +102,20 @@ export default function TestimonialCards() {
             }}
           >
             <StarRating />
-            <p className="text-white/70 text-[14px] leading-relaxed mb-4 italic">
+            <p className="text-white/90 text-[14px] leading-relaxed mb-4 italic">
               &ldquo;{item.quote}&rdquo;
             </p>
-            <div className="flex items-center gap-3">
-              <Avatar initials={item.initials} color={item.color} />
-              <p className="text-white/50 text-[13px]">
-                {item.author}, {item.location}
-              </p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Avatar initials={item.initials} color={item.color} image={item.image} />
+                <p className="text-white/70 text-[13px]">
+                  {item.author}, {item.location}
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-emerald-400 text-[11px]">
+                <CheckCircle className="w-3.5 h-3.5" />
+                <span>Verified</span>
+              </div>
             </div>
           </motion.div>
         ))}

@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
 
     // Handle the event
     switch (event.type) {
+      // Checkout completion (works for both one-time and subscription)
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         await handleCheckoutComplete(session);
@@ -60,6 +61,33 @@ export async function POST(request: NextRequest) {
       case "checkout.session.expired": {
         const session = event.data.object as Stripe.Checkout.Session;
         await handleCheckoutExpired(session);
+        break;
+      }
+
+      // Subscription lifecycle events
+      case "customer.subscription.created": {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleSubscriptionCreated(subscription);
+        break;
+      }
+
+      case "customer.subscription.updated": {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleSubscriptionUpdated(subscription);
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object as Stripe.Subscription;
+        await handleSubscriptionDeleted(subscription);
+        break;
+      }
+
+      // Trial ending reminder (3 days before)
+      case "customer.subscription.trial_will_end": {
+        const subscription = event.data.object as Stripe.Subscription;
+        console.log(`Trial ending soon for customer: ${subscription.customer}`);
+        // TODO: Send trial ending email if desired
         break;
       }
 
@@ -78,10 +106,14 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
-  console.log("Payment completed for session:", session.id);
+  console.log("Checkout completed for session:", session.id);
+  console.log("Mode:", session.mode);
 
   const appSessionId = session.metadata?.app_session_id;
   const email = session.metadata?.email || session.customer_email;
+  const planId = session.metadata?.plan_id;
+  const createSubscription = session.metadata?.create_subscription === "true";
+  const trialDays = parseInt(session.metadata?.trial_days || "0", 10);
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://astropowermaps.com";
 
   if (!appSessionId) {
@@ -94,6 +126,113 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
     return;
   }
 
+  const stripe = getStripe();
+  let subscriptionId: string | null = session.subscription as string | null;
+
+  // ========================================
+  // CREATE SUBSCRIPTION AFTER TRIAL PAYMENT
+  // ========================================
+  if (createSubscription && session.mode === "payment" && trialDays > 0) {
+    try {
+      const customerId = session.customer as string;
+
+      // Get the payment method from the payment intent
+      const paymentIntent = await stripe.paymentIntents.retrieve(
+        session.payment_intent as string
+      );
+      const paymentMethodId = paymentIntent.payment_method as string;
+
+      if (!paymentMethodId) {
+        console.error("No payment method found on payment intent");
+      } else {
+        // Set payment method as default for customer
+        await stripe.customers.update(customerId, {
+          invoice_settings: {
+            default_payment_method: paymentMethodId,
+          },
+        });
+
+        // Calculate trial end date
+        const trialEnd = Math.floor(Date.now() / 1000) + trialDays * 24 * 60 * 60;
+
+        // Create or get the monthly price
+        // For simplicity, we create the price inline. In production, use a pre-created price ID.
+        const monthlyPriceCents = parseInt(session.metadata?.monthly_price_cents || "1999", 10);
+
+        // First, find or create the Stella+ product
+        const products = await stripe.products.list({
+          limit: 1,
+        });
+
+        let productId: string;
+        const existingProduct = products.data.find(
+          (p) => p.metadata?.app === "astropowermaps" && p.metadata?.type === "stella_plus"
+        );
+
+        if (existingProduct) {
+          productId = existingProduct.id;
+        } else {
+          const newProduct = await stripe.products.create({
+            name: "Stella+ Monthly",
+            description: "Your personal AI astrologer with daily cosmic guidance.",
+            metadata: {
+              app: "astropowermaps",
+              type: "stella_plus",
+            },
+          });
+          productId = newProduct.id;
+        }
+
+        // Find or create the monthly price
+        const prices = await stripe.prices.list({
+          product: productId,
+          limit: 10,
+        });
+
+        let priceId: string;
+        const existingPrice = prices.data.find(
+          (p) =>
+            p.recurring?.interval === "month" &&
+            p.unit_amount === monthlyPriceCents &&
+            p.active
+        );
+
+        if (existingPrice) {
+          priceId = existingPrice.id;
+        } else {
+          const newPrice = await stripe.prices.create({
+            product: productId,
+            unit_amount: monthlyPriceCents,
+            currency: "usd",
+            recurring: {
+              interval: "month",
+            },
+          });
+          priceId = newPrice.id;
+        }
+
+        // Create subscription with trial
+        const subscription = await stripe.subscriptions.create({
+          customer: customerId,
+          items: [{ price: priceId }],
+          trial_end: trialEnd,
+          default_payment_method: paymentMethodId,
+          metadata: {
+            app_session_id: appSessionId,
+            plan_id: planId || "",
+            created_from: "trial_checkout",
+          },
+        });
+
+        subscriptionId = subscription.id;
+        console.log(`Subscription created: ${subscriptionId} (trial ends: ${new Date(trialEnd * 1000).toISOString()})`);
+      }
+    } catch (subError) {
+      console.error("Failed to create subscription:", subError);
+      // Don't fail the whole webhook - user still paid for trial
+    }
+  }
+
   // Update astro_purchases to completed
   const { error: purchaseError } = await supabaseAdmin
     .from("astro_purchases")
@@ -101,7 +240,13 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       status: "completed",
       completed_at: new Date().toISOString(),
       stripe_customer_id: session.customer as string,
-      stripe_payment_intent_id: session.payment_intent as string,
+      stripe_payment_intent_id: session.payment_intent as string || null,
+      metadata: {
+        checkout_session_id: session.id,
+        plan_id: planId,
+        subscription_id: subscriptionId,
+        subscription_mode: Boolean(subscriptionId),
+      },
     })
     .eq("session_id", appSessionId)
     .eq("status", "pending");
@@ -163,6 +308,11 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
         console.log(`Auth: Created new user for ${email.substring(0, 3)}***`);
       }
 
+      // Calculate trial end for profile
+      const trialEndDate = trialDays > 0
+        ? new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString()
+        : null;
+
       // 3. Create or update user_profiles record with birth data from lead
       const { error: profileError } = await supabaseAdmin
         .from("user_profiles")
@@ -178,7 +328,9 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
             birth_lat: lead.birth_location_lat,
             birth_lng: lead.birth_location_lng,
             birth_timezone: lead.birth_location_timezone,
-            subscription_status: "active",
+            subscription_status: subscriptionId ? "trialing" : "active",
+            subscription_id: subscriptionId || null,
+            subscription_trial_end: trialEndDate,
             stripe_customer_id: session.customer as string,
           },
           { onConflict: "user_id" }
@@ -230,7 +382,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
     email,
     sessionId: appSessionId,
     baseUrl,
-    magicLink, // NEW: Include magic link for dashboard access
+    magicLink, // Include magic link for dashboard access
   });
 
   if (emailResult.success) {
@@ -257,4 +409,101 @@ async function handleCheckoutExpired(session: Stripe.Checkout.Session) {
     .update({ status: "expired" })
     .eq("session_id", appSessionId)
     .eq("status", "pending");
+}
+
+// ========================================
+// SUBSCRIPTION LIFECYCLE HANDLERS
+// ========================================
+
+async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+  console.log("Subscription created:", subscription.id);
+  console.log("Status:", subscription.status);
+  console.log("Trial end:", subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : "none");
+
+  const customerId = subscription.customer as string;
+  const subscriptionId = subscription.id;
+  const status = mapSubscriptionStatus(subscription.status);
+
+  // Update user_profiles with subscription info
+  const { error } = await supabaseAdmin
+    .from("user_profiles")
+    .update({
+      subscription_id: subscriptionId,
+      subscription_status: status,
+      subscription_trial_end: subscription.trial_end
+        ? new Date(subscription.trial_end * 1000).toISOString()
+        : null,
+    })
+    .eq("stripe_customer_id", customerId);
+
+  if (error) {
+    console.error("Failed to update profile with subscription:", error);
+  }
+}
+
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  console.log("Subscription updated:", subscription.id);
+  console.log("Status:", subscription.status);
+
+  const customerId = subscription.customer as string;
+  const status = mapSubscriptionStatus(subscription.status);
+
+  // Update user_profiles with new status
+  const { error } = await supabaseAdmin
+    .from("user_profiles")
+    .update({
+      subscription_status: status,
+      subscription_trial_end: subscription.trial_end
+        ? new Date(subscription.trial_end * 1000).toISOString()
+        : null,
+    })
+    .eq("stripe_customer_id", customerId);
+
+  if (error) {
+    console.error("Failed to update profile subscription status:", error);
+  }
+}
+
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  console.log("Subscription deleted/cancelled:", subscription.id);
+
+  const customerId = subscription.customer as string;
+
+  // Update user_profiles to cancelled status
+  const { error } = await supabaseAdmin
+    .from("user_profiles")
+    .update({
+      subscription_status: "cancelled",
+      subscription_cancelled_at: new Date().toISOString(),
+    })
+    .eq("stripe_customer_id", customerId);
+
+  if (error) {
+    console.error("Failed to update profile for cancelled subscription:", error);
+  }
+}
+
+/**
+ * Map Stripe subscription status to our internal status
+ */
+function mapSubscriptionStatus(stripeStatus: Stripe.Subscription.Status): string {
+  switch (stripeStatus) {
+    case "trialing":
+      return "trialing";
+    case "active":
+      return "active";
+    case "past_due":
+      return "past_due";
+    case "canceled":
+      return "cancelled";
+    case "unpaid":
+      return "unpaid";
+    case "incomplete":
+    case "incomplete_expired":
+      return "incomplete";
+    case "paused":
+      return "paused";
+    default:
+      return stripeStatus;
+  }
 }

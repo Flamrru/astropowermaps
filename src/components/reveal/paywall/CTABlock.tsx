@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Lock, Shield, Zap, CreditCard, CheckCircle } from "lucide-react";
+import { Lock, Shield, Zap, CreditCard } from "lucide-react";
 
 interface CTABlockProps {
   onCtaClick: () => void;
@@ -71,17 +71,13 @@ export default function CTABlock({
           transition={{ delay: 0.3 }}
           className="mt-6 pt-6 border-t border-white/10"
         >
-          <div className="flex items-start gap-3 justify-center">
-            <CheckCircle className="w-5 h-5 text-gold/70 flex-shrink-0 mt-0.5" />
-            <div className="text-center">
-              <p className="text-white/60 text-[14px] font-medium mb-1">
-                14-day money-back guarantee
-              </p>
-              <p className="text-white/40 text-[12px]">
-                If the map doesn&apos;t resonate, email us for a full refund. No
-                questions asked.
-              </p>
-            </div>
+          <div className="text-center">
+            <p className="text-white text-[18px] font-semibold mb-2">
+              14-day money-back guarantee
+            </p>
+            <p className="text-white/70 text-[14px]">
+              If the map doesn&apos;t resonate, email us for a full refund.
+            </p>
           </div>
         </motion.div>
       )}

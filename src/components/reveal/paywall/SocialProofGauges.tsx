@@ -11,17 +11,17 @@ interface GaugeData {
 const GAUGE_DATA: GaugeData[] = [
   {
     percentage: 87,
-    description: "said their power month \"felt different\"",
+    description: "...said their power month \"felt different\"",
     subdescription: "— more clarity, better timing, things clicking",
   },
   {
     percentage: 73,
-    description: "visited a power city and noticed",
+    description: "...visited a power city and noticed",
     subdescription: "a shift in energy or opportunities",
   },
   {
     percentage: 91,
-    description: "said they'd plan their year differently",
+    description: "...said they'd plan their year differently",
     subdescription: "now that they have their map",
   },
 ];
@@ -78,14 +78,17 @@ function SemiCircularGauge({ percentage, delay }: { percentage: number; delay: n
 export default function SocialProofGauges() {
   return (
     <section className="py-10 px-5">
-      <motion.p
+      <motion.h3
         initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="text-center text-white/50 text-sm mb-8"
+        className="text-center text-white text-2xl font-bold mb-10"
+        style={{
+          textShadow: "0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 255, 255, 0.3)",
+        }}
       >
-        People using their Power Map report:
-      </motion.p>
+        People Using Their Power Map...
+      </motion.h3>
 
       <div className="space-y-8">
         {GAUGE_DATA.map((item, index) => (
@@ -98,10 +101,10 @@ export default function SocialProofGauges() {
             className="flex flex-col items-center text-center"
           >
             <SemiCircularGauge percentage={item.percentage} delay={index * 0.3} />
-            <p className="text-white/80 text-[15px] mt-3 max-w-[280px]">
+            <p className="text-white text-[15px] mt-3 max-w-[280px]">
               {item.description}
             </p>
-            <p className="text-white/50 text-[13px] mt-1 max-w-[280px]">
+            <p className="text-white/70 text-[13px] mt-1 max-w-[280px]">
               {item.subdescription}
             </p>
           </motion.div>

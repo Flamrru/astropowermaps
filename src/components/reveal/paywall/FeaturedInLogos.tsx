@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 export default function FeaturedInLogos() {
   return (
-    <section className="px-5 pb-6">
+    <section className="px-5 py-12">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}

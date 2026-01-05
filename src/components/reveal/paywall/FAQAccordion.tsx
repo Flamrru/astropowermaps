@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, HelpCircle } from "lucide-react";
 
 interface FAQItem {
   question: string;
@@ -52,9 +52,12 @@ export default function FAQAccordion() {
         initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="text-center text-white/70 text-lg font-medium mb-6"
+        className="text-center text-white text-2xl font-bold mb-10"
+        style={{
+          textShadow: "0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 255, 255, 0.3)",
+        }}
       >
-        People often ask
+        Frequently Asked Questions
       </motion.h3>
 
       <div className="space-y-3 max-w-md mx-auto">
@@ -75,8 +78,8 @@ export default function FAQAccordion() {
               onClick={() => setOpenIndex(openIndex === index ? null : index)}
               className="w-full flex items-start gap-3 p-4 text-left"
             >
-              <span className="text-gold text-lg mt-0.5">❓</span>
-              <span className="text-white/80 text-[14px] flex-1 leading-relaxed">
+              <HelpCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+              <span className="text-white text-[14px] flex-1 leading-relaxed">
                 {item.question}
               </span>
               <motion.div
@@ -98,7 +101,7 @@ export default function FAQAccordion() {
                   className="overflow-hidden"
                 >
                   <div className="px-4 pb-4 pt-0 ml-8">
-                    <p className="text-white/60 text-[13px] leading-relaxed">
+                    <p className="text-white/80 text-[13px] leading-relaxed">
                       {item.answer}
                     </p>
                   </div>

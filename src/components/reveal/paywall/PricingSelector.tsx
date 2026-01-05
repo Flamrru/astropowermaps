@@ -56,7 +56,14 @@ export default function PricingSelector({
         viewport={{ once: true }}
         className="text-center mb-6"
       >
-        <h3 className="text-white text-xl font-semibold">Choose your access</h3>
+        <h3
+          className="text-white text-2xl font-bold"
+          style={{
+            textShadow: "0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 255, 255, 0.3)",
+          }}
+        >
+          Choose your access
+        </h3>
       </motion.div>
 
       {/* Pricing Cards Container - with subtle background */}

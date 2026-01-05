@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { useReveal } from "@/lib/reveal-state";
 import StripeCheckout from "@/components/reveal/StripeCheckout";
 import { type PlanId } from "@/lib/subscription-plans";
@@ -21,6 +22,66 @@ import HowItWorksCollapsible from "../paywall/HowItWorksCollapsible";
 import UrgencySection from "../paywall/UrgencySection";
 import CredibilityBlock from "../paywall/CredibilityBlock";
 import FeaturedInLogos from "../paywall/FeaturedInLogos";
+
+// Cosmic stardust background particles - matching HeroSection style
+function CosmicStardust() {
+  // Sparse particles with brighter, more magical feel
+  const particles = [
+    // Gold particles
+    { x: 8, y: 5, size: 1.5, color: "rgba(232, 197, 71, 0.5)", glow: "rgba(232, 197, 71, 0.7)", duration: 4 },
+    { x: 85, y: 12, size: 1, color: "rgba(232, 197, 71, 0.45)", glow: "rgba(232, 197, 71, 0.65)", duration: 5 },
+    { x: 45, y: 25, size: 1, color: "rgba(232, 197, 71, 0.5)", glow: "rgba(232, 197, 71, 0.7)", duration: 3.5 },
+    { x: 92, y: 38, size: 1.5, color: "rgba(232, 197, 71, 0.45)", glow: "rgba(232, 197, 71, 0.65)", duration: 4.5 },
+    { x: 15, y: 55, size: 1, color: "rgba(232, 197, 71, 0.5)", glow: "rgba(232, 197, 71, 0.7)", duration: 5 },
+    { x: 78, y: 68, size: 1, color: "rgba(232, 197, 71, 0.45)", glow: "rgba(232, 197, 71, 0.65)", duration: 4 },
+    { x: 35, y: 82, size: 1.5, color: "rgba(232, 197, 71, 0.5)", glow: "rgba(232, 197, 71, 0.7)", duration: 3.5 },
+    // Blue particles
+    { x: 22, y: 15, size: 1, color: "rgba(147, 197, 253, 0.45)", glow: "rgba(147, 197, 253, 0.7)", duration: 5 },
+    { x: 68, y: 22, size: 1, color: "rgba(147, 197, 253, 0.5)", glow: "rgba(147, 197, 253, 0.75)", duration: 4 },
+    { x: 5, y: 42, size: 1.5, color: "rgba(147, 197, 253, 0.45)", glow: "rgba(147, 197, 253, 0.7)", duration: 4.5 },
+    { x: 55, y: 48, size: 1, color: "rgba(147, 197, 253, 0.5)", glow: "rgba(147, 197, 253, 0.75)", duration: 3.5 },
+    { x: 88, y: 62, size: 1, color: "rgba(147, 197, 253, 0.45)", glow: "rgba(147, 197, 253, 0.7)", duration: 5 },
+    { x: 28, y: 75, size: 1.5, color: "rgba(147, 197, 253, 0.5)", glow: "rgba(147, 197, 253, 0.75)", duration: 4 },
+    { x: 72, y: 88, size: 1, color: "rgba(147, 197, 253, 0.45)", glow: "rgba(147, 197, 253, 0.7)", duration: 4.5 },
+    // Purple particles
+    { x: 42, y: 8, size: 1, color: "rgba(196, 181, 253, 0.45)", glow: "rgba(196, 181, 253, 0.7)", duration: 4 },
+    { x: 12, y: 28, size: 1.5, color: "rgba(196, 181, 253, 0.5)", glow: "rgba(196, 181, 253, 0.75)", duration: 5 },
+    { x: 75, y: 35, size: 1, color: "rgba(196, 181, 253, 0.45)", glow: "rgba(196, 181, 253, 0.7)", duration: 3.5 },
+    { x: 38, y: 58, size: 1, color: "rgba(196, 181, 253, 0.5)", glow: "rgba(196, 181, 253, 0.75)", duration: 4.5 },
+    { x: 95, y: 72, size: 1.5, color: "rgba(196, 181, 253, 0.45)", glow: "rgba(196, 181, 253, 0.7)", duration: 4 },
+    { x: 58, y: 92, size: 1, color: "rgba(196, 181, 253, 0.5)", glow: "rgba(196, 181, 253, 0.75)", duration: 5 },
+  ];
+
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+      {particles.map((particle, i) => (
+        <motion.div
+          key={i}
+          className="absolute rounded-full"
+          style={{
+            left: `${particle.x}%`,
+            top: `${particle.y}%`,
+            width: particle.size,
+            height: particle.size,
+            background: particle.color,
+            boxShadow: `0 0 6px ${particle.glow}`,
+          }}
+          animate={{
+            y: [0, -15, 0],
+            opacity: [0.3, 0.8, 0.3],
+            scale: [1, 1.2, 1],
+          }}
+          transition={{
+            duration: particle.duration,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: i * 0.25,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function RevealScreen09Paywall() {
   const { state } = useReveal();
@@ -46,7 +107,10 @@ export default function RevealScreen09Paywall() {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-y-auto">
+    <div className="flex-1 flex flex-col overflow-y-auto relative">
+      {/* Cosmic stardust background */}
+      <CosmicStardust />
+
       {/* ========== SECTION 1: Blurred Report Preview (teaser) ========== */}
       <BlurredReportPreview forecastData={state.forecastData} />
 

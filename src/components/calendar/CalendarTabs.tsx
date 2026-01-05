@@ -22,9 +22,9 @@ export default function CalendarTabs({
   onTabChange,
 }: CalendarTabsProps) {
   const tabs: { id: CalendarTabType; label: string; icon: typeof Calendar }[] = [
-    { id: "month", label: "Calendar", icon: Calendar },
-    { id: "2026", label: "2026", icon: Sparkles },
-    { id: "transits", label: "Life Transits", icon: Star },
+    { id: "month", label: "Month", icon: Calendar },
+    { id: "2026", label: "Year", icon: Sparkles },
+    { id: "transits", label: "Destiny", icon: Star },
   ];
 
   // Calculate indicator position based on active tab index

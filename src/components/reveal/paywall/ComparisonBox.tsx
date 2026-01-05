@@ -29,18 +29,23 @@ export default function ComparisonBox() {
         viewport={{ once: true }}
         className="rounded-2xl p-5 mb-4"
         style={{
-          background: "rgba(255, 100, 100, 0.05)",
-          border: "1px solid rgba(255, 100, 100, 0.15)",
+          background: "linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(185, 28, 28, 0.04))",
+          border: "1px solid rgba(239, 68, 68, 0.2)",
         }}
       >
-        <p className="text-white/70 text-[15px] font-medium mb-4">
-          Planning 2026 without your map:
+        <p
+          className="text-red-400 text-[17px] font-semibold mb-4"
+          style={{
+            textShadow: "0 0 10px rgba(239, 68, 68, 0.6), 0 0 20px rgba(239, 68, 68, 0.4), 0 0 30px rgba(239, 68, 68, 0.2)",
+          }}
+        >
+          Planning 2026 Without Your Map:
         </p>
         <ul className="space-y-3">
           {WITHOUT_ITEMS.map((item, i) => (
             <li key={i} className="flex items-start gap-3">
-              <X className="w-4 h-4 text-red-400/70 mt-0.5 flex-shrink-0" />
-              <span className="text-white/50 text-[14px]">{item}</span>
+              <X className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+              <span className="text-white/70 text-[14px]">{item}</span>
             </li>
           ))}
         </ul>
@@ -54,17 +59,22 @@ export default function ComparisonBox() {
         transition={{ delay: 0.2 }}
         className="rounded-2xl p-5"
         style={{
-          background: "linear-gradient(135deg, rgba(201, 162, 39, 0.08), rgba(201, 162, 39, 0.03))",
-          border: "1px solid rgba(201, 162, 39, 0.25)",
+          background: "linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(22, 163, 74, 0.04))",
+          border: "1px solid rgba(34, 197, 94, 0.25)",
         }}
       >
-        <p className="text-gold text-[15px] font-medium mb-4">
-          Planning 2026 with your map:
+        <p
+          className="text-emerald-400 text-[17px] font-semibold mb-4"
+          style={{
+            textShadow: "0 0 10px rgba(52, 211, 153, 0.6), 0 0 20px rgba(52, 211, 153, 0.4), 0 0 30px rgba(52, 211, 153, 0.2)",
+          }}
+        >
+          Planning 2026 With Your Map:
         </p>
         <ul className="space-y-3">
           {WITH_ITEMS.map((item, i) => (
             <li key={i} className="flex items-start gap-3">
-              <Check className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
+              <Check className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
               <span className="text-white/80 text-[14px]">{item}</span>
             </li>
           ))}
