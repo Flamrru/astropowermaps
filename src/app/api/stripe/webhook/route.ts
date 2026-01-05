@@ -278,8 +278,6 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   // ========================================
   // CREATE SUPABASE AUTH USER & PROFILE
   // ========================================
-  let magicLink: string | undefined;
-
   if (lead && lead.birth_date) {
     try {
       // 1. Check if auth user already exists
@@ -342,21 +340,8 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
         console.log(`Profile: Created/updated for ${email.substring(0, 3)}***`);
       }
 
-      // 4. Generate magic link for dashboard access
-      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: "magiclink",
-        email,
-        options: {
-          redirectTo: `${baseUrl}/auth/callback?next=/setup`,
-        },
-      });
-
-      if (linkError) {
-        console.error("Failed to generate magic link:", linkError);
-      } else if (linkData?.properties?.action_link) {
-        magicLink = linkData.properties.action_link;
-        console.log(`Magic link generated for ${email.substring(0, 3)}***`);
-      }
+      // Note: Users now set their password during checkout on /account-setup page
+      // No magic link needed - they can log in with email + password anytime
     } catch (authSetupError) {
       console.error("Auth setup failed:", authSetupError);
       // Continue anyway - email will still be sent with map link
@@ -377,12 +362,11 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
     console.log(`Meta CAPI: Purchase event sent for ${appSessionId}, eventId: ${eventId}`);
   }
 
-  // Send confirmation email with permanent map link + magic link via Resend
+  // Send confirmation email with permanent map link via Resend
   const emailResult = await sendConfirmationEmail({
     email,
     sessionId: appSessionId,
     baseUrl,
-    magicLink, // Include magic link for dashboard access
   });
 
   if (emailResult.success) {

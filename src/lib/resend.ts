@@ -18,7 +18,6 @@ interface SendConfirmationEmailParams {
   email: string;
   sessionId: string;
   baseUrl: string;
-  magicLink?: string; // Magic link for dashboard access (Stella+)
 }
 
 const SUPPORT_EMAIL = "support@astropowermap.com";
@@ -31,7 +30,6 @@ export async function sendConfirmationEmail({
   email,
   sessionId,
   baseUrl,
-  magicLink,
 }: SendConfirmationEmailParams): Promise<{ success: boolean; error?: string }> {
   const resend = getResend();
 
@@ -40,29 +38,28 @@ export async function sendConfirmationEmail({
   }
 
   const mapUrl = `${baseUrl}/map?sid=${sessionId}`;
+  const loginUrl = `${baseUrl}/login`;
 
-  // Build dashboard access section if magic link is available
-  const dashboardSection = magicLink
-    ? `
-              <!-- Dashboard Access Section -->
+  // Login instructions section
+  const loginSection = `
+              <!-- Account Access Section -->
               <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, rgba(74, 222, 128, 0.1) 0%, rgba(74, 222, 128, 0.02) 100%); border: 1px solid rgba(74, 222, 128, 0.3); border-radius: 12px; margin: 24px 0;">
                 <tr>
                   <td style="padding: 20px;">
-                    <p style="font-size: 14px; color: #4ade80; margin: 0 0 8px 0; font-weight: 600;">✨ NEW: Access Your Stella+ Dashboard</p>
+                    <p style="font-size: 14px; color: #4ade80; margin: 0 0 8px 0; font-weight: 600;">✨ Access Your Stella+ Dashboard</p>
                     <p style="font-size: 14px; color: #b5b5b5; margin: 0 0 16px 0;">Get daily cosmic guidance, power day alerts, and chat with Stella — your personal astrology AI.</p>
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td align="center">
-                          <a href="${magicLink}" style="display: inline-block; background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); color: #0a0a0f; text-align: center; padding: 14px 28px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 15px;">Open Dashboard →</a>
+                          <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); color: #0a0a0f; text-align: center; padding: 14px 28px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 15px;">Log In to Dashboard →</a>
                         </td>
                       </tr>
                     </table>
-                    <p style="text-align: center; font-size: 12px; color: #666666; margin: 12px 0 0 0;">This link expires in 1 hour. You can always request a new one at the login page.</p>
+                    <p style="text-align: center; font-size: 12px; color: #666666; margin: 12px 0 0 0;">Use your email and the password you created to log in anytime.</p>
                   </td>
                 </tr>
               </table>
-    `
-    : "";
+    `;
 
   try {
     const { error } = await resend.emails.send({
@@ -137,7 +134,7 @@ export async function sendConfirmationEmail({
                 </tr>
               </table>
 
-              ${dashboardSection}
+              ${loginSection}
 
               <!-- Divider -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0;">

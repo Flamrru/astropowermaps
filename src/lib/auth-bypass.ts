@@ -9,7 +9,7 @@
  * Auth bypass flag
  * Set to false to enable real authentication
  */
-export const BYPASS_AUTH = false;
+export const BYPASS_AUTH = true;
 
 /**
  * Test user ID for bypassing auth

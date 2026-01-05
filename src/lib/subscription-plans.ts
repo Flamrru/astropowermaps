@@ -1,21 +1,19 @@
 /**
  * Stella+ Subscription Plans Configuration
  *
- * Price IDs are populated by running: npx tsx scripts/setup-stripe-products.ts
+ * Price IDs are stored in stripe-config.ts with separate sandbox/live values.
+ * Toggle between modes using STRIPE_MODE environment variable.
  *
- * IMPORTANT: These are SANDBOX/TEST IDs. For production, create separate
- * products in your live Stripe account and update these values.
+ * To create products: npx tsx scripts/setup-stripe-products.ts
  */
 
-// Stripe Price IDs (populated after running setup script)
-// TODO: Run `npx tsx scripts/setup-stripe-products.ts` and update these values
-export const STRIPE_PRICES = {
-  PRODUCT_ID: "", // Will be like: prod_xxx
-  MONTHLY: "", // Will be like: price_xxx ($19.99/month recurring)
-  TRIAL_3DAY: "", // Will be like: price_xxx ($2.99 one-time)
-  TRIAL_7DAY: "", // Will be like: price_xxx ($5.99 one-time)
-  TRIAL_14DAY: "", // Will be like: price_xxx ($9.99 one-time)
-} as const;
+import { getStripePrices, getStripeMode } from "./stripe-config";
+
+// Re-export for backward compatibility - dynamically selects based on STRIPE_MODE
+export const STRIPE_PRICES = getStripePrices();
+
+// Export mode for debugging
+export const CURRENT_STRIPE_MODE = getStripeMode();
 
 // Plan IDs match the UI component (PricingSelector)
 export type PlanId = "trial_3day" | "trial_7day" | "trial_14day";

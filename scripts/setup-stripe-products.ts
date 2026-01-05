@@ -1,39 +1,96 @@
 /**
  * Stripe Product Setup Script
  *
- * Run this script ONCE to create the subscription products and prices in Stripe.
- * It will output the price IDs that you need to add to subscription-plans.ts.
+ * Creates subscription products and prices in Stripe for Stella+.
+ * Supports both sandbox and live modes via STRIPE_MODE environment variable.
  *
  * Usage:
- *   npx tsx scripts/setup-stripe-products.ts
+ *   npx tsx scripts/setup-stripe-products.ts           # Uses current STRIPE_MODE
+ *   STRIPE_MODE=sandbox npx tsx scripts/setup-stripe-products.ts  # Force sandbox
+ *   STRIPE_MODE=live npx tsx scripts/setup-stripe-products.ts     # Force live (requires confirmation)
  *
  * Prerequisites:
- *   - STRIPE_SECRET_KEY environment variable must be set
- *   - Use your SANDBOX/TEST key (sk_test_...)
+ *   - STRIPE_SECRET_KEY must match the mode (sk_test_... for sandbox, sk_live_... for live)
  */
 
 import Stripe from "stripe";
 import * as dotenv from "dotenv";
+import * as readline from "readline";
 
 // Load environment variables from .env.local
 dotenv.config({ path: ".env.local" });
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+const STRIPE_MODE = process.env.STRIPE_MODE?.toLowerCase() || "sandbox";
 
 if (!STRIPE_SECRET_KEY) {
   console.error("❌ STRIPE_SECRET_KEY not found in environment variables");
-  console.error("   Make sure .env.local contains STRIPE_SECRET_KEY=sk_test_...");
+  console.error("   Make sure .env.local contains STRIPE_SECRET_KEY=sk_test_... or sk_live_...");
   process.exit(1);
 }
 
-// Verify we're using test/sandbox key
-if (!STRIPE_SECRET_KEY.startsWith("sk_test_")) {
-  console.error("❌ This script should only be run with SANDBOX keys (sk_test_...)");
-  console.error("   Found key starting with:", STRIPE_SECRET_KEY.substring(0, 10));
+// Determine mode from key
+const isLiveKey = STRIPE_SECRET_KEY.startsWith("sk_live_");
+const isTestKey = STRIPE_SECRET_KEY.startsWith("sk_test_");
+const keyMode = isLiveKey ? "live" : isTestKey ? "sandbox" : "unknown";
+
+// Log current configuration
+console.log("\n" + "=".repeat(60));
+console.log("🔧 STRIPE SETUP CONFIGURATION");
+console.log("=".repeat(60));
+console.log(`   STRIPE_MODE env var: ${STRIPE_MODE}`);
+console.log(`   Key type detected:   ${keyMode}`);
+console.log(`   Key prefix:          ${STRIPE_SECRET_KEY.substring(0, 12)}...`);
+console.log("=".repeat(60) + "\n");
+
+// Validate key matches expected mode
+if (STRIPE_MODE === "live" && !isLiveKey) {
+  console.error("❌ STRIPE_MODE is 'live' but key is not a live key (sk_live_...)");
+  console.error("   Update your .env.local with your live Stripe key");
   process.exit(1);
+}
+
+if (STRIPE_MODE === "sandbox" && !isTestKey) {
+  console.error("❌ STRIPE_MODE is 'sandbox' but key is not a test key (sk_test_...)");
+  console.error("   Update your .env.local with your test Stripe key, or set STRIPE_MODE=live");
+  process.exit(1);
+}
+
+// Helper to prompt for confirmation
+async function confirmLiveMode(): Promise<boolean> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    console.log("\n⚠️  WARNING: You are about to create products in LIVE MODE");
+    console.log("   This will create real products that can charge real money.\n");
+    rl.question("   Type 'yes' to confirm: ", (answer) => {
+      rl.close();
+      resolve(answer.toLowerCase() === "yes");
+    });
+  });
 }
 
 const stripe = new Stripe(STRIPE_SECRET_KEY);
+
+// Main function to handle async operations
+async function main() {
+  // For live mode, require confirmation
+  if (isLiveKey) {
+    const confirmed = await confirmLiveMode();
+    if (!confirmed) {
+      console.log("\n❌ Cancelled. No products were created.");
+      process.exit(0);
+    }
+    console.log("\n✅ Confirmed. Proceeding with LIVE mode...\n");
+  }
+
+  // Run the actual setup
+  await setupStripeProducts();
+  console.log("Done! Now update stripe-config.ts with the price IDs above.\n");
+}
 
 // Subscription pricing configuration
 const MONTHLY_PRICE_CENTS = 1999; // $19.99/month after trial
@@ -153,10 +210,13 @@ async function setupStripeProducts() {
 
     // Output results
     console.log("\n" + "=".repeat(60));
-    console.log("✅ SETUP COMPLETE!");
+    console.log(`✅ SETUP COMPLETE! (${keyMode.toUpperCase()} MODE)`);
     console.log("=".repeat(60));
-    console.log("\n📋 Copy these price IDs to src/lib/subscription-plans.ts:\n");
-    console.log(`export const STRIPE_PRICES = {`);
+
+    // Show which config to update based on mode
+    const configName = isLiveKey ? "LIVE_PRICES" : "SANDBOX_PRICES";
+    console.log(`\n📋 Copy these IDs to src/lib/stripe-config.ts → ${configName}:\n`);
+    console.log(`export const ${configName} = {`);
     console.log(`  PRODUCT_ID: "${product.id}",`);
     console.log(`  MONTHLY: "${priceIds.monthly}",`);
     console.log(`  TRIAL_3DAY: "${priceIds.stella_3day}",`);
@@ -164,6 +224,12 @@ async function setupStripeProducts() {
     console.log(`  TRIAL_14DAY: "${priceIds.stella_14day}",`);
     console.log(`} as const;`);
     console.log("\n");
+
+    // Remind about mode switching
+    console.log("💡 To switch modes, set STRIPE_MODE in your .env.local:");
+    console.log("   STRIPE_MODE=sandbox  → Uses test keys & SANDBOX_PRICES");
+    console.log("   STRIPE_MODE=live     → Uses live keys & LIVE_PRICES");
+    console.log("");
 
     // Return the IDs for programmatic use
     return {
@@ -177,9 +243,8 @@ async function setupStripeProducts() {
 }
 
 // Run the setup
-setupStripeProducts()
+main()
   .then(() => {
-    console.log("Done! Now update subscription-plans.ts with the price IDs above.\n");
     process.exit(0);
   })
   .catch((error) => {

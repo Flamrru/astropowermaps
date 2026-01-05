@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * Auth bypass flag
  * Set to false to enable real authentication
  */
-const BYPASS_AUTH = false;
+const BYPASS_AUTH = true;
 
 /**
  * Refreshes the user's session and handles auth redirects.

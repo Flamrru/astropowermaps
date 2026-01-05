@@ -4,13 +4,24 @@ import { NextResponse } from "next/server";
 /**
  * Auth Callback Route
  *
- * Handles magic link redirects from Supabase Auth.
- * Exchanges the code for a session, then redirects to dashboard or setup.
+ * Handles auth redirects from Supabase:
+ * - Password reset links (type=recovery)
+ * - Email confirmation links
+ * - Magic links (deprecated, but still handled)
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  const type = searchParams.get("type");
   const next = searchParams.get("next") ?? "/dashboard";
+
+  // Handle password recovery redirect
+  // Supabase sends users here after clicking password reset link
+  if (type === "recovery") {
+    // Redirect to our reset-password page where user can set new password
+    // The hash fragment contains the access token that Supabase client will use
+    return NextResponse.redirect(`${origin}/reset-password`);
+  }
 
   if (code) {
     const supabase = await createClient();

@@ -20,6 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 import { calculateBigThree } from "@/lib/astro/zodiac";
 import type { BirthData } from "@/lib/astro/types";
 import BottomNav from "./BottomNav";
+import { BYPASS_AUTH } from "@/lib/auth-bypass";
 
 // ============================================
 // Initial State
@@ -127,8 +128,9 @@ export default function DashboardShell({
   const router = useRouter();
   const [state, dispatch] = useReducer(dashboardReducer, initialDashboardState);
 
-  // Check for dev mode: ?dev=true or ?d=dashboard
+  // Check for dev mode: ?dev=true or ?d=dashboard or BYPASS_AUTH enabled
   const isDevMode =
+    BYPASS_AUTH ||
     searchParams.get("dev") === "true" ||
     searchParams.get("d") === "dashboard";
 

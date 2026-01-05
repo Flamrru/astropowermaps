@@ -19,6 +19,7 @@ interface CheckoutPayload {
   session_id: string;
   email: string;
   planId?: PlanId; // Optional for backward compatibility, defaults to "trial_7day"
+  devMode?: boolean; // True if testing in dev mode (no real lead in DB)
 }
 
 /**
@@ -88,8 +89,11 @@ export async function POST(request: NextRequest) {
         },
       ],
 
-      // Return URL after successful payment
-      return_url: `${origin}/reveal?payment_status=complete&session_id={CHECKOUT_SESSION_ID}`,
+      // Return URL after successful payment - go to account setup page
+      // Pass our app's session_id (for lead lookup) and dev mode flag if testing
+      return_url: body.devMode
+        ? `${origin}/account-setup?sid=${body.session_id}&d=1`
+        : `${origin}/account-setup?sid=${body.session_id}`,
 
       // Store our session_id in metadata for webhook
       metadata: {
