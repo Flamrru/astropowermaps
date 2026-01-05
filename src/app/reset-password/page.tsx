@@ -7,6 +7,23 @@ import { createClient } from "@/lib/supabase/client";
 import { Lock, Eye, EyeOff, Check, ArrowRight, Sparkles, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
+// Password validation helper
+function validatePassword(password: string): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (password.length < 6) {
+    errors.push("At least 6 characters");
+  }
+  if (!/[a-zA-Z]/.test(password)) {
+    errors.push("At least 1 letter");
+  }
+  if (!/[0-9]/.test(password)) {
+    errors.push("At least 1 number");
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
 /**
  * Reset Password Page
  *
@@ -26,9 +43,9 @@ function ResetPasswordContent() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
   // Password validation
-  const passwordValid = password.length >= 6;
+  const passwordValidation = validatePassword(password);
   const passwordsMatch = password === confirmPassword;
-  const canSubmit = passwordValid && passwordsMatch && confirmPassword.length > 0;
+  const canSubmit = passwordValidation.valid && passwordsMatch && confirmPassword.length > 0;
 
   // Listen for PASSWORD_RECOVERY event when user lands from email link
   useEffect(() => {
@@ -68,8 +85,8 @@ function ResetPasswordContent() {
     e.preventDefault();
     setError(null);
 
-    if (!passwordValid) {
-      setError("Password must be at least 6 characters");
+    if (!passwordValidation.valid) {
+      setError("Password must have at least 6 characters, 1 letter, and 1 number");
       return;
     }
 
@@ -319,7 +336,7 @@ function ResetPasswordContent() {
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="At least 6 characters"
+                      placeholder="Min 6 chars, 1 letter, 1 number"
                       required
                       autoComplete="new-password"
                       className="input-glass w-full pl-12 pr-12 py-4 rounded-xl text-white placeholder:text-white/30 text-base"
@@ -337,9 +354,21 @@ function ResetPasswordContent() {
                       )}
                     </button>
                   </div>
-                  {password.length > 0 && password.length < 6 && (
-                    <p className="text-red-400 text-xs mt-1">
-                      Must be at least 6 characters
+                  {/* Password requirements */}
+                  {password.length > 0 && !passwordValidation.valid && (
+                    <div className="mt-2 space-y-1">
+                      {passwordValidation.errors.map((err, i) => (
+                        <p key={i} className="text-red-400 text-xs flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-red-400" />
+                          {err}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {password.length > 0 && passwordValidation.valid && (
+                    <p className="text-green-400 text-xs mt-1 flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      Password meets requirements
                     </p>
                   )}
                 </div>

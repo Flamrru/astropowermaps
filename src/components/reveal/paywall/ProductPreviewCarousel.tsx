@@ -2,53 +2,50 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Calendar, Map, BarChart3, Stars, LucideIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import Image from "next/image";
 
-// Placeholder screens - will be replaced with actual screenshots
-const PREVIEW_SCREENS: {
-  id: string;
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  iconColor: string;
-  color: string;
-}[] = [
+// App preview screenshots
+const PREVIEW_SCREENS = [
   {
-    id: "calendar",
-    title: "Daily Calendar",
-    description: "Your daily power scores at a glance",
-    icon: Calendar,
-    iconColor: "#E8C547",
-    color: "from-gold/20 to-gold/5",
+    id: "home",
+    title: "Daily Power Score",
+    image: "/previews/preview-home.png",
   },
   {
     id: "map",
-    title: "Interactive Map",
-    description: "Explore your 40 planetary lines",
-    icon: Map,
-    iconColor: "#60A5FA",
-    color: "from-blue-500/20 to-blue-500/5",
+    title: "Astrocartography Map",
+    image: "/previews/preview-map.png",
   },
   {
-    id: "forecast",
-    title: "2026 Forecast",
-    description: "Your year ranked month by month",
-    icon: BarChart3,
-    iconColor: "#A78BFA",
-    color: "from-purple-500/20 to-purple-500/5",
+    id: "places",
+    title: "Power Places",
+    image: "/previews/preview-places.png",
+  },
+  {
+    id: "calendar",
+    title: "Cosmic Calendar",
+    image: "/previews/preview-calendar.png",
   },
   {
     id: "stella",
-    title: "Stella AI",
-    description: "Ask anything about your chart",
-    icon: Stars,
-    iconColor: "#34D399",
-    color: "from-emerald-500/20 to-emerald-500/5",
+    title: "Stella AI Guide",
+    image: "/previews/preview-stella.png",
+  },
+  {
+    id: "year",
+    title: "2026 Forecast",
+    image: "/previews/preview-year.png",
   },
 ];
 
 export default function ProductPreviewCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  // Minimum swipe distance to trigger navigation (in px)
+  const minSwipeDistance = 50;
 
   const next = () => {
     setCurrentIndex((prev) => (prev + 1) % PREVIEW_SCREENS.length);
@@ -56,6 +53,28 @@ export default function ProductPreviewCarousel() {
 
   const prev = () => {
     setCurrentIndex((prev) => (prev - 1 + PREVIEW_SCREENS.length) % PREVIEW_SCREENS.length);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isSwipe = Math.abs(distance) > minSwipeDistance;
+    if (isSwipe) {
+      if (distance > 0) {
+        next(); // Swipe left → go to next
+      } else {
+        prev(); // Swipe right → go to previous
+      }
+    }
   };
 
   // Get indices for 3-card display
@@ -70,7 +89,12 @@ export default function ProductPreviewCarousel() {
   return (
     <div className="w-full">
       {/* 3D Carousel */}
-      <div className="relative h-[280px] flex items-center justify-center">
+      <div
+        className="relative h-[350px] flex items-center justify-center"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         {/* Navigation Arrows */}
         <button
           onClick={prev}
@@ -102,9 +126,9 @@ export default function ProductPreviewCarousel() {
                     x: isLeft ? -100 : isCenter ? 0 : 100
                   }}
                   animate={{
-                    opacity: isCenter ? 1 : 0.5,
-                    scale: isCenter ? 1 : 0.75,
-                    x: isLeft ? -90 : isCenter ? 0 : 90,
+                    opacity: isCenter ? 1 : 0.4,
+                    scale: isCenter ? 1 : 0.8,
+                    x: isLeft ? -110 : isCenter ? 0 : 110,
                     zIndex: isCenter ? 10 : 5,
                   }}
                   exit={{
@@ -113,45 +137,64 @@ export default function ProductPreviewCarousel() {
                   }}
                   transition={{ duration: 0.3, ease: "easeOut" }}
                   className="absolute"
-                  style={{
-                    width: isCenter ? "180px" : "140px",
-                  }}
                   onClick={() => !isCenter && (isLeft ? prev() : next())}
                 >
-                  {/* Preview Card */}
+                  {/* iPhone-style device frame */}
                   <div
-                    className={`rounded-2xl overflow-hidden cursor-pointer transition-all duration-300`}
+                    className="relative cursor-pointer transition-all duration-300"
                     style={{
-                      aspectRatio: "9/16",
-                      background: isCenter ? "#0a0a1a" : "rgba(255, 255, 255, 0.03)",
-                      border: isCenter
-                        ? "2px solid rgba(255, 255, 255, 0.2)"
-                        : "1px solid rgba(255, 255, 255, 0.1)",
-                      boxShadow: isCenter
-                        ? "0 10px 40px rgba(0, 0, 0, 0.4)"
-                        : "none",
+                      width: isCenter ? "180px" : "135px",
+                      height: isCenter ? "320px" : "240px",
                     }}
                   >
+                    {/* Device bezel */}
                     <div
-                      className={`w-full h-full flex flex-col items-center justify-center bg-gradient-to-b ${screen.color}`}
+                      className="absolute inset-0 rounded-[28px]"
+                      style={{
+                        background: isCenter
+                          ? "linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 50%, #0a0a0a 100%)"
+                          : "linear-gradient(145deg, #222 0%, #111 100%)",
+                        padding: "3px",
+                        boxShadow: isCenter
+                          ? "0 20px 60px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255,255,255,0.1)"
+                          : "none",
+                      }}
                     >
-                      {/* Icon */}
-                      <screen.icon
-                        className={`${isCenter ? "w-12 h-12" : "w-10 h-10"} mb-4`}
-                        style={{
-                          color: screen.iconColor,
-                          filter: `drop-shadow(0 0 12px ${screen.iconColor}80)`,
-                        }}
-                      />
-
-                      {/* Screen title */}
-                      <p className={`text-white font-semibold ${isCenter ? "text-[15px]" : "text-[12px]"} text-center px-3`}>
-                        {screen.title}
-                      </p>
-                      <p className={`text-white/50 ${isCenter ? "text-[11px]" : "text-[9px]"} mt-1 text-center px-3`}>
-                        {screen.description}
-                      </p>
+                      {/* Screen area */}
+                      <div className="relative w-full h-full rounded-[25px] overflow-hidden bg-black">
+                        {/* Screenshot */}
+                        <Image
+                          src={screen.image}
+                          alt={screen.title}
+                          width={180}
+                          height={320}
+                          className="w-full h-full"
+                          style={{ objectFit: "cover" }}
+                        />
+                      </div>
                     </div>
+
+                    {/* Side button (right) */}
+                    {isCenter && (
+                      <div
+                        className="absolute right-[-2px] top-[70px] w-[3px] h-[40px] rounded-r-sm"
+                        style={{ background: "linear-gradient(180deg, #333 0%, #1a1a1a 100%)" }}
+                      />
+                    )}
+
+                    {/* Volume buttons (left) */}
+                    {isCenter && (
+                      <>
+                        <div
+                          className="absolute left-[-2px] top-[60px] w-[3px] h-[20px] rounded-l-sm"
+                          style={{ background: "linear-gradient(180deg, #333 0%, #1a1a1a 100%)" }}
+                        />
+                        <div
+                          className="absolute left-[-2px] top-[85px] w-[3px] h-[35px] rounded-l-sm"
+                          style={{ background: "linear-gradient(180deg, #333 0%, #1a1a1a 100%)" }}
+                        />
+                      </>
+                    )}
                   </div>
                 </motion.div>
               );

@@ -3,10 +3,28 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Lock, Eye, EyeOff, Check, ArrowRight, Sparkles } from "lucide-react";
+import { Lock, Eye, EyeOff, Check, ArrowRight, Sparkles, Mail } from "lucide-react";
+
+// Password validation helper
+function validatePassword(password: string): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  if (password.length < 6) {
+    errors.push("At least 6 characters");
+  }
+  if (!/[a-zA-Z]/.test(password)) {
+    errors.push("At least 1 letter");
+  }
+  if (!/[0-9]/.test(password)) {
+    errors.push("At least 1 number");
+  }
+
+  return { valid: errors.length === 0, errors };
+}
 
 function AccountSetupContent() {
   const searchParams = useSearchParams();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -15,19 +33,29 @@ function AccountSetupContent() {
 
   // Get session info from URL params
   const sessionId = searchParams.get("sid");
-  const isDevMode = searchParams.get("d") !== null;
 
-  // Validate passwords match in real-time
+  // Load email from localStorage on mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("stella_email") || "";
+    setEmail(savedEmail);
+  }, []);
+
+  // Validate passwords
+  const passwordValidation = validatePassword(password);
   const passwordsMatch = password === confirmPassword;
-  const passwordValid = password.length >= 6;
-  const canSubmit = passwordValid && passwordsMatch && confirmPassword.length > 0;
+  const canSubmit = passwordValidation.valid && passwordsMatch && confirmPassword.length > 0 && email.length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!passwordValid) {
-      setError("Password must be at least 6 characters");
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    if (!passwordValidation.valid) {
+      setError("Password must have at least 6 characters, 1 letter, and 1 number");
       return;
     }
 
@@ -39,14 +67,11 @@ function AccountSetupContent() {
     setIsCreating(true);
 
     try {
-      // Get email from localStorage (saved during quiz/reveal flow)
-      const savedEmail = localStorage.getItem("stella_email") || "test@example.com";
-
       const response = await fetch("/api/auth/create-account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: savedEmail,
+          email,
           password,
           sessionId,
         }),
@@ -56,6 +81,9 @@ function AccountSetupContent() {
         const data = await response.json();
         throw new Error(data.error || "Failed to create account");
       }
+
+      // Update localStorage with potentially changed email
+      localStorage.setItem("stella_email", email);
 
       // Redirect to dashboard map (full app with navigation)
       window.location.href = "/dashboard/map";
@@ -106,7 +134,7 @@ function AccountSetupContent() {
             Payment Successful!
           </h1>
           <p className="text-white/60 text-sm">
-            One last step — create your password
+            One last step — create your account
           </p>
         </motion.div>
 
@@ -130,6 +158,33 @@ function AccountSetupContent() {
               </div>
             )}
 
+            {/* Email */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-white/70 mb-2">
+                Email Address
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <Mail className="w-5 h-5 text-white/40" />
+                </div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  autoComplete="email"
+                  className="w-full pl-12 pr-4 py-4 rounded-xl text-white placeholder:text-white/30 text-base outline-none focus:ring-2 focus:ring-gold/50"
+                  style={{
+                    background: "rgba(255, 255, 255, 0.08)",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                  }}
+                />
+              </div>
+              <p className="text-white/40 text-xs mt-1">
+                You can change this if needed
+              </p>
+            </div>
+
             {/* Password */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-white/70 mb-2">
@@ -143,7 +198,7 @@ function AccountSetupContent() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="Min 6 chars, 1 letter, 1 number"
                   autoComplete="new-password"
                   className="w-full pl-12 pr-12 py-4 rounded-xl text-white placeholder:text-white/30 text-base outline-none focus:ring-2 focus:ring-gold/50"
                   style={{
@@ -159,8 +214,22 @@ function AccountSetupContent() {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
-              {password.length > 0 && password.length < 6 && (
-                <p className="text-red-400 text-xs mt-1">Must be at least 6 characters</p>
+              {/* Password requirements */}
+              {password.length > 0 && !passwordValidation.valid && (
+                <div className="mt-2 space-y-1">
+                  {passwordValidation.errors.map((err, i) => (
+                    <p key={i} className="text-red-400 text-xs flex items-center gap-1">
+                      <span className="w-1 h-1 rounded-full bg-red-400" />
+                      {err}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {password.length > 0 && passwordValidation.valid && (
+                <p className="text-green-400 text-xs mt-1 flex items-center gap-1">
+                  <Check className="w-3 h-3" />
+                  Password meets requirements
+                </p>
               )}
             </div>
 
@@ -237,16 +306,6 @@ function AccountSetupContent() {
             Skip for now — I'll set this up later
           </button>
         </motion.div>
-
-        {/* Info text */}
-        <motion.p
-          className="text-center text-white/40 text-xs mt-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          We'll send a confirmation email to verify your account
-        </motion.p>
 
         {/* Decorative */}
         <motion.div
