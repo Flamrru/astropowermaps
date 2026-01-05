@@ -20,6 +20,7 @@ import CTABlock from "../paywall/CTABlock";
 import HowItWorksCollapsible from "../paywall/HowItWorksCollapsible";
 import UrgencySection from "../paywall/UrgencySection";
 import CredibilityBlock from "../paywall/CredibilityBlock";
+import FeaturedInLogos from "../paywall/FeaturedInLogos";
 
 export default function RevealScreen09Paywall() {
   const { state } = useReveal();
@@ -49,10 +50,13 @@ export default function RevealScreen09Paywall() {
       {/* ========== SECTION 1: Blurred Report Preview (teaser) ========== */}
       <BlurredReportPreview forecastData={state.forecastData} />
 
-      {/* ========== SECTION 2: Hero + Credibility ========== */}
+      {/* ========== SECTION 2: Hero ========== */}
       <HeroSection />
 
-      {/* ========== SECTION 3: Pricing Selector ========== */}
+      {/* ========== SECTION 3: Featured In ========== */}
+      <FeaturedInLogos />
+
+      {/* ========== SECTION 4: Pricing Selector ========== */}
       <section id="pricing-section" className="px-5 pb-6">
         <PricingSelector
           selectedPlan={selectedPlan}

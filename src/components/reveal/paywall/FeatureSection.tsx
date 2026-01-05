@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
+import ProductPreviewCarousel from "./ProductPreviewCarousel";
 
 interface Feature {
   text: string;
@@ -66,14 +67,6 @@ const FEATURE_GROUPS: FeatureGroup[] = [
         text: "Interactive World Map",
         sub: "Explore your lines visually",
       },
-      {
-        text: "Line-by-Line Interpretations",
-        sub: "What each line means for you",
-      },
-      {
-        text: "Locations That Drain You",
-        sub: "Know where NOT to go",
-      },
     ],
   },
   {
@@ -90,10 +83,6 @@ const FEATURE_GROUPS: FeatureGroup[] = [
       {
         text: "Best Day Picker",
         sub: "Filter any week by goal — love, career, creativity, clarity",
-      },
-      {
-        text: "Personalized Journal Prompts",
-        sub: "Daily reflection inspired by your chart placements",
       },
       {
         text: "Moon Phase + Transit Tracking",
@@ -162,6 +151,26 @@ export default function FeatureSection() {
       >
         What You&apos;re Unlocking
       </motion.h2>
+
+      {/* Product Preview Carousel */}
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="mb-8"
+      >
+        <ProductPreviewCarousel />
+      </motion.div>
+
+      {/* What that means for you */}
+      <motion.h3
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="text-center text-white/70 text-lg font-medium mb-6"
+      >
+        What that means for you
+      </motion.h3>
 
       {/* Feature Groups */}
       <div className="space-y-4">
