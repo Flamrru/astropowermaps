@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Calendar, Map, Sparkles, CheckCircle } from "lucide-react";
+import { Calendar, Map, Sparkles } from "lucide-react";
 
 // Floating particles component for cosmic atmosphere
 function FloatingParticles() {
@@ -44,7 +44,7 @@ function FloatingParticles() {
 
 export default function HeroSection() {
   return (
-    <section className="px-5 pt-8 pb-8 relative">
+    <section className="px-5 pt-8 pb-1 relative">
       {/* Main Title */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -222,28 +222,9 @@ export default function HeroSection() {
                 </strong>
               </p>
             </motion.div>
+
           </div>
         </div>
-      </motion.div>
-
-      {/* Goal tagline */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ delay: 0.5 }}
-        className="flex items-center justify-center gap-2.5 mt-6"
-      >
-        <CheckCircle
-          className="w-5 h-5 flex-shrink-0"
-          style={{
-            color: "#22c55e",
-            filter: "drop-shadow(0 0 8px rgba(34, 197, 94, 0.6))",
-          }}
-        />
-        <p className="text-white/90 text-[14px]">
-          <span className="text-white/60">Goal:</span> you know exactly how to move through your year
-        </p>
       </motion.div>
 
       {/* CSS for gradient animation */}

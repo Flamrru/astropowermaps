@@ -139,62 +139,25 @@ export default function ProductPreviewCarousel() {
                   className="absolute"
                   onClick={() => !isCenter && (isLeft ? prev() : next())}
                 >
-                  {/* iPhone-style device frame */}
+                  {/* Preview Card */}
                   <div
-                    className="relative cursor-pointer transition-all duration-300"
+                    className="rounded-[24px] overflow-hidden cursor-pointer transition-all duration-300"
                     style={{
                       width: isCenter ? "180px" : "135px",
                       height: isCenter ? "320px" : "240px",
+                      boxShadow: isCenter
+                        ? "0 0 25px rgba(232, 197, 71, 0.25), 0 0 50px rgba(232, 197, 71, 0.1)"
+                        : "0 0 15px rgba(232, 197, 71, 0.08)",
                     }}
                   >
-                    {/* Device bezel */}
-                    <div
-                      className="absolute inset-0 rounded-[28px]"
-                      style={{
-                        background: isCenter
-                          ? "linear-gradient(145deg, #2a2a2a 0%, #1a1a1a 50%, #0a0a0a 100%)"
-                          : "linear-gradient(145deg, #222 0%, #111 100%)",
-                        padding: "3px",
-                        boxShadow: isCenter
-                          ? "0 20px 60px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(255,255,255,0.1)"
-                          : "none",
-                      }}
-                    >
-                      {/* Screen area */}
-                      <div className="relative w-full h-full rounded-[25px] overflow-hidden bg-black">
-                        {/* Screenshot */}
-                        <Image
-                          src={screen.image}
-                          alt={screen.title}
-                          width={180}
-                          height={320}
-                          className="w-full h-full"
-                          style={{ objectFit: "cover" }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Side button (right) */}
-                    {isCenter && (
-                      <div
-                        className="absolute right-[-2px] top-[70px] w-[3px] h-[40px] rounded-r-sm"
-                        style={{ background: "linear-gradient(180deg, #333 0%, #1a1a1a 100%)" }}
-                      />
-                    )}
-
-                    {/* Volume buttons (left) */}
-                    {isCenter && (
-                      <>
-                        <div
-                          className="absolute left-[-2px] top-[60px] w-[3px] h-[20px] rounded-l-sm"
-                          style={{ background: "linear-gradient(180deg, #333 0%, #1a1a1a 100%)" }}
-                        />
-                        <div
-                          className="absolute left-[-2px] top-[85px] w-[3px] h-[35px] rounded-l-sm"
-                          style={{ background: "linear-gradient(180deg, #333 0%, #1a1a1a 100%)" }}
-                        />
-                      </>
-                    )}
+                    <Image
+                      src={screen.image}
+                      alt={screen.title}
+                      width={180}
+                      height={320}
+                      className="w-full h-full"
+                      style={{ objectFit: "cover" }}
+                    />
                   </div>
                 </motion.div>
               );
