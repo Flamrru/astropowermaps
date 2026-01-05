@@ -2,46 +2,47 @@
 
 import { motion } from "framer-motion";
 
-// Publication logos rendered as styled text
-const PUBLICATIONS = [
-  { name: "Cosmopolitan", style: "font-serif italic" },
-  { name: "Well+Good", style: "font-sans font-semibold" },
-  { name: "Refinery29", style: "font-sans font-bold" },
-  { name: "mindbodygreen", style: "font-sans font-light tracking-wide" },
-  { name: "The Cut", style: "font-serif" },
-  { name: "Bustle", style: "font-sans font-medium tracking-wider" },
-];
-
 export default function FeaturedInLogos() {
   return (
-    <section className="py-8 px-5">
-      <motion.p
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        className="text-center text-white/40 text-xs uppercase tracking-widest mb-6"
-      >
-        As featured in
-      </motion.p>
-
+    <section className="px-5 pb-6">
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="flex flex-wrap justify-center items-center gap-x-6 gap-y-4"
+        className="credibility-bar-premium rounded-2xl py-4 px-4"
       >
-        {PUBLICATIONS.map((pub, index) => (
-          <motion.span
-            key={pub.name}
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: index * 0.1 }}
-            className={`text-white/30 text-[13px] ${pub.style}`}
+        <p className="text-white/80 text-[10px] text-center mb-3 uppercase tracking-[0.2em] font-medium">
+          As featured in
+        </p>
+        {/* Top row */}
+        <div className="flex items-center justify-center gap-5 mb-2">
+          {/* NYTimes - Gothic style */}
+          <span
+            className="text-white/90 text-[16px] font-serif tracking-tight"
+            style={{ fontFamily: "Georgia, Times, serif", fontStyle: "italic" }}
           >
-            {pub.name}
-          </motion.span>
-        ))}
+            The New York Times
+          </span>
+          {/* WIRED - blocky style */}
+          <span className="text-white/90 text-[15px] font-bold tracking-widest uppercase">
+            WIRED
+          </span>
+        </div>
+        {/* Bottom row */}
+        <div className="flex items-center justify-center gap-6">
+          {/* Forbes */}
+          <span className="text-white/90 text-[16px] font-serif font-bold tracking-tight">
+            Forbes
+          </span>
+          {/* healthline */}
+          <span className="text-white/90 text-[15px] font-sans font-medium">
+            healthline
+          </span>
+          {/* girlboss */}
+          <span className="text-white/90 text-[15px] font-sans font-bold lowercase">
+            girlboss
+          </span>
+        </div>
       </motion.div>
     </section>
   );

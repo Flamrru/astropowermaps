@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
+import { Check, Calendar, Map, Compass, Stars } from "lucide-react";
 import ProductPreviewCarousel from "./ProductPreviewCarousel";
+import { LucideIcon } from "lucide-react";
 
 interface Feature {
   text: string;
@@ -11,7 +12,8 @@ interface Feature {
 
 interface FeatureGroup {
   id: string;
-  emoji: string;
+  icon: LucideIcon;
+  iconColor: string;
   title: string;
   badge: string;
   badgeVariant: "primary" | "secondary" | "bonus";
@@ -21,7 +23,8 @@ interface FeatureGroup {
 const FEATURE_GROUPS: FeatureGroup[] = [
   {
     id: "2026_forecast",
-    emoji: "📅",
+    icon: Calendar,
+    iconColor: "#E8C547",
     title: "Your 2026 Forecast",
     badge: "YOUR 2026",
     badgeVariant: "primary",
@@ -50,7 +53,8 @@ const FEATURE_GROUPS: FeatureGroup[] = [
   },
   {
     id: "birth_chart",
-    emoji: "🗺️",
+    icon: Map,
+    iconColor: "#60A5FA",
     title: "Your Complete Birth Chart",
     badge: "INCLUDED",
     badgeVariant: "secondary",
@@ -71,7 +75,8 @@ const FEATURE_GROUPS: FeatureGroup[] = [
   },
   {
     id: "daily_guidance",
-    emoji: "✨",
+    icon: Compass,
+    iconColor: "#A78BFA",
     title: "Daily Guidance",
     badge: "ALSO INCLUDED",
     badgeVariant: "secondary",
@@ -92,9 +97,10 @@ const FEATURE_GROUPS: FeatureGroup[] = [
   },
   {
     id: "stella",
-    emoji: "🤖",
-    title: "Stella — Your Personal Astrology Assistant",
-    badge: "ALSO INCLUDED",
+    icon: Stars,
+    iconColor: "#34D399",
+    title: "Stella — Your Personal Astrologist",
+    badge: "BONUS",
     badgeVariant: "bonus",
     features: [
       {
@@ -147,7 +153,10 @@ export default function FeatureSection() {
         initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="text-center text-white text-xl font-bold mb-6"
+        className="text-center text-white text-2xl font-bold mb-12"
+        style={{
+          textShadow: "0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 255, 255, 0.3)",
+        }}
       >
         What You&apos;re Unlocking
       </motion.h2>
@@ -157,7 +166,7 @@ export default function FeatureSection() {
         initial={{ opacity: 0, y: 15 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="mb-8"
+        className="mb-16"
       >
         <ProductPreviewCarousel />
       </motion.div>
@@ -167,9 +176,12 @@ export default function FeatureSection() {
         initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className="text-center text-white/70 text-lg font-medium mb-6"
+        className="text-center text-white text-2xl font-bold mb-10"
+        style={{
+          textShadow: "0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 255, 255, 0.3)",
+        }}
       >
-        What that means for you
+        What That Means For You
       </motion.h3>
 
       {/* Feature Groups */}
@@ -199,10 +211,24 @@ export default function FeatureSection() {
             </div>
 
             {/* Section Title */}
-            <p className="text-gold text-xs uppercase tracking-wider mb-4 font-medium flex items-center gap-2">
-              <span>{group.emoji}</span>
-              {group.title}
-            </p>
+            <div className="flex items-center gap-2 mb-4">
+              <group.icon
+                className="w-5 h-5"
+                style={{
+                  color: group.iconColor,
+                  filter: `drop-shadow(0 0 8px ${group.iconColor}80)`,
+                }}
+              />
+              <p
+                className="text-sm uppercase tracking-wider font-semibold"
+                style={{
+                  color: group.iconColor,
+                  textShadow: `0 0 10px ${group.iconColor}99, 0 0 20px ${group.iconColor}66`,
+                }}
+              >
+                {group.title}
+              </p>
+            </div>
 
             {/* Features List */}
             <ul className="space-y-2.5">
@@ -211,7 +237,7 @@ export default function FeatureSection() {
                   <Check
                     className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
                       group.badgeVariant === "bonus"
-                        ? "text-white/50"
+                        ? "text-white/70"
                         : "text-gold"
                     }`}
                   />
@@ -219,19 +245,13 @@ export default function FeatureSection() {
                     <p
                       className={`text-[14px] font-medium ${
                         group.badgeVariant === "bonus"
-                          ? "text-white/70"
-                          : "text-white/80"
+                          ? "text-white/90"
+                          : "text-white"
                       }`}
                     >
                       {feature.text}
                     </p>
-                    <p
-                      className={`text-[12px] ${
-                        group.badgeVariant === "bonus"
-                          ? "text-white/40"
-                          : "text-white/50"
-                      }`}
-                    >
+                    <p className="text-[12px] text-white/80">
                       {feature.sub}
                     </p>
                   </div>

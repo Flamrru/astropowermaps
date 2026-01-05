@@ -29,7 +29,7 @@ export default function HeroSection() {
             {/* WHEN - Calendar */}
             <div className="flex items-center justify-center gap-3">
               <Calendar className="w-5 h-5 text-gold/70 flex-shrink-0" />
-              <p className="text-white/80 text-[15px]">
+              <p className="text-white text-[15px]">
                 Your <span className="text-gold font-medium">2026 Forecast</span> tells you <strong className="text-white font-bold">WHEN</strong>.
               </p>
             </div>
@@ -37,7 +37,7 @@ export default function HeroSection() {
             {/* WHERE - Map */}
             <div className="flex items-center justify-center gap-3">
               <Map className="w-5 h-5 text-gold/70 flex-shrink-0" />
-              <p className="text-white/80 text-[15px]">
+              <p className="text-white text-[15px]">
                 Your <span className="text-gold font-medium">Birth Chart</span> tells you <strong className="text-white font-bold">WHERE</strong>.
               </p>
             </div>
@@ -45,8 +45,8 @@ export default function HeroSection() {
             {/* WHAT - Sparkles */}
             <div className="flex items-center justify-center gap-3">
               <Sparkles className="w-5 h-5 text-gold/70 flex-shrink-0" />
-              <p className="text-white/80 text-[15px]">
-                Your <span className="text-gold font-medium">Daily Guidance</span> tells you <strong className="text-white font-bold">WHAT</strong> — every single day.
+              <p className="text-white text-[15px]">
+                Your <span className="text-gold font-medium">Daily Guidance</span> tells you <strong className="text-white font-bold">WHAT</strong>.
               </p>
             </div>
           </div>
@@ -61,8 +61,8 @@ export default function HeroSection() {
               filter: "drop-shadow(0 0 6px rgba(34, 197, 94, 0.5))"
             }}
           />
-          <p className="text-white/80 text-[14px]">
-            <span className="text-white/60">Goal:</span> you know exactly how to move through your year
+          <p className="text-white text-[14px]">
+            <span className="text-white/80">Goal:</span> you know exactly how to move through your year
           </p>
         </div>
       </motion.div>
