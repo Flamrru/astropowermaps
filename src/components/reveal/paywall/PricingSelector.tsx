@@ -2,8 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Check, Sparkles } from "lucide-react";
-
-type PlanId = "trial_3day" | "trial_7day" | "trial_14day";
+import { type PlanId } from "@/lib/subscription-plans";
 
 interface Plan {
   id: PlanId;
@@ -57,9 +56,6 @@ export default function PricingSelector({
         viewport={{ once: true }}
         className="text-center mb-6"
       >
-        <p className="text-white/50 text-xs uppercase tracking-[0.2em] mb-2">
-          Select Your Plan
-        </p>
         <h3 className="text-white text-xl font-semibold">Choose your access</h3>
       </motion.div>
 
@@ -301,5 +297,3 @@ export default function PricingSelector({
     </div>
   );
 }
-
-export type { PlanId };

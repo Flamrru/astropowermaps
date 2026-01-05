@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useReveal } from "@/lib/reveal-state";
 import StripeCheckout from "@/components/reveal/StripeCheckout";
+import { type PlanId } from "@/lib/subscription-plans";
 
 // Existing components (kept)
 import BlurredReportPreview from "../paywall/BlurredReportPreview";
@@ -11,13 +12,14 @@ import ComparisonBox from "../paywall/ComparisonBox";
 import FAQAccordion from "../paywall/FAQAccordion";
 import TestimonialCards from "../paywall/TestimonialCards";
 
-// New V2 components
+// V2.5 components
 import HeroSection from "../paywall/HeroSection";
-import PricingSelector, { PlanId } from "../paywall/PricingSelector";
+import PricingSelector from "../paywall/PricingSelector";
 import FeatureSection from "../paywall/FeatureSection";
 import CTABlock from "../paywall/CTABlock";
 import HowItWorksCollapsible from "../paywall/HowItWorksCollapsible";
 import UrgencySection from "../paywall/UrgencySection";
+import CredibilityBlock from "../paywall/CredibilityBlock";
 
 export default function RevealScreen09Paywall() {
   const { state } = useReveal();
@@ -63,17 +65,30 @@ export default function RevealScreen09Paywall() {
         {!showCheckout ? (
           <CTABlock onCtaClick={handleCheckoutClick} showTrustLine={true} />
         ) : (
-          <div
-            id="stripe-checkout"
-            className="rounded-2xl overflow-hidden"
-            style={{ background: "rgba(10, 10, 30, 0.8)" }}
-          >
-            <StripeCheckout />
+          <div id="stripe-checkout" className="relative z-50">
+            {/* Change plan button */}
+            <button
+              onClick={() => setShowCheckout(false)}
+              className="flex items-center gap-1.5 text-white/60 hover:text-white/80 text-sm mb-3 transition-colors"
+            >
+              <span>←</span>
+              <span>Change plan</span>
+            </button>
+            {/* Stripe checkout */}
+            <div
+              className="rounded-2xl overflow-hidden relative z-50"
+              style={{ background: "rgba(10, 10, 30, 0.8)" }}
+            >
+              <StripeCheckout planId={selectedPlan} />
+            </div>
           </div>
         )}
       </section>
 
-      {/* ========== SECTION 5: Feature Lists ========== */}
+      {/* ========== SECTION 5: Credibility Block ========== */}
+      <CredibilityBlock />
+
+      {/* ========== SECTION 6: Feature Lists ========== */}
       <FeatureSection />
 
       {/* ========== SECTION 6: CTA #2 → Scrolls to Pricing ========== */}
@@ -89,6 +104,11 @@ export default function RevealScreen09Paywall() {
 
       {/* ========== SECTION 9: With vs Without ========== */}
       <ComparisonBox />
+
+      {/* ========== SECTION 9b: CTA after Comparison ========== */}
+      <section className="px-5 pb-8">
+        <CTABlock onCtaClick={scrollToPricing} showTrustLine={true} />
+      </section>
 
       {/* ========== SECTION 10: Social Proof Gauges ========== */}
       <SocialProofGauges />

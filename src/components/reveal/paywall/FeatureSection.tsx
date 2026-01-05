@@ -48,6 +48,35 @@ const FEATURE_GROUPS: FeatureGroup[] = [
     ],
   },
   {
+    id: "birth_chart",
+    emoji: "🗺️",
+    title: "Your Complete Birth Chart",
+    badge: "INCLUDED",
+    badgeVariant: "secondary",
+    features: [
+      {
+        text: "All 40 Planetary Lines",
+        sub: "Calculated using NASA-grade ephemeris data — unique to your exact birth moment",
+      },
+      {
+        text: "338 Cities Matched + Ranked",
+        sub: "Find your power places anywhere in the world",
+      },
+      {
+        text: "Interactive World Map",
+        sub: "Explore your lines visually",
+      },
+      {
+        text: "Line-by-Line Interpretations",
+        sub: "What each line means for you",
+      },
+      {
+        text: "Locations That Drain You",
+        sub: "Know where NOT to go",
+      },
+    ],
+  },
+  {
     id: "daily_guidance",
     emoji: "✨",
     title: "Daily Guidance",
@@ -77,52 +106,19 @@ const FEATURE_GROUPS: FeatureGroup[] = [
     emoji: "🤖",
     title: "Stella — Your Personal Astrology Assistant",
     badge: "ALSO INCLUDED",
-    badgeVariant: "secondary",
-    features: [
-      {
-        text: "Ask anything about your chart",
-        sub: '"Should I take this job?" "Is March good for travel?" "What does my Moon sign mean?"',
-      },
-      {
-        text: "Personalized answers",
-        sub: "Not generic — based on YOUR birth chart",
-      },
-      {
-        text: "Available 24/7",
-        sub: "Like having an astrologer in your pocket",
-      },
-      {
-        text: "Context-aware",
-        sub: "Knows what page you're on, suggests relevant questions",
-      },
-    ],
-  },
-  {
-    id: "birth_chart",
-    emoji: "🗺️",
-    title: "Your Complete Birth Chart",
-    badge: "BONUS",
     badgeVariant: "bonus",
     features: [
       {
-        text: "All 40 Planetary Lines",
-        sub: "Calculated using NASA-grade ephemeris data — unique to your exact birth moment",
+        text: "2am decisions, answered",
+        sub: "When you're overthinking a decision and need someone to talk to — Stella's there 24/7.",
       },
       {
-        text: "338 Cities Matched + Ranked",
-        sub: "Find your power places anywhere in the world",
+        text: 'For the "what do I do?" moments',
+        sub: "Job offers. Relationship crossroads. Moving cities. Ask your chart, not the internet.",
       },
       {
-        text: "Interactive World Map",
-        sub: "Explore your lines visually",
-      },
-      {
-        text: "Line-by-Line Interpretations",
-        sub: "What each line means for you",
-      },
-      {
-        text: "Locations That Drain You",
-        sub: "Know where NOT to go",
+        text: "For when you can't afford to wait",
+        sub: "No booking appointments. No explaining your whole story. No $200/hour. No judgement. Instant.",
       },
     ],
   },

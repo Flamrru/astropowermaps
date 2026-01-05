@@ -516,9 +516,88 @@ export default function RevealShell({ children }: RevealShellProps) {
             `,
           }}
         >
-          {/* ===== LAYER 1: Map Background (persistent, always visible) ===== */}
-          <div className="absolute inset-0 z-0">
-            {state.astroData ? (
+          {/* ===== LAYER 1: Map Background (hidden on paywall step 9) ===== */}
+          <div
+            className="absolute inset-0 z-0"
+            style={{ pointerEvents: state.stepIndex === 1 ? "auto" : "none" }}
+          >
+            {/* Paywall gets a premium static cosmic background instead of map */}
+            {state.stepIndex === 9 ? (
+              <div className="absolute inset-0 overflow-hidden">
+                {/* Base deep space gradient */}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: `
+                      linear-gradient(180deg,
+                        #030308 0%,
+                        #050510 15%,
+                        #0a0a1a 40%,
+                        #080812 70%,
+                        #050510 100%
+                      )
+                    `,
+                  }}
+                />
+
+                {/* Nebula glow - top left (gold) */}
+                <div
+                  className="absolute -top-20 -left-20 w-[400px] h-[400px] opacity-40"
+                  style={{
+                    background: `radial-gradient(ellipse at center, rgba(201, 162, 39, 0.15) 0%, rgba(201, 162, 39, 0.05) 40%, transparent 70%)`,
+                    filter: "blur(60px)",
+                  }}
+                />
+
+                {/* Nebula glow - center right (purple) */}
+                <div
+                  className="absolute top-1/3 -right-10 w-[350px] h-[500px] opacity-30"
+                  style={{
+                    background: `radial-gradient(ellipse at center, rgba(80, 60, 140, 0.2) 0%, rgba(60, 50, 120, 0.1) 40%, transparent 70%)`,
+                    filter: "blur(80px)",
+                  }}
+                />
+
+                {/* Nebula glow - bottom center (subtle gold) */}
+                <div
+                  className="absolute -bottom-40 left-1/4 w-[500px] h-[300px] opacity-25"
+                  style={{
+                    background: `radial-gradient(ellipse at center, rgba(232, 197, 71, 0.1) 0%, transparent 60%)`,
+                    filter: "blur(100px)",
+                  }}
+                />
+
+                {/* Subtle star field using CSS */}
+                <div
+                  className="absolute inset-0 opacity-60"
+                  style={{
+                    backgroundImage: `
+                      radial-gradient(1px 1px at 20px 30px, rgba(255, 255, 255, 0.8), transparent),
+                      radial-gradient(1px 1px at 40px 70px, rgba(255, 255, 255, 0.5), transparent),
+                      radial-gradient(1px 1px at 50px 160px, rgba(255, 255, 255, 0.6), transparent),
+                      radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.4), transparent),
+                      radial-gradient(1px 1px at 130px 80px, rgba(255, 255, 255, 0.7), transparent),
+                      radial-gradient(1.5px 1.5px at 160px 120px, rgba(232, 197, 71, 0.6), transparent),
+                      radial-gradient(1px 1px at 200px 50px, rgba(255, 255, 255, 0.5), transparent),
+                      radial-gradient(1px 1px at 220px 140px, rgba(255, 255, 255, 0.4), transparent),
+                      radial-gradient(1px 1px at 260px 90px, rgba(255, 255, 255, 0.6), transparent),
+                      radial-gradient(1.5px 1.5px at 300px 180px, rgba(232, 197, 71, 0.5), transparent),
+                      radial-gradient(1px 1px at 340px 60px, rgba(255, 255, 255, 0.5), transparent),
+                      radial-gradient(1px 1px at 380px 130px, rgba(255, 255, 255, 0.7), transparent)
+                    `,
+                    backgroundSize: "400px 200px",
+                  }}
+                />
+
+                {/* Vignette overlay for depth */}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: `radial-gradient(ellipse 70% 60% at 50% 50%, transparent 0%, rgba(5, 5, 16, 0.4) 100%)`,
+                  }}
+                />
+              </div>
+            ) : state.astroData ? (
               <AstroMap
                 data={state.astroData}
                 onReset={() => {}} // Not used in background mode
