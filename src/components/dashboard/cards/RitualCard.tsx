@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useDashboard } from "../DashboardShell";
-import { Moon, PenLine } from "lucide-react";
+import { Moon } from "lucide-react";
 
 /**
  * RitualCard
@@ -116,26 +116,6 @@ export default function RitualCard() {
           </p>
         </motion.blockquote>
 
-        {/* Write button */}
-        <motion.button
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl transition-all"
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 1 }}
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%)",
-            border: "1px solid rgba(139, 92, 246, 0.4)",
-            boxShadow: "0 0 20px rgba(139, 92, 246, 0.15)",
-          }}
-        >
-          <PenLine size={16} className="text-purple-300" />
-          <span className="text-purple-200 text-sm font-medium">
-            Write in journal
-          </span>
-        </motion.button>
 
         {/* Subtle star decoration */}
         <div className="absolute bottom-3 right-5 flex gap-1.5 opacity-30">

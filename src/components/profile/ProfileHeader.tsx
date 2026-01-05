@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Pencil, Check, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useProfile } from "./ProfileShell";
 
@@ -15,8 +16,64 @@ export default function ProfileHeader() {
   const router = useRouter();
   const { state } = useProfile();
   const { profile, bigThree } = state;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
 
   if (!profile) return null;
+
+  const handleStartEditing = () => {
+    setEditName(profile.displayName || "");
+    setIsEditing(true);
+  };
+
+  const handleCancelEditing = () => {
+    setIsEditing(false);
+    setEditName("");
+  };
+
+  const handleSaveName = async () => {
+    if (editName.trim() === (profile.displayName || "")) {
+      setIsEditing(false);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ displayName: editName.trim() }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update name");
+      }
+
+      // Reload to show updated name
+      window.location.reload();
+    } catch (error) {
+      console.error("Failed to save name:", error);
+      setIsSaving(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSaveName();
+    } else if (e.key === "Escape") {
+      handleCancelEditing();
+    }
+  };
 
   const placements = bigThree
     ? [
@@ -173,20 +230,79 @@ export default function ProfileHeader() {
             </motion.div>
 
             {/* Name */}
-            <div>
-              <motion.h1
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-xl font-medium"
-                style={{
-                  background: "linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0.7) 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                }}
-              >
-                {profile.displayName || "Cosmic Traveler"}
-              </motion.h1>
+            <div className="flex-1 min-w-0">
+              {isEditing ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center gap-2"
+                >
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    disabled={isSaving}
+                    placeholder="Your name"
+                    maxLength={30}
+                    className="flex-1 min-w-0 bg-white/5 border border-white/20 rounded-lg px-3 py-1.5 text-lg font-medium text-white placeholder-white/30 focus:outline-none focus:border-[#E8C547]/50"
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleSaveName}
+                    disabled={isSaving}
+                    className="p-1.5 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors disabled:opacity-50"
+                  >
+                    {isSaving ? (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="w-4 h-4 border-2 border-green-300/30 border-t-green-300 rounded-full"
+                      />
+                    ) : (
+                      <Check size={16} />
+                    )}
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleCancelEditing}
+                    disabled={isSaving}
+                    className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 transition-colors disabled:opacity-50"
+                  >
+                    <X size={16} />
+                  </motion.button>
+                </motion.div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <motion.h1
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-xl font-medium truncate"
+                    style={{
+                      background: "linear-gradient(180deg, #FFFFFF 0%, rgba(255, 255, 255, 0.7) 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                    }}
+                  >
+                    {profile.displayName || "Cosmic Traveler"}
+                  </motion.h1>
+                  <motion.button
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleStartEditing}
+                    className="p-1 rounded-md text-white/30 hover:text-[#E8C547] hover:bg-white/5 transition-colors"
+                  >
+                    <Pencil size={14} />
+                  </motion.button>
+                </div>
+              )}
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

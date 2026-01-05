@@ -25,7 +25,7 @@ const navItems: NavItem[] = [
   { id: "home", label: "Home", icon: Home, href: "/dashboard", enabled: true },
   { id: "map", label: "Map", icon: Map, href: "/dashboard/map", enabled: true },
   { id: "calendar", label: "Calendar", icon: Calendar, href: "/dashboard/calendar", enabled: true },
-  { id: "profile", label: "Profile", icon: User, href: "/dashboard/profile", enabled: true },
+  { id: "profile", label: "Profile", icon: User, href: "/profile", enabled: true },
 ];
 
 interface BottomNavProps {
@@ -91,7 +91,7 @@ export default function BottomNav({ autoHide = false, onInteraction }: BottomNav
   const getActiveTab = () => {
     if (pathname?.startsWith("/dashboard/map")) return "map";
     if (pathname?.startsWith("/dashboard/calendar")) return "calendar";
-    if (pathname?.startsWith("/dashboard/profile")) return "profile";
+    if (pathname?.startsWith("/profile")) return "profile";
     return "home";
   };
 

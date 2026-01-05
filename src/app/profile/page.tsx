@@ -4,6 +4,7 @@ import ProfileHeader from "@/components/profile/ProfileHeader";
 import BirthDataCard from "@/components/profile/BirthDataCard";
 import SubscriptionCard from "@/components/profile/SubscriptionCard";
 import SignOutButton from "@/components/profile/SignOutButton";
+import DeleteAccountButton from "@/components/profile/DeleteAccountButton";
 
 export const metadata: Metadata = {
   title: "Profile | Stella+",
@@ -31,6 +32,7 @@ export default function ProfilePage() {
         </div>
 
         <SignOutButton />
+        <DeleteAccountButton />
 
         {/* Version info */}
         <div className="text-center pb-8">

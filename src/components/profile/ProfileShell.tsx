@@ -13,6 +13,11 @@ import StellaFloatingButton from "@/components/dashboard/StellaFloatingButton";
 // Profile State Types
 // ============================================
 
+export interface UserPreferences {
+  theme?: "dark" | "light";
+  units?: "km" | "miles";
+}
+
 export interface UserProfile {
   id: string;
   userId: string;
@@ -27,6 +32,7 @@ export interface UserProfile {
   birthTimezone: string;
   subscriptionStatus: string;
   stripeCustomerId: string | null;
+  preferences?: UserPreferences;
   createdAt: string;
   updatedAt: string;
 }

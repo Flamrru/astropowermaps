@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useDashboard } from "../DashboardShell";
-import { Star, Heart, Briefcase, Palette, Compass, Sparkles, ArrowRight } from "lucide-react";
+import { Star, Heart, Briefcase, Palette, Compass, Sparkles } from "lucide-react";
 import type { GoalCategory } from "@/lib/dashboard-types";
 
 /**
@@ -133,30 +133,6 @@ export default function BestDaysCard() {
           ))}
         </div>
 
-        {/* CTA */}
-        <motion.button
-          className="w-full mt-4 flex items-center justify-center gap-2 py-3 rounded-xl transition-all"
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 1 }}
-          style={{
-            background: "var(--element-bg, rgba(201, 162, 39, 0.1))",
-            border: "1px solid var(--element-primary, #C9A227)",
-          }}
-        >
-          <span
-            className="text-sm font-medium"
-            style={{ color: "var(--element-primary, #E8C547)" }}
-          >
-            Open Best Day Picker
-          </span>
-          <ArrowRight
-            size={16}
-            style={{ color: "var(--element-primary, #E8C547)" }}
-          />
-        </motion.button>
       </div>
     </motion.div>
   );
