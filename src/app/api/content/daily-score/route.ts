@@ -120,12 +120,24 @@ export async function POST(request: NextRequest) {
     });
 
     const responseText = completion.choices[0]?.message?.content || "{}";
+    console.log("OpenAI daily-score response:", responseText.substring(0, 200));
+
     let score;
 
     try {
       score = JSON.parse(responseText);
     } catch {
       // Fallback if JSON parsing fails
+      score = {
+        score: 75,
+        message: "The stars align to support your intentions today.",
+        focusAreas: ["mindfulness", "creativity"],
+      };
+    }
+
+    // Validate response has required fields - if not, use fallback
+    if (!score.score || !score.message) {
+      console.warn("OpenAI returned incomplete response, using fallback");
       score = {
         score: 75,
         message: "The stars align to support your intentions today.",
@@ -140,13 +152,15 @@ export async function POST(request: NextRequest) {
       generatedAt: new Date().toISOString(),
     };
 
-    // 7. Cache the result
-    await supabaseAdmin.from("daily_content").upsert({
-      user_id: userId,
-      content_date: today,
-      content_type: "daily_score",
-      content: dailyScore,
-    });
+    // Only cache if we have valid data
+    if (dailyScore.score && dailyScore.message) {
+      await supabaseAdmin.from("daily_content").upsert({
+        user_id: userId,
+        content_date: today,
+        content_type: "daily_score",
+        content: dailyScore,
+      });
+    }
 
     return NextResponse.json(dailyScore);
   } catch (error) {

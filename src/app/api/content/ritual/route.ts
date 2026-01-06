@@ -109,12 +109,25 @@ export async function POST(request: NextRequest) {
     });
 
     const responseText = completion.choices[0]?.message?.content || "{}";
+    console.log("OpenAI ritual response:", responseText.substring(0, 200));
+
     let ritual;
 
     try {
       ritual = JSON.parse(responseText);
     } catch {
       // Fallback
+      ritual = {
+        type: "daily",
+        category: "reflection",
+        personalizedPrompt: `As a ${bigThree.moon.sign} Moon, take a moment to reflect on what you're feeling today.`,
+        signReference: bigThree.moon.sign,
+      };
+    }
+
+    // Validate response has required fields - if not, use fallback
+    if (!ritual.personalizedPrompt) {
+      console.warn("OpenAI returned incomplete ritual, using fallback");
       ritual = {
         type: "daily",
         category: "reflection",
@@ -131,13 +144,15 @@ export async function POST(request: NextRequest) {
       generatedAt: new Date().toISOString(),
     };
 
-    // 7. Cache the result
-    await supabaseAdmin.from("daily_content").upsert({
-      user_id: userId,
-      content_date: today,
-      content_type: "ritual",
-      content: ritualPrompt,
-    });
+    // Only cache if we have valid data
+    if (ritualPrompt.personalizedPrompt) {
+      await supabaseAdmin.from("daily_content").upsert({
+        user_id: userId,
+        content_date: today,
+        content_type: "ritual",
+        content: ritualPrompt,
+      });
+    }
 
     return NextResponse.json(ritualPrompt);
   } catch (error) {

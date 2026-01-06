@@ -110,12 +110,26 @@ export async function POST(request: NextRequest) {
     });
 
     const responseText = completion.choices[0]?.message?.content || "{}";
+    console.log("OpenAI weekly-forecast response:", responseText.substring(0, 200));
+
     let forecast;
 
     try {
       forecast = JSON.parse(responseText);
     } catch {
       // Fallback if JSON parsing fails
+      forecast = {
+        theme: "Renewal",
+        summary: "This week brings opportunities for growth and reflection.",
+        powerDays: [],
+        cautionDays: [],
+        keyInsight: "Trust your intuition this week.",
+      };
+    }
+
+    // Validate response has required fields - if not, use fallback
+    if (!forecast.theme || !forecast.summary) {
+      console.warn("OpenAI returned incomplete weekly forecast, using fallback");
       forecast = {
         theme: "Renewal",
         summary: "This week brings opportunities for growth and reflection.",
@@ -132,13 +146,15 @@ export async function POST(request: NextRequest) {
       generatedAt: new Date().toISOString(),
     };
 
-    // 8. Cache the result
-    await supabaseAdmin.from("daily_content").upsert({
-      user_id: userId,
-      content_date: weekStart,
-      content_type: "weekly_forecast",
-      content: weeklyForecast,
-    });
+    // Only cache if we have valid data
+    if (weeklyForecast.theme && weeklyForecast.summary) {
+      await supabaseAdmin.from("daily_content").upsert({
+        user_id: userId,
+        content_date: weekStart,
+        content_type: "weekly_forecast",
+        content: weeklyForecast,
+      });
+    }
 
     return NextResponse.json(weeklyForecast);
   } catch (error) {
