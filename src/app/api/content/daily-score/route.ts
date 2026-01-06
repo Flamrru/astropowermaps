@@ -120,7 +120,6 @@ export async function POST(request: NextRequest) {
     });
 
     const responseText = completion.choices[0]?.message?.content || "{}";
-    console.log("OpenAI daily-score response:", responseText.substring(0, 200));
 
     let score;
 

@@ -109,7 +109,6 @@ export async function POST(request: NextRequest) {
     });
 
     const responseText = completion.choices[0]?.message?.content || "{}";
-    console.log("OpenAI ritual response:", responseText.substring(0, 200));
 
     let ritual;
 
