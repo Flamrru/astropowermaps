@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
       ui_mode: "embedded",
       mode: "payment", // One-time payment for trial fee
       customer_email: body.email,
+      customer_creation: "always", // Create Stripe customer for subscription
 
       // Save payment method for future subscription charges
       payment_intent_data: {
