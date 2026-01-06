@@ -454,16 +454,15 @@ export default function AstroMap({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Show tutorial on first visit after map loads
-  useEffect(() => {
-    if (mapLoaded && !isFirstVisitLoading && isFirstVisit) {
-      // Small delay to let the map settle
-      const timer = setTimeout(() => {
-        setShowTutorial(true);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [mapLoaded, isFirstVisitLoading, isFirstVisit]);
+  // OLD tutorial disabled - using new OnboardingProvider flow instead
+  // useEffect(() => {
+  //   if (mapLoaded && !isFirstVisitLoading && isFirstVisit) {
+  //     const timer = setTimeout(() => {
+  //       setShowTutorial(true);
+  //     }, 1500);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [mapLoaded, isFirstVisitLoading, isFirstVisit]);
 
   // Initialize map
   useEffect(() => {

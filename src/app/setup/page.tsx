@@ -121,10 +121,10 @@ function SetupContent() {
       // Update localStorage with email (in case they changed it)
       localStorage.setItem("stella_email", email);
 
-      // Note: Old onboarding flow disabled - users go directly to dashboard
-      // localStorage.setItem("stella-onboarding-start", "true");
+      // Trigger the NEW onboarding flow (5-step: Home → Map → Calendar reveal)
+      localStorage.setItem("stella-onboarding-start", "true");
 
-      // Redirect to home
+      // Redirect to home where onboarding will start
       window.location.href = "/home";
     } catch (err) {
       console.error("Setup error:", err);
