@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { createClient } from "@/lib/supabase/client";
 import {
   User,
   Lock,
@@ -102,6 +103,19 @@ function SetupContent() {
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || "Failed to create account");
+      }
+
+      // Sign in the user automatically after account creation
+      const supabase = createClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        console.error("Auto sign-in failed:", signInError);
+        // Don't fail completely - account was created, they can log in manually
+        // But still try to redirect to home
       }
 
       // Update localStorage with email (in case they changed it)
