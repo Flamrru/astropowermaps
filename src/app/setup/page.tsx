@@ -81,12 +81,17 @@ export default function SetupPage() {
       return;
     }
 
-    if (password && password.length < 6) {
+    if (!password) {
+      setError("Please create a password");
+      return;
+    }
+
+    if (password.length < 6) {
       setError("Password must be at least 6 characters");
       return;
     }
 
-    if (password && password !== confirmPassword) {
+    if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
@@ -308,11 +313,10 @@ export default function SetupPage() {
                 htmlFor="password"
                 className="block text-sm font-medium text-white/70 mb-1"
               >
-                Create a password{" "}
-                <span className="text-white/40 font-normal">(optional)</span>
+                Create a password
               </label>
               <p className="text-xs text-white/40 mb-2">
-                For faster future logins. You can always use magic link instead.
+                You&apos;ll use this to log in to your account.
               </p>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -342,44 +346,35 @@ export default function SetupPage() {
               </div>
             </div>
 
-            {/* Confirm Password (only show if password entered) */}
-            <AnimatePresence>
-              {password && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mb-6"
-                >
-                  <label
-                    htmlFor="confirmPassword"
-                    className="block text-sm font-medium text-white/70 mb-2"
-                  >
-                    Confirm password
-                  </label>
-                  <div className="relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <Lock className="w-5 h-5 text-white/40" />
-                    </div>
-                    <input
-                      id="confirmPassword"
-                      type={showPassword ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Re-enter password"
-                      autoComplete="new-password"
-                      className="input-glass w-full pl-12 pr-4 py-4 rounded-xl text-white placeholder:text-white/30 text-base"
-                      style={{ minHeight: "56px" }}
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Confirm Password */}
+            <div className="mb-6">
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium text-white/70 mb-2"
+              >
+                Confirm password
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <Lock className="w-5 h-5 text-white/40" />
+                </div>
+                <input
+                  id="confirmPassword"
+                  type={showPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  autoComplete="new-password"
+                  className="input-glass w-full pl-12 pr-4 py-4 rounded-xl text-white placeholder:text-white/30 text-base"
+                  style={{ minHeight: "56px" }}
+                />
+              </div>
+            </div>
 
             {/* Submit Button */}
             <motion.button
               type="submit"
-              disabled={isLoading || !displayName.trim()}
+              disabled={isLoading || !displayName.trim() || !password || !confirmPassword}
               className="gold-button-premium gold-button-shimmer w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 mt-2"
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
