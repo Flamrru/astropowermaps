@@ -136,7 +136,7 @@ export default function CalendarView() {
         <div className="flex items-center justify-between mb-4">
           {/* Back button */}
           <motion.button
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push("/home")}
             whileHover={{ x: -2 }}
             className="flex items-center gap-1 text-white/40 hover:text-white/70 transition-colors"
           >

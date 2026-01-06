@@ -22,9 +22,9 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: "home", label: "Home", icon: Home, href: "/dashboard", enabled: true },
-  { id: "map", label: "Map", icon: Map, href: "/dashboard/map", enabled: true },
-  { id: "calendar", label: "Calendar", icon: Calendar, href: "/dashboard/calendar", enabled: true },
+  { id: "home", label: "Home", icon: Home, href: "/home", enabled: true },
+  { id: "map", label: "Map", icon: Map, href: "/map", enabled: true },
+  { id: "calendar", label: "Calendar", icon: Calendar, href: "/calendar", enabled: true },
   { id: "profile", label: "Profile", icon: User, href: "/profile", enabled: true },
 ];
 
@@ -89,8 +89,8 @@ export default function BottomNav({ autoHide = false, onInteraction }: BottomNav
 
   // Determine active tab based on pathname
   const getActiveTab = () => {
-    if (pathname?.startsWith("/dashboard/map")) return "map";
-    if (pathname?.startsWith("/dashboard/calendar")) return "calendar";
+    if (pathname?.startsWith("/map")) return "map";
+    if (pathname?.startsWith("/calendar")) return "calendar";
     if (pathname?.startsWith("/profile")) return "profile";
     return "home";
   };

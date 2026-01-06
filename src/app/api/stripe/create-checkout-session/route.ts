@@ -5,12 +5,13 @@ import {
   SUBSCRIPTION_PLANS,
   type PlanId,
 } from "@/lib/subscription-plans";
+import { getStripeSecretKey } from "@/lib/stripe-config";
 
 // Lazy-initialize Stripe to avoid build-time errors when env vars aren't set
 function getStripe() {
-  const key = process.env.STRIPE_SECRET_KEY;
+  const key = getStripeSecretKey();
   if (!key) {
-    throw new Error("STRIPE_SECRET_KEY is not configured");
+    throw new Error("Stripe secret key is not configured. Set STRIPE_SECRET_KEY_SANDBOX or STRIPE_SECRET_KEY_LIVE");
   }
   return new Stripe(key);
 }

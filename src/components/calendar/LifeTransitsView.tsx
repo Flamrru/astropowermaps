@@ -129,7 +129,7 @@ export default function LifeTransitsView() {
       {/* Header - just back button since title is in tabs */}
       <div className="flex items-center mb-6">
         <motion.button
-          onClick={() => router.push("/dashboard")}
+          onClick={() => router.push("/home")}
           whileHover={{ x: -2 }}
           className="flex items-center gap-1 text-white/40 hover:text-white/70 transition-colors"
         >

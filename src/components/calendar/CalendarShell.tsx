@@ -7,6 +7,7 @@ import type { CalendarEvent, GoalCategory, BestDay } from "@/lib/dashboard-types
 import type { CalendarTabType } from "./CalendarTabs";
 import BottomNav from "@/components/dashboard/BottomNav";
 import StellaFloatingButton from "@/components/dashboard/StellaFloatingButton";
+import { OnboardingProvider } from "@/components/onboarding";
 
 // ============================================
 // Calendar State Types
@@ -302,6 +303,19 @@ export default function CalendarShell({ children }: CalendarShellProps) {
   // Tab state lifted from CalendarView for Stella context awareness
   const [activeCalendarTab, setActiveCalendarTab] = useState<CalendarTabType>("month");
 
+  // Listen for onboarding tab switch event
+  useEffect(() => {
+    const handleTabSwitch = (e: Event) => {
+      const customEvent = e as CustomEvent<CalendarTabType>;
+      if (customEvent.detail) {
+        setActiveCalendarTab(customEvent.detail);
+      }
+    };
+
+    window.addEventListener("stella-switch-tab", handleTabSwitch);
+    return () => window.removeEventListener("stella-switch-tab", handleTabSwitch);
+  }, []);
+
   // Callback to open Stella with pre-filled context
   const openStellaWithContext = (context: StellaContext) => {
     setStellaContext(context);
@@ -418,43 +432,45 @@ export default function CalendarShell({ children }: CalendarShellProps) {
 
   return (
     <CalendarContext.Provider value={{ state, navigateMonth, goToToday, setSelectedGoal, bestDaysForGoal, openStellaWithContext, activeCalendarTab, setActiveCalendarTab }}>
-      <div
-        className="min-h-screen pb-24"
-        style={{
-          background: `
-            radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
-            radial-gradient(ellipse at 20% 80%, rgba(201, 162, 39, 0.05) 0%, transparent 40%),
-            #050510
-          `,
-        }}
-      >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={state.currentMonthKey}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="relative"
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+      <OnboardingProvider>
+        <div
+          className="min-h-screen pb-24"
+          style={{
+            background: `
+              radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+              radial-gradient(ellipse at 20% 80%, rgba(201, 162, 39, 0.05) 0%, transparent 40%),
+              #050510
+            `,
+          }}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={state.currentMonthKey}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="relative"
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
 
-        {/* Stella chat button - with context for "Ask Stella about this day" */}
-        <StellaFloatingButton
-          externalContext={stellaContext}
-          onContextConsumed={clearStellaContext}
-          viewHint={
-            activeCalendarTab === "transits" ? "life-transits" :
-            activeCalendarTab === "2026" ? "2026-report" :
-            "calendar"
-          }
-        />
+          {/* Stella chat button - with context for "Ask Stella about this day" */}
+          <StellaFloatingButton
+            externalContext={stellaContext}
+            onContextConsumed={clearStellaContext}
+            viewHint={
+              activeCalendarTab === "transits" ? "life-transits" :
+              activeCalendarTab === "2026" ? "2026-report" :
+              "calendar"
+            }
+          />
 
-        {/* Bottom navigation */}
-        <BottomNav />
-      </div>
+          {/* Bottom navigation */}
+          <BottomNav />
+        </div>
+      </OnboardingProvider>
     </CalendarContext.Provider>
   );
 }

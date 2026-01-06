@@ -63,7 +63,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Check if route requires authentication
-  const protectedRoutes = ["/dashboard", "/calendar", "/profile"];
+  const protectedRoutes = ["/home", "/map", "/calendar", "/profile"];
   const isProtectedRoute = protectedRoutes.some((route) =>
     request.nextUrl.pathname.startsWith(route)
   );
@@ -71,7 +71,7 @@ export async function updateSession(request: NextRequest) {
   // Allow dev mode bypass
   const isDevMode =
     request.nextUrl.searchParams.get("dev") === "true" ||
-    request.nextUrl.searchParams.get("d") === "dashboard";
+    request.nextUrl.searchParams.get("d") === "home";
 
   // Redirect to login if accessing protected route without auth (and not dev mode)
   if (isProtectedRoute && !user && !isDevMode) {

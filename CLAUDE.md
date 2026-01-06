@@ -89,30 +89,29 @@ Before going live, complete ALL of these steps:
 - [ ] Test magic link authentication end-to-end
 - [ ] Verify Supabase redirect URLs are correct for production domain
 
-**💳 Stripe (SUBSCRIPTION MODEL - needs setup):**
-- [ ] User enters birth data (step 1) → data saved to `astro_leads`
-- [ ] User goes through onboarding (steps 2-8)
-- [ ] User reaches paywall (step 9) with their REAL email
-- [ ] Payment completes → `astro_purchases` updated, `has_purchased` = true
-- [ ] User redirected to `/map` with their actual birth chart
-- [ ] **⚠️ CONVERT TO SUBSCRIPTION MODEL (UI ready, backend needs update):**
-  - [ ] Create Stripe Product "Stella+ Monthly" in Stripe Dashboard
-  - [ ] Create 3 Stripe Prices with trial periods:
-    - `price_3day`: $2.99 for 3-day trial → then $19.99/month
-    - `price_7day`: $5.99 for 7-day trial → then $19.99/month
-    - `price_14day`: $9.99 for 14-day trial → then $19.99/month
-  - [ ] Update `src/app/api/stripe/create-checkout-session/route.ts`:
-    - Change `mode: "payment"` → `mode: "subscription"`
-    - Accept `planId` from request body
-    - Use Stripe Price IDs instead of inline `price_data`
-  - [ ] Update `src/app/api/stripe/webhook/route.ts`:
-    - Add handlers for `customer.subscription.created/updated/deleted`
-  - [ ] Update `src/components/reveal/StripeCheckout.tsx`:
-    - Pass `selectedPlan` to checkout session API
-  - [ ] Create `src/lib/subscription-plans.ts` with Stripe Price ID mapping
-- [ ] Switch Stripe keys from `pk_test_`/`sk_test_` to `pk_live_`/`sk_live_`
-- [ ] Set up production webhook in Stripe Dashboard (add subscription events)
-- [ ] Add live Stripe keys to Vercel environment variables
+**💳 Stripe (NEW ACCOUNT - sandbox tested ✅):**
+- [x] Dual-key system implemented (sandbox + live keys can coexist)
+- [x] Sandbox products created and tested locally
+- [x] Subscription flow working with trial pricing ($2.99/$5.99/$9.99 → $19.99/mo)
+
+**⚠️ PRODUCTION STRIPE SETUP (do this when launching):**
+1. [ ] In Stripe Dashboard, toggle OFF "Test mode" to access live keys
+2. [ ] Copy live keys and add to `.env.local`:
+   - `STRIPE_SECRET_KEY_LIVE=sk_live_...`
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE=pk_live_...`
+3. [ ] Run: `STRIPE_MODE=live npx tsx scripts/setup-stripe-products.ts`
+4. [ ] Copy output to `LIVE_PRICES` in `src/lib/stripe-config.ts`
+5. [ ] Create production webhook in Stripe Dashboard:
+   - URL: `https://YOUR_DOMAIN/api/stripe/webhook`
+   - Events: `checkout.session.*`, `customer.subscription.*`
+   - Copy signing secret → `STRIPE_WEBHOOK_SECRET_LIVE`
+6. [ ] Add ALL live keys to **Vercel Dashboard** → Environment Variables:
+   - `STRIPE_MODE=live`
+   - `NEXT_PUBLIC_STRIPE_MODE=live`
+   - `STRIPE_SECRET_KEY_LIVE`
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE`
+   - `STRIPE_WEBHOOK_SECRET_LIVE`
+7. [ ] Test one real payment with your own card before announcing launch
 
 ## 🚨 CRITICAL: Branch Protection (ABSOLUTE RULE)
 **NEVER push to `main` branch — NO EXCEPTIONS**

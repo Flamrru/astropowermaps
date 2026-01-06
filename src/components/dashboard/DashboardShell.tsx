@@ -21,6 +21,7 @@ import { calculateBigThree } from "@/lib/astro/zodiac";
 import type { BirthData } from "@/lib/astro/types";
 import BottomNav from "./BottomNav";
 import { BYPASS_AUTH } from "@/lib/auth-bypass";
+import { OnboardingProvider } from "@/components/onboarding";
 
 // ============================================
 // Initial State
@@ -153,7 +154,7 @@ export default function DashboardShell({
 
         if (!user) {
           // Not authenticated, redirect to login
-          router.push("/login?redirect=/dashboard");
+          router.push("/login?redirect=/home");
           return;
         }
 
@@ -299,7 +300,7 @@ export default function DashboardShell({
             </h1>
             <p className="text-white/70 mb-6">{state.error}</p>
             <a
-              href="/dashboard?dev=true"
+              href="/home?dev=true"
               className="gold-button-premium rounded-full px-6 py-3 inline-block"
             >
               Enter Dev Mode
@@ -310,39 +311,44 @@ export default function DashboardShell({
     );
   }
 
+  // Get sun sign for onboarding personalization
+  const sunSign = state.bigThree?.sun?.sign || "Stargazer";
+
   return (
     <DashboardContext.Provider value={{ state, dispatch }}>
-      {/* Dev mode indicator */}
-      {isDevMode && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500/90 text-black text-xs text-center py-1 font-medium">
-          🧪 Dev Mode — Using mock data (Leo ☀️ / Scorpio 🌙 / Virgo ⬆️)
-        </div>
-      )}
+      <OnboardingProvider sunSign={sunSign}>
+        {/* Dev mode indicator */}
+        {isDevMode && (
+          <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500/90 text-black text-xs text-center py-1 font-medium">
+            🧪 Dev Mode — Using mock data (Leo ☀️ / Scorpio 🌙 / Virgo ⬆️)
+          </div>
+        )}
 
-      {/* Main container with element theming */}
-      <div
-        data-element={element}
-        className="min-h-screen cosmic-bg"
-        style={{ paddingTop: isDevMode ? "24px" : 0 }}
-      >
-        {/* Star background */}
-        <div className="stars-layer" />
-
-        {/* Content */}
-        <main
-          className={`relative z-10 min-h-screen ${
-            variant === "map" ? "" : "pb-28"
-          }`}
+        {/* Main container with element theming */}
+        <div
+          data-element={element}
+          className="min-h-screen cosmic-bg"
+          style={{ paddingTop: isDevMode ? "24px" : 0 }}
         >
-          {children}
-        </main>
+          {/* Star background */}
+          <div className="stars-layer" />
 
-        {/* Bottom Navigation */}
-        <BottomNav
-          autoHide={variant === "map"}
-          onInteraction={onMapInteraction}
-        />
-      </div>
+          {/* Content */}
+          <main
+            className={`relative z-10 min-h-screen ${
+              variant === "map" ? "" : "pb-28"
+            }`}
+          >
+            {children}
+          </main>
+
+          {/* Bottom Navigation */}
+          <BottomNav
+            autoHide={variant === "map"}
+            onInteraction={onMapInteraction}
+          />
+        </div>
+      </OnboardingProvider>
     </DashboardContext.Provider>
   );
 }

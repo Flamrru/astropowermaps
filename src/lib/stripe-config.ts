@@ -5,9 +5,20 @@
  * - STRIPE_MODE=sandbox (default) - Uses test keys and test price IDs
  * - STRIPE_MODE=live - Uses live keys and live price IDs
  *
- * IMPORTANT: Make sure your .env.local has the matching keys:
- * - Sandbox: STRIPE_SECRET_KEY=sk_test_... and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
- * - Live: STRIPE_SECRET_KEY=sk_live_... and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
+ * Environment variables (both sets can exist simultaneously):
+ *
+ * SANDBOX (test mode):
+ *   STRIPE_SECRET_KEY_SANDBOX=sk_test_...
+ *   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_SANDBOX=pk_test_...
+ *   STRIPE_WEBHOOK_SECRET_SANDBOX=whsec_...
+ *
+ * LIVE (production):
+ *   STRIPE_SECRET_KEY_LIVE=sk_live_...
+ *   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE=pk_live_...
+ *   STRIPE_WEBHOOK_SECRET_LIVE=whsec_...
+ *
+ * MODE TOGGLE:
+ *   STRIPE_MODE=sandbox (default) or STRIPE_MODE=live
  */
 
 // ============================================
@@ -34,19 +45,89 @@ export function isLiveMode(): boolean {
 }
 
 // ============================================
+// API KEY RETRIEVAL (based on current mode)
+// ============================================
+
+/**
+ * Get the Stripe secret key for the current mode (server-side only)
+ * Falls back to legacy STRIPE_SECRET_KEY if mode-specific key not found
+ */
+export function getStripeSecretKey(): string {
+  const mode = getStripeMode();
+
+  if (mode === "live") {
+    return (
+      process.env.STRIPE_SECRET_KEY_LIVE ||
+      process.env.STRIPE_SECRET_KEY ||
+      ""
+    );
+  }
+
+  return (
+    process.env.STRIPE_SECRET_KEY_SANDBOX ||
+    process.env.STRIPE_SECRET_KEY ||
+    ""
+  );
+}
+
+/**
+ * Get the Stripe publishable key for the current mode (client-side)
+ * Falls back to legacy key if mode-specific key not found
+ */
+export function getStripePublishableKey(): string {
+  const mode = getStripeMode();
+
+  if (mode === "live") {
+    return (
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE ||
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
+      ""
+    );
+  }
+
+  return (
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_SANDBOX ||
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
+    ""
+  );
+}
+
+/**
+ * Get the Stripe webhook secret for the current mode
+ * Falls back to legacy key if mode-specific key not found
+ */
+export function getStripeWebhookSecret(): string {
+  const mode = getStripeMode();
+
+  if (mode === "live") {
+    return (
+      process.env.STRIPE_WEBHOOK_SECRET_LIVE ||
+      process.env.STRIPE_WEBHOOK_SECRET ||
+      ""
+    );
+  }
+
+  return (
+    process.env.STRIPE_WEBHOOK_SECRET_SANDBOX ||
+    process.env.STRIPE_WEBHOOK_SECRET ||
+    ""
+  );
+}
+
+// ============================================
 // PRICE IDS BY MODE
 // ============================================
 
 /**
  * Sandbox (Test) Stripe Price IDs
- * Created with sk_test_... key on 2026-01-05
+ * Created: 2026-01-06
  */
 export const SANDBOX_PRICES = {
-  PRODUCT_ID: "prod_TjhwZ3t7O2qmIA",
-  MONTHLY: "price_1SmEWaP7gi9mbAmLE4WdDpBV",
-  TRIAL_3DAY: "price_1SmEWaP7gi9mbAmLdD4jTG0R",
-  TRIAL_7DAY: "price_1SmEWaP7gi9mbAmLwQyAypJ0",
-  TRIAL_14DAY: "price_1SmEWaP7gi9mbAmLuDysEb2F",
+  PRODUCT_ID: "prod_TjxLY35zJk4P9d",
+  MONTHLY: "price_1SmTR41yURwpWT9L40Irv9XX",
+  TRIAL_3DAY: "price_1SmTR51yURwpWT9LlMpZuAeb",
+  TRIAL_7DAY: "price_1SmTR51yURwpWT9LPgwiQfeg",
+  TRIAL_14DAY: "price_1SmTR51yURwpWT9Ltlu1jKs0",
 } as const;
 
 /**

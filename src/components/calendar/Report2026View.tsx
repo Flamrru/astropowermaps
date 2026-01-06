@@ -68,7 +68,7 @@ export default function Report2026View() {
     (lat: number, lng: number, cityName: string) => {
       // Encode parameters for URL
       const flyTo = `${lat},${lng},${encodeURIComponent(cityName)}`;
-      router.push(`/dashboard/map?flyTo=${flyTo}`);
+      router.push(`/map?flyTo=${flyTo}`);
     },
     [router]
   );

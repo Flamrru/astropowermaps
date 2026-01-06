@@ -55,8 +55,8 @@ export default function SetupPage() {
         .single();
 
       if (profile && profile.account_status === "active") {
-        // Already set up, redirect to dashboard
-        router.push("/dashboard");
+        // Already set up, redirect to home
+        router.push("/home");
         return;
       }
 
@@ -171,8 +171,8 @@ export default function SetupPage() {
         }
       }
 
-      // Success! Redirect to dashboard
-      router.push("/dashboard");
+      // Success! Redirect to home
+      router.push("/home");
     } catch (err) {
       console.error("Setup error:", err);
       setError(

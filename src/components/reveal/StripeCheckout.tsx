@@ -139,8 +139,8 @@ export default function StripeCheckout({
         throw new Error(data.error || "Failed to create account");
       }
 
-      // Redirect to dashboard map (full app with navigation)
-      window.location.href = "/dashboard/map";
+      // Redirect to map (full app with navigation)
+      window.location.href = "/map";
     } catch (err) {
       console.error("Account creation error:", err);
       setPasswordError(err instanceof Error ? err.message : "Failed to create account");
@@ -148,9 +148,9 @@ export default function StripeCheckout({
     }
   };
 
-  // Skip password and go directly to dashboard map
+  // Skip password and go directly to map
   const handleSkipPassword = () => {
-    window.location.href = "/dashboard/map";
+    window.location.href = "/map";
   };
 
   const stripePromise = getStripe();

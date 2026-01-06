@@ -9,14 +9,14 @@ import RitualCard from "@/components/dashboard/cards/RitualCard";
 import StellaFloatingButton from "@/components/dashboard/StellaFloatingButton";
 
 export const metadata: Metadata = {
-  title: "Stella+ Dashboard | AstroPowerMaps",
+  title: "Home | Stella+",
   description: "Your personalized cosmic guidance dashboard with daily insights, forecasts, and AI-powered astrology guidance.",
 };
 
 /**
- * Loading fallback for dashboard
+ * Loading fallback for home
  */
-function DashboardLoading() {
+function HomeLoading() {
   return (
     <div className="min-h-screen cosmic-bg flex items-center justify-center">
       <div className="stars-layer" />
@@ -29,9 +29,9 @@ function DashboardLoading() {
 }
 
 /**
- * Dashboard Page
+ * Home Page (formerly Dashboard)
  *
- * Main Stella+ subscriber dashboard with:
+ * Main Stella+ subscriber home with:
  * - Big Three zodiac header (Sun, Moon, Rising)
  * - Daily Power Score
  * - Weekly Forecast
@@ -40,11 +40,11 @@ function DashboardLoading() {
  * - Stella floating chat button
  *
  * Dev Mode: Access with ?dev=true to see mock data
- * Example: /dashboard?dev=true
+ * Example: /home?dev=true
  */
-export default function DashboardPage() {
+export default function HomePage() {
   return (
-    <Suspense fallback={<DashboardLoading />}>
+    <Suspense fallback={<HomeLoading />}>
       <DashboardShell>
         {/* Zodiac identity header */}
         <BigThreeHeader />

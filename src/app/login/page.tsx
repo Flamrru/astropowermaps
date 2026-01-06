@@ -28,7 +28,7 @@ function LoginContent() {
   const message = searchParams.get("message");
   const authError = searchParams.get("error");
   const authErrorDescription = searchParams.get("error_description");
-  const redirectTo = searchParams.get("redirect") || "/dashboard";
+  const redirectTo = searchParams.get("redirect") || "/home";
 
   useEffect(() => {
     // Handle success messages

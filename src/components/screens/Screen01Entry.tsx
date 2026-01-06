@@ -121,7 +121,7 @@ export default function Screen01Entry() {
             className="flex gap-3 mb-4"
           >
             <Link
-              href="/dashboard?dev=true"
+              href="/home?dev=true"
               className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-500 text-white text-center font-bold text-sm shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all"
             >
               ⭐ Stella+

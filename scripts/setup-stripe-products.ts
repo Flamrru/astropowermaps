@@ -20,12 +20,28 @@ import * as readline from "readline";
 // Load environment variables from .env.local
 dotenv.config({ path: ".env.local" });
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 const STRIPE_MODE = process.env.STRIPE_MODE?.toLowerCase() || "sandbox";
 
+// Get the correct key based on mode
+// Supports both new dual-key system and legacy single-key system
+function getSecretKey(): string | undefined {
+  if (STRIPE_MODE === "live") {
+    return process.env.STRIPE_SECRET_KEY_LIVE || process.env.STRIPE_SECRET_KEY;
+  }
+  return process.env.STRIPE_SECRET_KEY_SANDBOX || process.env.STRIPE_SECRET_KEY;
+}
+
+const STRIPE_SECRET_KEY = getSecretKey();
+
 if (!STRIPE_SECRET_KEY) {
-  console.error("❌ STRIPE_SECRET_KEY not found in environment variables");
-  console.error("   Make sure .env.local contains STRIPE_SECRET_KEY=sk_test_... or sk_live_...");
+  console.error("❌ Stripe secret key not found in environment variables");
+  console.error("");
+  console.error("   For sandbox mode, set one of these in .env.local:");
+  console.error("     STRIPE_SECRET_KEY_SANDBOX=sk_test_...");
+  console.error("     (or legacy) STRIPE_SECRET_KEY=sk_test_...");
+  console.error("");
+  console.error("   For live mode (STRIPE_MODE=live), set:");
+  console.error("     STRIPE_SECRET_KEY_LIVE=sk_live_...");
   process.exit(1);
 }
 
@@ -45,14 +61,14 @@ console.log("=".repeat(60) + "\n");
 
 // Validate key matches expected mode
 if (STRIPE_MODE === "live" && !isLiveKey) {
-  console.error("❌ STRIPE_MODE is 'live' but key is not a live key (sk_live_...)");
-  console.error("   Update your .env.local with your live Stripe key");
+  console.error("❌ STRIPE_MODE is 'live' but the key found is not a live key (sk_live_...)");
+  console.error("   Set STRIPE_SECRET_KEY_LIVE=sk_live_... in .env.local");
   process.exit(1);
 }
 
 if (STRIPE_MODE === "sandbox" && !isTestKey) {
-  console.error("❌ STRIPE_MODE is 'sandbox' but key is not a test key (sk_test_...)");
-  console.error("   Update your .env.local with your test Stripe key, or set STRIPE_MODE=live");
+  console.error("❌ STRIPE_MODE is 'sandbox' but the key found is not a test key (sk_test_...)");
+  console.error("   Set STRIPE_SECRET_KEY_SANDBOX=sk_test_... in .env.local");
   process.exit(1);
 }
 

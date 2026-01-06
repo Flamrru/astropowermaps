@@ -85,8 +85,11 @@ function AccountSetupContent() {
       // Update localStorage with potentially changed email
       localStorage.setItem("stella_email", email);
 
-      // Redirect to dashboard map (full app with navigation)
-      window.location.href = "/dashboard/map";
+      // Trigger onboarding flow for new users
+      localStorage.setItem("stella-onboarding-start", "true");
+
+      // Redirect to home where onboarding will start
+      window.location.href = "/home";
     } catch (err) {
       console.error("Account creation error:", err);
       setError(err instanceof Error ? err.message : "Failed to create account");
@@ -95,8 +98,10 @@ function AccountSetupContent() {
   };
 
   const handleSkip = () => {
-    // Redirect to dashboard map (full app with navigation)
-    window.location.href = "/dashboard/map";
+    // Trigger onboarding flow even when skipping account setup
+    localStorage.setItem("stella-onboarding-start", "true");
+    // Redirect to home where onboarding will start
+    window.location.href = "/home";
   };
 
   return (

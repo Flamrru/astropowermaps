@@ -110,13 +110,13 @@ export default function ProfileHeader() {
     >
       {/* Back button */}
       <motion.button
-        onClick={() => router.push("/dashboard")}
+        onClick={() => router.push("/home")}
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         className="flex items-center gap-1 text-white/40 hover:text-white/70 transition-colors mb-4"
       >
         <ChevronLeft size={18} />
-        <span className="text-sm">Dashboard</span>
+        <span className="text-sm">Home</span>
       </motion.button>
 
       {/* Profile card */}

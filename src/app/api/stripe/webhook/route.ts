@@ -4,20 +4,21 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { sendPurchaseEvent } from "@/lib/meta-capi";
 import { sendConfirmationEmail } from "@/lib/resend";
 import { moveSubscriberToCustomers } from "@/lib/mailerlite";
+import { getStripeSecretKey, getStripeWebhookSecret } from "@/lib/stripe-config";
 
 // Lazy-initialize Stripe to avoid build-time errors
 function getStripe() {
-  const key = process.env.STRIPE_SECRET_KEY;
+  const key = getStripeSecretKey();
   if (!key) {
-    throw new Error("STRIPE_SECRET_KEY is not configured");
+    throw new Error("Stripe secret key is not configured. Set STRIPE_SECRET_KEY_SANDBOX or STRIPE_SECRET_KEY_LIVE");
   }
   return new Stripe(key);
 }
 
-function getWebhookSecret() {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+function getWebhookSecretValue() {
+  const secret = getStripeWebhookSecret();
   if (!secret) {
-    throw new Error("STRIPE_WEBHOOK_SECRET is not configured");
+    throw new Error("Stripe webhook secret is not configured. Set STRIPE_WEBHOOK_SECRET_SANDBOX or STRIPE_WEBHOOK_SECRET_LIVE");
   }
   return secret;
 }
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     let event: Stripe.Event;
     try {
       const stripe = getStripe();
-      const webhookSecret = getWebhookSecret();
+      const webhookSecret = getWebhookSecretValue();
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err) {
       console.error("Webhook signature verification failed:", err);

@@ -3,14 +3,15 @@ import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
+import { getStripeSecretKey } from "@/lib/stripe-config";
 
 /**
  * Lazy-initialize Stripe to avoid build-time errors
  */
 function getStripe() {
-  const key = process.env.STRIPE_SECRET_KEY;
+  const key = getStripeSecretKey();
   if (!key) {
-    throw new Error("STRIPE_SECRET_KEY is not configured");
+    throw new Error("Stripe secret key is not configured. Set STRIPE_SECRET_KEY_SANDBOX or STRIPE_SECRET_KEY_LIVE");
   }
   return new Stripe(key);
 }
