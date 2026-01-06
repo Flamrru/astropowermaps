@@ -53,9 +53,12 @@ export function localToUTC(
   time: string,
   timezone: string
 ): Date {
+  // Normalize time to HH:MM format (database stores HH:MM:SS)
+  const normalizedTime = time.substring(0, 5);
+
   // Combine date and time into ISO string
   // This represents the local time IN the specified timezone
-  const localDateTimeString = `${date}T${time}:00`;
+  const localDateTimeString = `${date}T${normalizedTime}:00`;
 
   // fromZonedTime: "What UTC time corresponds to this local time in this zone?"
   // This function from date-fns-tz handles all the complex edge cases:

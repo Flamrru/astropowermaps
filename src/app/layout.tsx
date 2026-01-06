@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import MetaPixel from "@/components/MetaPixel";
 import CookieConsent from "@/components/CookieConsent";
+import DevAutoLogin from "@/components/dev/DevAutoLogin";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -52,6 +53,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} ${playfair.variable} antialiased`}>
         <MetaPixel />
+        <DevAutoLogin />
         {children}
       </body>
     </html>

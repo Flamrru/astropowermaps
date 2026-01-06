@@ -112,3 +112,66 @@ export interface TooltipData {
   interpretation: string;
   position: { x: number; y: number };
 }
+
+// ============================================
+// Extended Calculation Types (Chart Features)
+// ============================================
+
+/**
+ * Astro points include planets plus calculated points like nodes
+ */
+export type AstroPointId = PlanetId | "northNode" | "southNode";
+
+/**
+ * Which house a planet or point is located in
+ */
+export interface HousePlacement {
+  point: AstroPointId;    // Planet or node
+  house: number;          // House number (1-12)
+  longitude: number;      // Exact longitude
+  degreeInHouse: number;  // Degrees from house cusp
+}
+
+/**
+ * A natal aspect between two planets in the birth chart
+ */
+export interface NatalAspect {
+  planet1: PlanetId;
+  planet2: PlanetId;
+  aspectType: string;     // "conjunction", "trine", etc.
+  orb: number;            // Actual orb in degrees
+  isExact: boolean;       // Orb < 1°
+}
+
+/**
+ * Complete natal chart data structure
+ * Used for full chart interpretation and AI context
+ */
+export interface NatalChart {
+  birthData: BirthData;
+  julianDay: number;
+
+  // Core placements
+  planetPositions: PlanetPosition[];
+
+  // Houses (null if birth time unknown)
+  houses: {
+    cusps: number[];      // 12 house cusps
+    system: "placidus" | "equal";
+    ascendant: number;
+    mc: number;
+  } | null;
+
+  // Nodes
+  nodes: {
+    northNode: { longitude: number; sign: string; degree: number };
+    southNode: { longitude: number; sign: string; degree: number };
+  };
+
+  // Derived data
+  housePlacements: HousePlacement[] | null;
+  natalAspects: NatalAspect[];
+
+  // Metadata
+  calculatedAt: string;
+}

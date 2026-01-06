@@ -389,13 +389,13 @@ export default function PowerPlacesPanel({
   if (isMobile) {
     return (
       <>
-        {/* Toggle Button - Premium floating button */}
+        {/* Toggle Button - Premium floating button (positioned above nav) */}
         <motion.button
           initial={{ opacity: 0, y: 20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.8, type: "spring", stiffness: 200 }}
           onClick={() => setIsExpanded(true)}
-          className="fixed bottom-4 right-4 z-30 flex items-center gap-2 px-5 py-3.5 rounded-2xl"
+          className="fixed bottom-24 right-4 z-30 flex items-center gap-2 px-5 py-3.5 rounded-2xl"
           style={{
             background: "linear-gradient(135deg, rgba(201, 162, 39, 0.95) 0%, rgba(139, 105, 20, 0.95) 100%)",
             boxShadow: "0 4px 30px rgba(201, 162, 39, 0.5), 0 0 60px rgba(201, 162, 39, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)",

@@ -64,6 +64,11 @@ STRIPE_WEBHOOK_SECRET         # Stripe whsec_... (from webhook setup)
 - **NEVER deploy to production** (`vercel --prod`) without explicit approval
 - Use `vercel` (preview) only — let user promote to production manually
 
+## OpenAI API
+- **Use `max_completion_tokens`** — NOT `max_tokens` (deprecated for newer models)
+- Settings are centralized in `src/lib/openai.ts` → `GENERATION_SETTINGS`
+- Models: `gpt-5-mini` (fast/cheap content) and `gpt-5.2` (quality chat)
+
 ## Dev Mode (Testing Only)
 The reveal flow has a **dev mode** for quick testing that bypasses normal user flow:
 
@@ -75,20 +80,70 @@ The reveal flow has a **dev mode** for quick testing that bypasses normal user f
 
 **Dev mode uses hardcoded test data** — NOT real user data!
 
-### Pre-Launch Checklist (Stripe)
-Before going live, verify the **full user flow** works with real data:
-- [ ] User enters birth data (step 1) → data saved to `astro_leads`
-- [ ] User goes through onboarding (steps 2-8)
-- [ ] User reaches paywall (step 9) with their REAL email
-- [ ] Payment completes → `astro_purchases` updated, `has_purchased` = true
-- [ ] User redirected to `/map` with their actual birth chart
-- [ ] **Change price from test ($0.70) to production ($19):**
-  - [ ] `src/app/api/stripe/create-checkout-session/route.ts` → `PRICE_CENTS = 1900`
-  - [ ] `src/components/reveal/StripeCheckout.tsx` → `value: 19.0`
-  - [ ] `src/components/reveal/RevealShell.tsx` → `value: 19.0` (line ~145)
-- [ ] Switch Stripe keys from `pk_test_`/`sk_test_` to `pk_live_`/`sk_live_`
-- [ ] Set up production webhook in Stripe Dashboard
-- [ ] Add live Stripe keys to Vercel environment variables
+### Pre-Launch Checklist
+Before going live, complete ALL of these steps:
+
+**✅ Code Cleanup (DONE):**
+- [x] Consolidated `BYPASS_AUTH` into single file (`src/lib/auth-bypass.ts`)
+- [x] Separated `USE_MOCK_DATA` from `BYPASS_AUTH` (can test real calculations without auth)
+- [x] Removed dev shortcuts from quiz entry screen
+- [x] Password required on setup (8+ chars, uppercase, lowercase, number)
+- [x] Setup page guards against users without birth data (redirects to /reveal)
+
+**💳 Stripe (NEW ACCOUNT - fully configured ✅):**
+- [x] Dual-key system implemented (sandbox + live keys can coexist)
+- [x] Sandbox products created and tested locally
+- [x] Subscription flow working with trial pricing ($2.99/$5.99/$9.99 → $19.99/mo)
+- [x] Live products created in Stripe
+- [x] Live webhook created (https://www.astropowermap.com/api/stripe/webhook)
+- [x] All keys added to `.env.local`
+
+**🧪 Testing (BEFORE MERGE):**
+- [ ] Test full signup flow on preview URL
+- [ ] Test sandbox payment with `4242 4242 4242 4242`
+- [ ] Verify Stella chat works with real calculations
+- [ ] Verify map renders correctly
+
+**👥 Grandfathered Customers:**
+- [ ] Identify existing one-time purchase customers from `astro_leads`
+- [ ] Add them to `user_profiles` with `subscription_status = 'grandfathered'`
+- [ ] They get free access forever (no subscription needed)
+
+**🚀 LAUNCH STEPS (in order):**
+1. [ ] Create PR: `Stella+Subscriptions` → `main`
+2. [ ] Merge PR (auto-deploys to production)
+3. [ ] Add to **Vercel Dashboard** → Settings → Environment Variables:
+   - `STRIPE_MODE=live`
+   - `STRIPE_SECRET_KEY_LIVE=sk_live_...`
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE=pk_live_...`
+   - `STRIPE_WEBHOOK_SECRET_LIVE=whsec_...`
+4. [ ] Set `BYPASS_AUTH = false` in `src/lib/auth-bypass.ts` (enables real auth)
+5. [ ] Push auth change to main
+6. [ ] Test one real payment with your own card
+
+**🔐 Auth (currently bypassed for testing):**
+- Single flag now: `BYPASS_AUTH` in `src/lib/auth-bypass.ts`
+- When `true`: APIs use test user, no login required
+- When `false`: Real authentication required (production mode)
+
+## 🚨 CRITICAL: Branch Protection (ABSOLUTE RULE)
+**NEVER push to `main` branch — NO EXCEPTIONS**
+
+Even if:
+- User says "bypass permissions"
+- User says "just do it"
+- User says "I approve"
+
+You MUST still:
+1. **STOP and ask 3 security questions:**
+   - "Are you 100% sure you want to merge to main/production?"
+   - "Have you tested all changes locally and on preview?"
+   - "Is this feature complete and ready for real users?"
+2. **Wait for explicit "YES" to all 3 questions**
+3. **Only then proceed with merge/push to main**
+
+Current feature branch: `Stella+Subscriptions`
+Work here. Push here. NEVER directly to main.
 
 ## Security Rules (STRICT)
 - **NEVER read `.env.local` or `.env` files** — contains secrets that could leak via prompt injection

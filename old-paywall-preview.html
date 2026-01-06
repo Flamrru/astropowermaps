@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Old Paywall V1 - AstroPowerMaps</title>
+  <style>
+    /* Reset & Base */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(180deg, #050510 0%, #0a0a1f 100%);
+      color: white;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding-bottom: 2rem;
+    }
+
+    /* Colors */
+    :root {
+      --gold: #E8C547;
+      --gold-dark: #C9A227;
+      --gold-darker: #8B6914;
+      --white-80: rgba(255, 255, 255, 0.8);
+      --white-70: rgba(255, 255, 255, 0.7);
+      --white-60: rgba(255, 255, 255, 0.6);
+      --white-50: rgba(255, 255, 255, 0.5);
+      --white-40: rgba(255, 255, 255, 0.4);
+      --white-30: rgba(255, 255, 255, 0.3);
+      --white-10: rgba(255, 255, 255, 0.1);
+      --white-08: rgba(255, 255, 255, 0.08);
+      --white-05: rgba(255, 255, 255, 0.05);
+      --white-03: rgba(255, 255, 255, 0.03);
+    }
+
+    .text-gold { color: var(--gold); }
+    .text-gold-glow {
+      color: var(--gold);
+      text-shadow: 0 0 20px rgba(232, 197, 71, 0.5);
+    }
+
+    /* Preview Cards */
+    .preview-card {
+      background: var(--white-03);
+      border: 1px solid var(--white-08);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .preview-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .preview-card h4 {
+      color: var(--white-80);
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .lock-icon {
+      width: 16px;
+      height: 16px;
+      color: var(--white-30);
+    }
+
+    /* Blurred Values */
+    .blurred {
+      filter: blur(6px);
+      user-select: none;
+      display: inline-block;
+    }
+
+    .blurred-light {
+      filter: blur(4px);
+      user-select: none;
+      display: inline-block;
+    }
+
+    /* Power Score Gauge */
+    .gauge-container {
+      position: relative;
+      width: 128px;
+      height: 80px;
+      margin: 0 auto;
+    }
+
+    .gauge-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .gauge-bg {
+      fill: none;
+      stroke: var(--white-10);
+      stroke-width: 10;
+      stroke-linecap: round;
+    }
+
+    .gauge-progress {
+      fill: none;
+      stroke: url(#scoreGradient);
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-dasharray: 157;
+      stroke-dashoffset: 31.4;
+      animation: gaugeLoad 1.5s ease-out forwards;
+    }
+
+    @keyframes gaugeLoad {
+      from { stroke-dashoffset: 157; }
+      to { stroke-dashoffset: 31.4; }
+    }
+
+    .gauge-value {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+    }
+
+    .gauge-value .score {
+      font-size: 1.875rem;
+      font-weight: bold;
+      color: var(--gold);
+    }
+
+    .gauge-value .max {
+      font-size: 1.125rem;
+      color: var(--white-50);
+    }
+
+    /* Energy Bars */
+    .energy-bar-container {
+      width: 100%;
+      height: 8px;
+      background: var(--white-10);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .energy-bar {
+      height: 100%;
+      border-radius: 4px;
+      background: var(--white-30);
+      animation: barLoad 0.8s ease-out forwards;
+    }
+
+    .energy-bar.highlighted {
+      background: var(--gold);
+    }
+
+    @keyframes barLoad {
+      from { width: 0; }
+    }
+
+    /* Category Cards Grid */
+    .category-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .category-card {
+      background: var(--white-03);
+      border: 1px solid var(--white-08);
+      border-radius: 1rem;
+      padding: 1rem;
+    }
+
+    .category-card .icon {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .category-card .label {
+      color: var(--white-60);
+      font-size: 12px;
+      margin-bottom: 0.25rem;
+    }
+
+    .category-card .value {
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    /* Warning Cards */
+    .warning-card {
+      background: rgba(255, 100, 100, 0.05);
+      border: 1px solid rgba(255, 100, 100, 0.15);
+    }
+
+    .warning-card.orange {
+      background: rgba(249, 115, 22, 0.05);
+      border: 1px solid rgba(249, 115, 22, 0.2);
+    }
+
+    .warning-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .warning-months {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .warning-month {
+      flex: 1;
+      text-align: center;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      background: rgba(249, 115, 22, 0.1);
+      color: #fdba74;
+      font-weight: 500;
+    }
+
+    .draining-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .draining-tag {
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      background: rgba(239, 68, 68, 0.1);
+      color: rgba(252, 165, 165, 0.8);
+      font-size: 13px;
+    }
+
+    /* Calendar Grid */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .calendar-cell {
+      aspect-ratio: 1;
+      border-radius: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      background: var(--white-05);
+      color: var(--white-30);
+    }
+
+    .calendar-cell.power {
+      background: rgba(232, 197, 71, 0.3);
+      color: var(--gold);
+    }
+
+    .calendar-cell.avoid {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+    }
+
+    .calendar-legend {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      font-size: 11px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .legend-dot.power { background: rgba(232, 197, 71, 0.5); }
+    .legend-dot.avoid { background: rgba(239, 68, 68, 0.3); }
+
+    /* Gradient Separator */
+    .gradient-separator {
+      height: 80px;
+      background: linear-gradient(to bottom, transparent, rgba(5, 5, 16, 0.95));
+      margin: 0 -1.25rem;
+    }
+
+    /* Checkout Section */
+    .checkout-section {
+      padding: 2rem 1.25rem;
+      text-align: center;
+    }
+
+    .checkout-section h2 {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    .checkout-section .subtitle {
+      color: var(--white-60);
+      font-size: 15px;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Price Display */
+    .price-display {
+      margin-bottom: 1.5rem;
+    }
+
+    .price-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .price-old {
+      color: var(--white-40);
+      font-size: 1.25rem;
+      text-decoration: line-through;
+    }
+
+    .price-current {
+      color: var(--gold);
+      font-size: 2.5rem;
+      font-weight: bold;
+      text-shadow: 0 0 20px rgba(232, 197, 71, 0.5);
+    }
+
+    .price-label {
+      color: var(--white-60);
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .price-note {
+      color: var(--white-40);
+      font-size: 12px;
+      margin-top: 0.25rem;
+    }
+
+    /* Positioning Copy Block */
+    .positioning-block {
+      background: linear-gradient(135deg, rgba(232, 197, 71, 0.1), rgba(201, 162, 39, 0.05));
+      border: 1px solid rgba(232, 197, 71, 0.2);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .positioning-block .title {
+      color: var(--gold);
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 0.5rem;
+    }
+
+    .positioning-block .desc {
+      color: var(--white-70);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* Feature Lists */
+    .feature-section {
+      border-radius: 1rem;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      text-align: left;
+    }
+
+    .feature-section.forecast {
+      background: var(--white-03);
+      border: 1px solid var(--white-08);
+    }
+
+    .feature-section.birthchart {
+      background: linear-gradient(135deg, rgba(100, 100, 150, 0.08), rgba(60, 60, 100, 0.05));
+      border: 1px solid var(--white-10);
+      position: relative;
+    }
+
+    .included-badge {
+      position: absolute;
+      top: -8px;
+      right: 16px;
+      padding: 2px 10px;
+      border-radius: 9999px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: linear-gradient(135deg, #E8C547, #C9A227);
+      color: #000;
+    }
+
+    .feature-section .section-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 500;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .feature-section.forecast .section-title { color: var(--gold); }
+    .feature-section.birthchart .section-title { color: var(--white-70); }
+
+    .feature-list {
+      list-style: none;
+    }
+
+    .feature-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 0.625rem;
+    }
+
+    .feature-list .check {
+      width: 16px;
+      height: 16px;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .feature-list .text {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .feature-list .subtext {
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .feature-section.forecast .feature-list .text { color: var(--white-80); }
+    .feature-section.forecast .feature-list .subtext { color: var(--white-50); }
+    .feature-section.birthchart .feature-list .text { color: var(--white-70); }
+    .feature-section.birthchart .feature-list .subtext { color: var(--white-40); }
+
+    /* CTA Button */
+    .cta-button {
+      width: 100%;
+      padding: 1rem;
+      border: none;
+      border-radius: 9999px;
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      background: linear-gradient(180deg, #E8C547 0%, #C9A227 50%, #8B6914 100%);
+      color: #000;
+      box-shadow: 0 0 30px rgba(201, 162, 39, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      transition: transform 0.2s;
+    }
+
+    .cta-button:hover {
+      transform: scale(1.02);
+    }
+
+    .cta-button:active {
+      transform: scale(0.98);
+    }
+
+    /* Trust Indicators */
+    .trust-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-top: 1rem;
+      color: var(--white-40);
+      font-size: 13px;
+    }
+
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    /* Social Proof Gauges */
+    .social-proof-section {
+      padding: 2.5rem 1.25rem;
+    }
+
+    .social-proof-section .intro {
+      text-align: center;
+      color: var(--white-50);
+      font-size: 14px;
+      margin-bottom: 2rem;
+    }
+
+    .proof-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .proof-gauge {
+      position: relative;
+      width: 96px;
+      height: 56px;
+    }
+
+    .proof-gauge svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .proof-gauge .percentage {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: var(--gold);
+    }
+
+    .proof-item .desc {
+      color: var(--white-80);
+      font-size: 15px;
+      margin-top: 0.75rem;
+      max-width: 280px;
+    }
+
+    .proof-item .subdesc {
+      color: var(--white-50);
+      font-size: 13px;
+      margin-top: 0.25rem;
+      max-width: 280px;
+    }
+
+    /* Featured In */
+    .featured-section {
+      padding: 2rem 1.25rem;
+    }
+
+    .featured-section .label {
+      text-align: center;
+      color: var(--white-40);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 1.5rem;
+    }
+
+    .featured-logos {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 1.5rem 1.5rem;
+    }
+
+    .featured-logos span {
+      color: var(--white-30);
+      font-size: 13px;
+    }
+
+    .pub-cosmo { font-family: Georgia, serif; font-style: italic; }
+    .pub-wellgood { font-family: sans-serif; font-weight: 600; }
+    .pub-refinery { font-family: sans-serif; font-weight: 700; }
+    .pub-mbg { font-family: sans-serif; font-weight: 300; letter-spacing: 0.05em; }
+    .pub-cut { font-family: Georgia, serif; }
+    .pub-bustle { font-family: sans-serif; font-weight: 500; letter-spacing: 0.1em; }
+
+    /* Comparison Section */
+    .comparison-section {
+      padding: 2rem 1.25rem;
+    }
+
+    .comparison-box {
+      border-radius: 1rem;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .comparison-box.without {
+      background: rgba(255, 100, 100, 0.05);
+      border: 1px solid rgba(255, 100, 100, 0.15);
+    }
+
+    .comparison-box.with {
+      background: linear-gradient(135deg, rgba(201, 162, 39, 0.08), rgba(201, 162, 39, 0.03));
+      border: 1px solid rgba(201, 162, 39, 0.25);
+    }
+
+    .comparison-box .title {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+
+    .comparison-box.without .title { color: var(--white-70); }
+    .comparison-box.with .title { color: var(--gold); }
+
+    .comparison-list {
+      list-style: none;
+    }
+
+    .comparison-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+      font-size: 14px;
+    }
+
+    .comparison-list .icon {
+      width: 16px;
+      height: 16px;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .comparison-box.without .comparison-list li { color: var(--white-50); }
+    .comparison-box.with .comparison-list li { color: var(--white-80); }
+
+    /* FAQ Section */
+    .faq-section {
+      padding: 2rem 1.25rem;
+    }
+
+    .faq-section h3 {
+      text-align: center;
+      color: var(--white-70);
+      font-size: 1.125rem;
+      font-weight: 500;
+      margin-bottom: 1.5rem;
+    }
+
+    .faq-item {
+      background: var(--white-03);
+      border: 1px solid var(--white-08);
+      border-radius: 0.75rem;
+      margin-bottom: 0.75rem;
+      overflow: hidden;
+    }
+
+    .faq-question {
+      width: 100%;
+      padding: 1rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      text-align: left;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: inherit;
+    }
+
+    .faq-question .emoji {
+      font-size: 1.125rem;
+      margin-top: 2px;
+      color: var(--gold);
+    }
+
+    .faq-question .text {
+      flex: 1;
+      color: var(--white-80);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .faq-question .chevron {
+      width: 16px;
+      height: 16px;
+      color: var(--white-40);
+      margin-top: 4px;
+      transition: transform 0.2s;
+    }
+
+    .faq-item.open .faq-question .chevron {
+      transform: rotate(180deg);
+    }
+
+    .faq-answer {
+      display: none;
+      padding: 0 1rem 1rem 2.75rem;
+      color: var(--white-60);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .faq-item.open .faq-answer {
+      display: block;
+    }
+
+    /* Testimonials */
+    .testimonials-section {
+      padding: 2rem 1.25rem;
+    }
+
+    .testimonials-section h3 {
+      text-align: center;
+      color: var(--white-70);
+      font-size: 1.125rem;
+      font-weight: 500;
+      margin-bottom: 1.5rem;
+    }
+
+    .testimonial-card {
+      background: var(--white-03);
+      border: 1px solid var(--white-08);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .testimonial-stars {
+      color: var(--gold);
+      font-size: 14px;
+      margin-bottom: 0.75rem;
+      letter-spacing: 2px;
+    }
+
+    .testimonial-quote {
+      color: var(--white-70);
+      font-size: 14px;
+      line-height: 1.6;
+      font-style: italic;
+      margin-bottom: 1rem;
+    }
+
+    .testimonial-author {
+      color: var(--white-50);
+      font-size: 13px;
+    }
+
+    /* Final CTA Section */
+    .final-cta-section {
+      padding: 2.5rem 1.25rem;
+      text-align: center;
+    }
+
+    .final-cta-section .countdown {
+      color: var(--white-60);
+      font-size: 15px;
+      margin-bottom: 0.5rem;
+    }
+
+    .final-cta-section .countdown .highlight {
+      color: var(--gold);
+      font-weight: bold;
+    }
+
+    .final-cta-section .tagline {
+      color: var(--white-70);
+      font-size: 16px;
+      margin-bottom: 1.5rem;
+    }
+
+    .final-cta-section .tagline em {
+      font-style: italic;
+    }
+
+    /* Guarantee */
+    .guarantee {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--white-10);
+    }
+
+    .guarantee .secure {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      color: var(--white-40);
+      font-size: 13px;
+      margin-bottom: 0.75rem;
+    }
+
+    .guarantee .title {
+      color: var(--white-30);
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+
+    .guarantee .desc {
+      color: rgba(255, 255, 255, 0.25);
+      font-size: 12px;
+    }
+
+    /* SVG Icons as inline */
+    .svg-icon {
+      display: inline-block;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- SECTION A: Blurred Report Preview -->
+    <div style="padding: 1.5rem 1.25rem 0;">
+
+      <!-- 2026 Power Score -->
+      <div class="preview-card">
+        <div class="preview-card-header">
+          <h4>Your 2026 Power Score</h4>
+          <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+        </div>
+        <div class="gauge-container">
+          <svg class="gauge-svg" viewBox="0 0 120 70">
+            <defs>
+              <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#8B6914"/>
+                <stop offset="50%" stop-color="#C9A227"/>
+                <stop offset="100%" stop-color="#E8C547"/>
+              </linearGradient>
+            </defs>
+            <path class="gauge-bg" d="M 10 60 A 50 50 0 0 1 110 60"/>
+            <path class="gauge-progress" d="M 10 60 A 50 50 0 0 1 110 60"/>
+          </svg>
+          <div class="gauge-value">
+            <span class="score">80</span><span class="max">/100</span>
+          </div>
+        </div>
+        <p style="text-align: center; color: var(--white-50); font-size: 13px; margin-top: 0.75rem;">
+          How aligned 2026 is for your chart
+        </p>
+      </div>
+
+      <!-- #1 Power Month -->
+      <div class="preview-card">
+        <div class="preview-card-header">
+          <h4>Your #1 Power Month</h4>
+          <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div style="flex: 1;">
+            <p style="color: var(--gold); font-size: 1.5rem; font-weight: bold; margin-bottom: 0.25rem;">
+              <span class="blurred">September</span>
+            </p>
+            <p style="color: var(--white-50); font-size: 13px;">Your highest-momentum window in 2026</p>
+          </div>
+          <div style="width: 64px; height: 48px; color: rgba(232, 197, 71, 0.3);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 100%; height: 100%;">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+              <polyline points="17 6 23 6 23 12"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- #1 Power City -->
+      <div class="preview-card">
+        <div class="preview-card-header">
+          <h4>Your #1 Power City</h4>
+          <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 32px; height: 32px; color: rgba(232, 197, 71, 0.5);">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          <div style="flex: 1;">
+            <p style="color: var(--gold); font-size: 1.25rem; font-weight: bold; margin-bottom: 0.25rem;">
+              <span class="blurred">Barcelona</span>
+            </p>
+            <p style="color: var(--white-50); font-size: 13px;">
+              <span class="blurred-light">2,450 km</span> from you
+            </p>
+            <p style="color: var(--white-40); font-size: 12px;">Where your Career lines intersect</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Grid -->
+      <div class="category-grid">
+        <div class="category-card">
+          <div class="icon">💰</div>
+          <p class="label">Best for Money</p>
+          <p class="value"><span class="blurred">July</span></p>
+        </div>
+        <div class="category-card">
+          <div class="icon">💕</div>
+          <p class="label">Best for Love</p>
+          <p class="value"><span class="blurred">March</span></p>
+        </div>
+        <div class="category-card">
+          <div class="icon">✨</div>
+          <p class="label">New Beginnings</p>
+          <p class="value"><span class="blurred">May</span></p>
+        </div>
+        <div class="category-card">
+          <div class="icon">🧠</div>
+          <p class="label">Major Decisions</p>
+          <p class="value"><span class="blurred">October</span></p>
+        </div>
+      </div>
+
+      <!-- Months to Avoid -->
+      <div class="preview-card warning-card orange">
+        <div class="warning-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="2" style="width: 20px; height: 20px;">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <h4 style="color: var(--white-80); font-size: 15px; font-weight: 500;">Months to Avoid</h4>
+          <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: auto;">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+        </div>
+        <div class="warning-months">
+          <div class="warning-month"><span class="blurred-light">Feb</span></div>
+          <div class="warning-month"><span class="blurred-light">Jun</span></div>
+          <div class="warning-month"><span class="blurred-light">Nov</span></div>
+        </div>
+        <p style="color: var(--white-50); font-size: 13px;">Mercury retrograde + your Saturn transit</p>
+      </div>
+
+      <!-- Lowest Energy Month -->
+      <div class="preview-card warning-card">
+        <div class="warning-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2" style="width: 20px; height: 20px;">
+            <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/>
+            <polyline points="17 18 23 18 23 12"/>
+          </svg>
+          <h4 style="color: var(--white-80); font-size: 15px; font-weight: 500;">Lowest Energy Month</h4>
+          <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: auto;">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+        </div>
+        <p style="color: #fca5a5; font-size: 1.25rem; font-weight: bold; margin-bottom: 0.25rem;">
+          <span class="blurred">August</span>
+        </p>
+        <p style="color: var(--white-50); font-size: 13px;">Plan rest, not action</p>
+      </div>
+
+      <!-- Draining Locations -->
+      <div class="preview-card" style="background: rgba(239, 68, 68, 0.03); border-color: rgba(239, 68, 68, 0.15);">
+        <div class="warning-header">
+          <svg viewBox="0 0 24 24" fill="none" stroke="rgba(248, 113, 113, 0.7)" stroke-width="2" style="width: 20px; height: 20px;">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          <h4 style="color: var(--white-80); font-size: 15px; font-weight: 500;">Locations That Drain You</h4>
+          <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: auto;">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+        </div>
+        <div class="draining-tags">
+          <span class="draining-tag"><span class="blurred-light">Tokyo</span></span>
+          <span class="draining-tag"><span class="blurred-light">Chicago</span></span>
+          <span class="draining-tag"><span class="blurred-light">Dubai</span></span>
+        </div>
+        <p style="color: var(--white-40); font-size: 12px; margin-top: 0.5rem;">Your Saturn + Pluto lines — avoid or prepare</p>
+      </div>
+
+      <!-- All 12 Months Ranked -->
+      <div class="preview-card">
+        <div class="preview-card-header">
+          <h4>All 12 Months Ranked</h4>
+          <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0110 0v4"/>
+          </svg>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="color: var(--white-40); font-size: 12px; width: 20px;">1.</span>
+            <span style="color: var(--white-70); font-size: 14px; width: 80px;"><span class="blurred-light">September</span></span>
+            <div style="flex: 1;">
+              <div class="energy-bar-container"><div class="energy-bar highlighted" style="width: 95%;"></div></div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="color: var(--white-40); font-size: 12px; width: 20px;">2.</span>
+            <span style="color: var(--white-70); font-size: 14px; width: 80px;"><span class="blurred-light">July</span></span>
+            <div style="flex: 1;">
+              <div class="energy-bar-container"><div class="energy-bar highlighted" style="width: 88%;"></div></div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="color: var(--white-40); font-size: 12px; width: 20px;">3.</span>
+            <span style="color: var(--white-70); font-size: 14px; width: 80px;"><span class="blurred-light">October</span></span>
+            <div style="flex: 1;">
+              <div class="energy-bar-container"><div class="energy-bar highlighted" style="width: 82%;"></div></div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="color: var(--white-40); font-size: 12px; width: 20px;">4.</span>
+            <span style="color: var(--white-70); font-size: 14px; width: 80px;"><span class="blurred-light">May</span></span>
+            <div style="flex: 1;">
+              <div class="energy-bar-container"><div class="energy-bar" style="width: 75%;"></div></div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="color: var(--white-40); font-size: 12px; width: 20px;">5.</span>
+            <span style="color: var(--white-70); font-size: 14px; width: 80px;"><span class="blurred-light">March</span></span>
+            <div style="flex: 1;">
+              <div class="energy-bar-container"><div class="energy-bar" style="width: 68%;"></div></div>
+            </div>
+          </div>
+        </div>
+        <p style="color: var(--white-30); font-size: 12px; text-align: center; padding-top: 0.5rem;">+ 7 more months...</p>
+      </div>
+
+      <!-- Calendar Preview -->
+      <div class="preview-card">
+        <div class="preview-card-header">
+          <h4>2026 Calendar View</h4>
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--white-30)" stroke-width="2" style="width: 16px; height: 16px;">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        <div class="calendar-grid">
+          <div class="calendar-cell"><span class="blurred-light">J</span></div>
+          <div class="calendar-cell avoid"><span class="blurred-light">F</span></div>
+          <div class="calendar-cell power"><span class="blurred-light">M</span></div>
+          <div class="calendar-cell"><span class="blurred-light">A</span></div>
+          <div class="calendar-cell"><span class="blurred-light">M</span></div>
+          <div class="calendar-cell avoid"><span class="blurred-light">J</span></div>
+          <div class="calendar-cell power"><span class="blurred-light">J</span></div>
+          <div class="calendar-cell"><span class="blurred-light">A</span></div>
+          <div class="calendar-cell power"><span class="blurred-light">S</span></div>
+          <div class="calendar-cell power"><span class="blurred-light">O</span></div>
+          <div class="calendar-cell avoid"><span class="blurred-light">N</span></div>
+          <div class="calendar-cell"><span class="blurred-light">D</span></div>
+        </div>
+        <div class="calendar-legend">
+          <span class="legend-item">
+            <span class="legend-dot power"></span>
+            <span style="color: var(--white-40);">Power</span>
+          </span>
+          <span class="legend-item">
+            <span class="legend-dot avoid"></span>
+            <span style="color: var(--white-40);">Avoid</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Gradient Separator -->
+      <div class="gradient-separator"></div>
+    </div>
+
+    <!-- SECTION B: Primary Checkout -->
+    <section class="checkout-section">
+      <h2>Unlock Your <span class="text-gold-glow">Complete Map</span></h2>
+      <p class="subtitle">Your 2026 forecast + your full birth chart — yours forever.</p>
+
+      <div class="price-display">
+        <div class="price-row">
+          <span class="price-old">$49</span>
+          <span class="price-current">$19</span>
+        </div>
+        <p class="price-label">One-time payment</p>
+        <p class="price-note">No subscription. Instant access. Yours forever.</p>
+      </div>
+
+      <div class="positioning-block">
+        <p class="title">Two maps. One purchase.</p>
+        <p class="desc">
+          Your <span class="text-gold">2026 Forecast</span> tells you <strong>WHEN</strong>.<br/>
+          Your <span class="text-gold">Birth Chart</span> tells you <strong>WHERE</strong>.<br/>
+          <span style="color: var(--white-50);">Together, they show you exactly how to plan your year.</span>
+        </p>
+      </div>
+
+      <!-- Forecast Features -->
+      <div class="feature-section forecast">
+        <p class="section-title">📅 Your 2026 Forecast</p>
+        <ul class="feature-list">
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">Your 3 Power Months</p>
+              <p class="subtext">Know exactly when to launch, decide, and move</p>
+            </div>
+          </li>
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">Your 3 Power Cities</p>
+              <p class="subtext">Where to travel for breakthroughs and clarity</p>
+            </div>
+          </li>
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">Best Month for Money Moves</p>
+              <p class="subtext">Time your financial decisions with precision</p>
+            </div>
+          </li>
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">Best Month for Love</p>
+              <p class="subtext">When connection comes easier</p>
+            </div>
+          </li>
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">Best Month for Major Decisions</p>
+              <p class="subtext">When your clarity peaks</p>
+            </div>
+          </li>
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">Months to Avoid</p>
+              <p class="subtext">Stop wasting energy fighting the current</p>
+            </div>
+          </li>
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">All 12 Months Ranked</p>
+              <p class="subtext">See your entire year at a glance</p>
+            </div>
+          </li>
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">2026 Calendar Overview</p>
+              <p class="subtext">Color-coded month-by-month energy map</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Birth Chart Features -->
+      <div class="feature-section birthchart">
+        <span class="included-badge">Included</span>
+        <p class="section-title">🗺️ Your Complete Birth Chart</p>
+        <ul class="feature-list">
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--white-50)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">All 40 Planetary Lines</p>
+              <p class="subtext">Your complete cosmic blueprint</p>
+            </div>
+          </li>
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--white-50)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">338 Cities Matched</p>
+              <p class="subtext">Power places around the world</p>
+            </div>
+          </li>
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--white-50)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">Interactive World Map</p>
+              <p class="subtext">Explore your lines visually</p>
+            </div>
+          </li>
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--white-50)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">4 Life Categories</p>
+              <p class="subtext">Love, Career, Growth, Home</p>
+            </div>
+          </li>
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--white-50)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">Line-by-Line Interpretations</p>
+              <p class="subtext">What each line means for you</p>
+            </div>
+          </li>
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--white-50)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">Locations That Drain You</p>
+              <p class="subtext">Know where NOT to go</p>
+            </div>
+          </li>
+          <li>
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="var(--white-50)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <div>
+              <p class="text">Yours Forever</p>
+              <p class="subtext">Access anytime, no expiration</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- CTA Button -->
+      <button class="cta-button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0110 0v4"/>
+        </svg>
+        Unlock Everything — $19
+      </button>
+
+      <div class="trust-row">
+        <span class="trust-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          Secure payment
+        </span>
+        <span class="trust-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          Instant access
+        </span>
+      </div>
+    </section>
+
+    <!-- SECTION C: Social Proof Gauges -->
+    <section class="social-proof-section">
+      <p class="intro">People using their Power Map report:</p>
+
+      <div class="proof-item">
+        <div class="proof-gauge">
+          <svg viewBox="0 0 100 55">
+            <defs>
+              <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#8B6914"/>
+                <stop offset="50%" stop-color="#C9A227"/>
+                <stop offset="100%" stop-color="#E8C547"/>
+              </linearGradient>
+            </defs>
+            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="rgba(255, 255, 255, 0.1)" stroke-width="8" stroke-linecap="round"/>
+            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="url(#gaugeGradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="125.66" stroke-dashoffset="16.34"/>
+          </svg>
+          <span class="percentage">87%</span>
+        </div>
+        <p class="desc">said their power month "felt different"</p>
+        <p class="subdesc">— more clarity, better timing, things clicking</p>
+      </div>
+
+      <div class="proof-item">
+        <div class="proof-gauge">
+          <svg viewBox="0 0 100 55">
+            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="rgba(255, 255, 255, 0.1)" stroke-width="8" stroke-linecap="round"/>
+            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="url(#gaugeGradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="125.66" stroke-dashoffset="33.93"/>
+          </svg>
+          <span class="percentage">73%</span>
+        </div>
+        <p class="desc">visited a power city and noticed</p>
+        <p class="subdesc">a shift in energy or opportunities</p>
+      </div>
+
+      <div class="proof-item">
+        <div class="proof-gauge">
+          <svg viewBox="0 0 100 55">
+            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="rgba(255, 255, 255, 0.1)" stroke-width="8" stroke-linecap="round"/>
+            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="url(#gaugeGradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="125.66" stroke-dashoffset="11.31"/>
+          </svg>
+          <span class="percentage">91%</span>
+        </div>
+        <p class="desc">said they'd plan their year differently</p>
+        <p class="subdesc">now that they have their map</p>
+      </div>
+    </section>
+
+    <!-- SECTION D: Featured In -->
+    <section class="featured-section">
+      <p class="label">As featured in</p>
+      <div class="featured-logos">
+        <span class="pub-cosmo">Cosmopolitan</span>
+        <span class="pub-wellgood">Well+Good</span>
+        <span class="pub-refinery">Refinery29</span>
+        <span class="pub-mbg">mindbodygreen</span>
+        <span class="pub-cut">The Cut</span>
+        <span class="pub-bustle">Bustle</span>
+      </div>
+    </section>
+
+    <!-- SECTION E: Comparison -->
+    <section class="comparison-section">
+      <div class="comparison-box without">
+        <p class="title">Planning 2026 without your map:</p>
+        <ul class="comparison-list">
+          <li>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            <span>Picking travel destinations randomly</span>
+          </li>
+          <li>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            <span>Starting projects whenever it's "convenient"</span>
+          </li>
+          <li>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            <span>Making big decisions when you feel pressure</span>
+          </li>
+          <li>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            <span>Wondering why some months feel like a grind</span>
+          </li>
+          <li>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            <span>Hoping timing works out</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="comparison-box with">
+        <p class="title">Planning 2026 with your map:</p>
+        <ul class="comparison-list">
+          <li>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Traveling to places that amplify your energy</span>
+          </li>
+          <li>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Launching in months where momentum is on your side</span>
+          </li>
+          <li>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Making decisions when clarity peaks</span>
+          </li>
+          <li>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Resting in low-energy months instead of forcing it</span>
+          </li>
+          <li>
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Knowing the timing — not hoping</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SECTION F: FAQ -->
+    <section class="faq-section">
+      <h3>People often ask</h3>
+
+      <div class="faq-item" onclick="this.classList.toggle('open')">
+        <button class="faq-question">
+          <span class="emoji">❓</span>
+          <span class="text">How accurate is this if I don't know my exact birth time?</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          Very. Your power months are based on planetary transits which don't require exact time. City recommendations may shift slightly, but the core insights remain accurate.
+        </div>
+      </div>
+
+      <div class="faq-item" onclick="this.classList.toggle('open')">
+        <button class="faq-question">
+          <span class="emoji">❓</span>
+          <span class="text">Is this just generic horoscope stuff?</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          No. We use VSOP87 — the same planetary algorithm NASA uses — to calculate your exact birth sky. Your 40 lines are computed to sub-degree precision. Two people born one day apart have completely different maps. This isn't 'you're a Scorpio, so...' — this is real astronomical math applied to your specific coordinates in space-time.
+        </div>
+      </div>
+
+      <div class="faq-item" onclick="this.classList.toggle('open')">
+        <button class="faq-question">
+          <span class="emoji">❓</span>
+          <span class="text">What if I can't travel to my power cities?</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          You don't need to move there. Even virtual connections to those places — collaborating with people from that region, or planning a future trip — can activate the energy. The cities are compass points, not requirements.
+        </div>
+      </div>
+
+      <div class="faq-item" onclick="this.classList.toggle('open')">
+        <button class="faq-question">
+          <span class="emoji">❓</span>
+          <span class="text">Do I get instant access?</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          Yes. Immediately after purchase, everything unlocks instantly — your map, your forecast, Stella, daily scores. All of it.
+        </div>
+      </div>
+
+      <div class="faq-item" onclick="this.classList.toggle('open')">
+        <button class="faq-question">
+          <span class="emoji">❓</span>
+          <span class="text">What happens after my trial?</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          Your subscription continues at $19.99/month. Cancel anytime with one tap — no calls, no hassle.
+        </div>
+      </div>
+
+      <div class="faq-item" onclick="this.classList.toggle('open')">
+        <button class="faq-question">
+          <span class="emoji">❓</span>
+          <span class="text">Does the content update?</span>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="faq-answer">
+          Yes. Your daily score, journal prompts, and transit tracking update every day. Stella is always available. This isn't a static PDF — it's a living tool.
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION G: Testimonials -->
+    <section class="testimonials-section">
+      <h3>What people are saying</h3>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+        <p class="testimonial-quote">
+          "I was about to send a resignation email on a 19-score day. Stella told me to wait. Sent it on a 78-score day instead — got a counteroffer I didn't expect. Same email. Different day. Different outcome."
+        </p>
+        <p class="testimonial-author">— Marcus L., Chicago</p>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+        <p class="testimonial-quote">
+          "Booked a trip to my #1 power city on a whim. Met my now-business partner in a hotel lobby. I'm not saying it's magic — but I'm not saying it isn't."
+        </p>
+        <p class="testimonial-author">— Sarah M., London</p>
+      </div>
+
+      <div class="testimonial-card">
+        <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+        <p class="testimonial-quote">
+          "My 'worst month' was March. I had already planned to launch then. Pushed it to May — my #2 power month. Best decision I made all year."
+        </p>
+        <p class="testimonial-author">— James T., Toronto</p>
+      </div>
+    </section>
+
+    <!-- SECTION H: Final CTA -->
+    <section class="final-cta-section">
+      <p class="countdown">2026 is <span class="highlight">here</span>.</p>
+      <p class="tagline">
+        Your first power window could be January.<br/>
+        <em>Don't you want to know?</em>
+      </p>
+
+      <div class="price-display" style="margin-bottom: 1.5rem;">
+        <div class="price-row">
+          <span class="price-old" style="font-size: 1.125rem;">$49</span>
+          <span class="price-current" style="font-size: 1.875rem;">$19</span>
+        </div>
+        <p class="price-label" style="font-size: 12px;">One-time payment</p>
+      </div>
+
+      <button class="cta-button" style="max-width: 384px; margin: 0 auto;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0110 0v4"/>
+        </svg>
+        Unlock Everything — $19
+      </button>
+
+      <div class="guarantee">
+        <div class="secure">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          Secure payment · Instant access
+        </div>
+        <p class="title">30-day money-back guarantee</p>
+        <p class="desc">If the map doesn't resonate, email us for a full refund.</p>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>

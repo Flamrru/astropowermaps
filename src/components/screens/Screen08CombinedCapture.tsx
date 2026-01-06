@@ -514,7 +514,7 @@ export default function Screen08CombinedCapture() {
             </div>
 
             {/* Legal disclaimer */}
-            <p className="text-center text-white/40 text-[10px] mt-2 pb-4 leading-relaxed">
+            <p className="text-center text-white/40 text-[10px] mt-2 leading-relaxed">
               By continuing, you agree to our{" "}
               <a href="/terms" target="_blank" className="underline hover:text-white/60 transition-colors">
                 Terms of Service
@@ -522,6 +522,14 @@ export default function Screen08CombinedCapture() {
               and{" "}
               <a href="/privacy" target="_blank" className="underline hover:text-white/60 transition-colors">
                 Privacy Policy
+              </a>
+            </p>
+
+            {/* Sign in link for existing users */}
+            <p className="text-center text-white/50 text-[12px] mt-4 pb-4">
+              Already have an account?{" "}
+              <a href="/login" className="text-gold hover:text-gold-light underline transition-colors">
+                Sign in
               </a>
             </p>
           </motion.form>

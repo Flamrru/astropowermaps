@@ -146,49 +146,95 @@ export default function RevealShell({ children }: RevealShellProps) {
       // PAYMENT SUCCESS: Handle return from Stripe after successful payment
       const paymentStatus = searchParams.get("payment_status");
       if (paymentStatus === "complete") {
-        console.log("✅ Payment completed - recovering session and redirecting to map");
+        console.log("✅ Payment completed - showing confirmation screen");
 
         // Get Stripe's checkout session ID from URL
         const stripeSessionId = searchParams.get("session_id");
 
         if (!stripeSessionId) {
           console.error("Missing Stripe session_id in return URL");
-          window.location.href = "/map?payment=success";
-          return;
+          // Fallback: Still try to show confirmation with localStorage data
         }
 
-        try {
-          // 1. Look up our app_session_id from Stripe's checkout session
-          const lookupRes = await fetch(
-            `/api/stripe/lookup-session?checkout_session_id=${stripeSessionId}`
-          );
-          const lookupData = await lookupRes.json();
+        let appSessionId: string | null = null;
 
-          if (!lookupRes.ok || !lookupData.app_session_id) {
-            console.error("Failed to look up session:", lookupData.error);
-            window.location.href = "/map?payment=success";
-            return;
+        if (stripeSessionId) {
+          try {
+            // 1. Look up our app_session_id from Stripe's checkout session
+            const lookupRes = await fetch(
+              `/api/stripe/lookup-session?checkout_session_id=${stripeSessionId}`
+            );
+            const lookupData = await lookupRes.json();
+
+            if (lookupRes.ok && lookupData.app_session_id) {
+              appSessionId = lookupData.app_session_id;
+              console.log("✅ Recovered app_session_id:", appSessionId);
+            } else {
+              console.error("Failed to look up session:", lookupData.error);
+            }
+          } catch (error) {
+            console.error("Error looking up session:", error);
           }
-
-          const { app_session_id } = lookupData;
-          console.log("✅ Recovered app_session_id:", app_session_id);
-
-          // 2. Track Purchase event (client-side pixel)
-          trackMetaEvent("Purchase", {
-            value: 19.0,
-            currency: "USD",
-            content_type: "product",
-            content_name: "2026 Astro Power Map",
-          });
-
-          // 3. Redirect to map (astro data is already in localStorage from reveal flow)
-          window.location.href = "/map?payment=success";
-          return;
-        } catch (error) {
-          console.error("Error handling payment completion:", error);
-          window.location.href = "/map?payment=success";
-          return;
         }
+
+        // 2. Track Purchase event (client-side pixel)
+        trackMetaEvent("Purchase", {
+          value: 19.0,
+          currency: "USD",
+          content_type: "product",
+          content_name: "2026 Astro Power Map",
+        });
+
+        // 3. Restore state from localStorage (saved during reveal flow)
+        let sessionData = null;
+        let astroFromQuiz = null;
+        try {
+          const storedSession = localStorage.getItem("astro_quiz_session");
+          if (storedSession) {
+            sessionData = JSON.parse(storedSession);
+          }
+          const storedAstro = localStorage.getItem("astro_quiz_result");
+          if (storedAstro) {
+            astroFromQuiz = JSON.parse(storedAstro);
+          }
+        } catch {
+          console.error("Failed to restore session from localStorage");
+        }
+
+        // 4. Hydrate state with recovered data
+        if (sessionData?.birthData && astroFromQuiz) {
+          dispatch({
+            type: "HYDRATE_WITH_ASTRO",
+            payload: {
+              email: sessionData.email || "",
+              session_id: appSessionId || sessionData.session_id || "",
+              utm: sessionData.utm || {},
+              quizAnswers: sessionData.quizAnswers || { q1: null, q2: [] },
+              birthData: sessionData.birthData,
+              astroData: astroFromQuiz,
+            },
+          });
+          saveAstroData(astroFromQuiz);
+
+          // Calculate forecast data for confirmation screen
+          try {
+            const natalPositions = calculateNatalPositions(sessionData.birthData);
+            const transitForecast = calculatePowerMonths(natalPositions);
+            const revealForecast = convertToRevealForecast(transitForecast);
+            dispatch({ type: "SET_FORECAST_DATA", payload: revealForecast });
+          } catch (forecastError) {
+            console.error("Forecast calculation error:", forecastError);
+          }
+        }
+
+        // 5. Mark payment complete and show confirmation screen (step 10)
+        dispatch({ type: "SET_PAYMENT_COMPLETE", payload: { orderId: stripeSessionId || "unknown" } });
+        dispatch({ type: "SET_STEP", payload: 10 });
+
+        setIsHydrating(false);
+        setHasHydrated(true);
+        setMounted(true);
+        return;
       }
 
       // DEV MODE: Skip birth data entry, pre-fill and jump to specified step
@@ -470,9 +516,88 @@ export default function RevealShell({ children }: RevealShellProps) {
             `,
           }}
         >
-          {/* ===== LAYER 1: Map Background (persistent, always visible) ===== */}
-          <div className="absolute inset-0 z-0">
-            {state.astroData ? (
+          {/* ===== LAYER 1: Map Background (hidden on paywall step 9) ===== */}
+          <div
+            className="absolute inset-0 z-0"
+            style={{ pointerEvents: state.stepIndex === 1 ? "auto" : "none" }}
+          >
+            {/* Paywall gets a premium static cosmic background instead of map */}
+            {state.stepIndex === 9 ? (
+              <div className="absolute inset-0 overflow-hidden">
+                {/* Base deep space gradient */}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: `
+                      linear-gradient(180deg,
+                        #030308 0%,
+                        #050510 15%,
+                        #0a0a1a 40%,
+                        #080812 70%,
+                        #050510 100%
+                      )
+                    `,
+                  }}
+                />
+
+                {/* Nebula glow - top left (gold) */}
+                <div
+                  className="absolute -top-20 -left-20 w-[400px] h-[400px] opacity-40"
+                  style={{
+                    background: `radial-gradient(ellipse at center, rgba(201, 162, 39, 0.15) 0%, rgba(201, 162, 39, 0.05) 40%, transparent 70%)`,
+                    filter: "blur(60px)",
+                  }}
+                />
+
+                {/* Nebula glow - center right (purple) */}
+                <div
+                  className="absolute top-1/3 -right-10 w-[350px] h-[500px] opacity-30"
+                  style={{
+                    background: `radial-gradient(ellipse at center, rgba(80, 60, 140, 0.2) 0%, rgba(60, 50, 120, 0.1) 40%, transparent 70%)`,
+                    filter: "blur(80px)",
+                  }}
+                />
+
+                {/* Nebula glow - bottom center (subtle gold) */}
+                <div
+                  className="absolute -bottom-40 left-1/4 w-[500px] h-[300px] opacity-25"
+                  style={{
+                    background: `radial-gradient(ellipse at center, rgba(232, 197, 71, 0.1) 0%, transparent 60%)`,
+                    filter: "blur(100px)",
+                  }}
+                />
+
+                {/* Subtle star field using CSS */}
+                <div
+                  className="absolute inset-0 opacity-60"
+                  style={{
+                    backgroundImage: `
+                      radial-gradient(1px 1px at 20px 30px, rgba(255, 255, 255, 0.8), transparent),
+                      radial-gradient(1px 1px at 40px 70px, rgba(255, 255, 255, 0.5), transparent),
+                      radial-gradient(1px 1px at 50px 160px, rgba(255, 255, 255, 0.6), transparent),
+                      radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.4), transparent),
+                      radial-gradient(1px 1px at 130px 80px, rgba(255, 255, 255, 0.7), transparent),
+                      radial-gradient(1.5px 1.5px at 160px 120px, rgba(232, 197, 71, 0.6), transparent),
+                      radial-gradient(1px 1px at 200px 50px, rgba(255, 255, 255, 0.5), transparent),
+                      radial-gradient(1px 1px at 220px 140px, rgba(255, 255, 255, 0.4), transparent),
+                      radial-gradient(1px 1px at 260px 90px, rgba(255, 255, 255, 0.6), transparent),
+                      radial-gradient(1.5px 1.5px at 300px 180px, rgba(232, 197, 71, 0.5), transparent),
+                      radial-gradient(1px 1px at 340px 60px, rgba(255, 255, 255, 0.5), transparent),
+                      radial-gradient(1px 1px at 380px 130px, rgba(255, 255, 255, 0.7), transparent)
+                    `,
+                    backgroundSize: "400px 200px",
+                  }}
+                />
+
+                {/* Vignette overlay for depth */}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: `radial-gradient(ellipse 70% 60% at 50% 50%, transparent 0%, rgba(5, 5, 16, 0.4) 100%)`,
+                  }}
+                />
+              </div>
+            ) : state.astroData ? (
               <AstroMap
                 data={state.astroData}
                 onReset={() => {}} // Not used in background mode

@@ -220,11 +220,17 @@ export function getAspectInterpretation(
   const natalName = formatPlanetName(natalPlanet);
 
   const aspectMeanings: Record<AspectType, string> = {
+    // Major aspects
     conjunction: `${transitName} merges with your ${natalName}, creating powerful new energy`,
     sextile: `${transitName} harmonizes with your ${natalName}, opening opportunities`,
     square: `${transitName} challenges your ${natalName}, driving growth through tension`,
     trine: `${transitName} flows beautifully with your ${natalName}, bringing ease`,
     opposition: `${transitName} illuminates your ${natalName}, bringing awareness`,
+    // Minor aspects
+    "semi-sextile": `${transitName} gently nudges your ${natalName}, prompting small adjustments`,
+    quincunx: `${transitName} creates subtle tension with your ${natalName}, requiring adaptation`,
+    "semi-square": `${transitName} mildly irritates your ${natalName}, sparking minor action`,
+    sesquiquadrate: `${transitName} creates hidden friction with your ${natalName}, revealing underlying patterns`,
   };
 
   return aspectMeanings[aspectType];

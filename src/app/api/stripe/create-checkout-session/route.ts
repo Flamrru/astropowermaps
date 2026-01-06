@@ -1,26 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import {
+  SUBSCRIPTION_PLANS,
+  type PlanId,
+} from "@/lib/subscription-plans";
+import { getStripeSecretKey } from "@/lib/stripe-config";
 
 // Lazy-initialize Stripe to avoid build-time errors when env vars aren't set
 function getStripe() {
-  const key = process.env.STRIPE_SECRET_KEY;
+  const key = getStripeSecretKey();
   if (!key) {
-    throw new Error("STRIPE_SECRET_KEY is not configured");
+    throw new Error("Stripe secret key is not configured. Set STRIPE_SECRET_KEY_SANDBOX or STRIPE_SECRET_KEY_LIVE");
   }
   return new Stripe(key);
 }
 
-// Product configuration
-const PRODUCT_NAME = "2026 Astro Power Map";
-const PRICE_CENTS = 1900; // $19.00
-const CURRENCY = "usd";
-
 interface CheckoutPayload {
   session_id: string;
   email: string;
+  planId?: PlanId; // Optional for backward compatibility, defaults to "trial_7day"
+  devMode?: boolean; // True if testing in dev mode (no real lead in DB)
 }
 
+/**
+ * Create a Stripe Checkout Session for trial payment
+ *
+ * Flow:
+ * 1. User pays trial fee ($2.99/5.99/9.99) via one-time payment
+ * 2. Webhook creates subscription with trial period (customer won't be charged until trial ends)
+ * 3. After trial, subscription auto-charges $19.99/month
+ *
+ * This approach is cleaner than mixing one-time and subscription charges in a single checkout.
+ */
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutPayload = await request.json();
@@ -33,38 +45,67 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Default to 7-day trial if not specified
+    const planId: PlanId = body.planId || "trial_7day";
+    const plan = SUBSCRIPTION_PLANS[planId];
+
+    if (!plan) {
+      return NextResponse.json(
+        { error: `Invalid plan: ${planId}` },
+        { status: 400 }
+      );
+    }
+
     // Create idempotency key to prevent duplicate charges
-    const idempotencyKey = `checkout_${body.session_id}_${Date.now()}`;
+    const idempotencyKey = `checkout_${body.session_id}_${planId}_${Date.now()}`;
 
     // Get the base URL for return URL
     const origin = request.headers.get("origin") || "http://localhost:3000";
 
-    // Create Stripe Checkout Session in embedded mode
+    // Create Stripe Checkout Session for ONE-TIME trial payment
+    // The subscription will be created in the webhook after payment succeeds
     const stripe = getStripe();
     const checkoutSession = await stripe.checkout.sessions.create({
       ui_mode: "embedded",
-      mode: "payment",
+      mode: "payment", // One-time payment for trial fee
       customer_email: body.email,
+
+      // Save payment method for future subscription charges
+      payment_intent_data: {
+        setup_future_usage: "off_session", // Allow charging later without customer present
+      },
+
+      // Trial fee line item
       line_items: [
         {
           price_data: {
-            currency: CURRENCY,
+            currency: "usd",
             product_data: {
-              name: PRODUCT_NAME,
-              description: "Your personalized 2026 astrocartography power map with power months, power cities, and timing insights.",
+              name: `Stella+ ${plan.name}`,
+              description: `${plan.trialDays}-day trial access to Stella+. After trial ends, you'll be charged $19.99/month. Cancel anytime.`,
             },
-            unit_amount: PRICE_CENTS,
+            unit_amount: plan.trialPriceCents,
           },
           quantity: 1,
         },
       ],
-      // Return URL after successful payment
-      return_url: `${origin}/reveal?payment_status=complete&session_id={CHECKOUT_SESSION_ID}`,
+
+      // Return URL after successful payment - go to setup page
+      // Pass our app's session_id (for lead lookup) and dev mode flag if testing
+      return_url: body.devMode
+        ? `${origin}/setup?sid=${body.session_id}&d=1`
+        : `${origin}/setup?sid=${body.session_id}`,
+
       // Store our session_id in metadata for webhook
       metadata: {
         app_session_id: body.session_id,
         email: body.email,
-        product_type: "2026_power_map",
+        plan_id: planId,
+        trial_days: plan.trialDays.toString(),
+        monthly_price_cents: plan.monthlyPriceCents.toString(),
+        product_type: "stella_plus_trial",
+        // Flag to tell webhook to create subscription
+        create_subscription: "true",
       },
     });
 
@@ -73,13 +114,17 @@ export async function POST(request: NextRequest) {
       session_id: body.session_id,
       email: body.email,
       stripe_payment_intent_id: checkoutSession.id, // Store checkout session ID
-      amount_cents: PRICE_CENTS,
-      currency: CURRENCY,
+      amount_cents: plan.trialPriceCents, // Initial trial charge
+      currency: "usd",
       status: "pending",
       idempotency_key: idempotencyKey,
-      product_type: "2026_power_map",
+      product_type: "stella_plus",
       metadata: {
         checkout_session_id: checkoutSession.id,
+        plan_id: planId,
+        trial_days: plan.trialDays,
+        monthly_amount_cents: plan.monthlyPriceCents,
+        subscription_mode: true,
       },
     });
 

@@ -604,3 +604,94 @@ input[type="time"] {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Chrome, Safari, Opera */
 }
+
+/* ===== ELEMENT THEMING (Zodiac Elements) ===== */
+/* Fire signs: Aries, Leo, Sagittarius */
+[data-element="fire"] {
+  --element-primary: #F59E0B;
+  --element-secondary: #DC2626;
+  --element-glow: rgba(245, 158, 11, 0.3);
+  --element-gradient: linear-gradient(135deg, #F59E0B 0%, #DC2626 100%);
+  --element-bg: rgba(245, 158, 11, 0.1);
+}
+
+/* Earth signs: Taurus, Virgo, Capricorn */
+[data-element="earth"] {
+  --element-primary: #10B981;
+  --element-secondary: #92400E;
+  --element-glow: rgba(16, 185, 129, 0.3);
+  --element-gradient: linear-gradient(135deg, #10B981 0%, #92400E 100%);
+  --element-bg: rgba(16, 185, 129, 0.1);
+}
+
+/* Air signs: Gemini, Libra, Aquarius */
+[data-element="air"] {
+  --element-primary: #8B5CF6;
+  --element-secondary: #6366F1;
+  --element-glow: rgba(139, 92, 246, 0.3);
+  --element-gradient: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%);
+  --element-bg: rgba(139, 92, 246, 0.1);
+}
+
+/* Water signs: Cancer, Scorpio, Pisces */
+[data-element="water"] {
+  --element-primary: #06B6D4;
+  --element-secondary: #3B82F6;
+  --element-glow: rgba(6, 182, 212, 0.3);
+  --element-gradient: linear-gradient(135deg, #06B6D4 0%, #3B82F6 100%);
+  --element-bg: rgba(6, 182, 212, 0.1);
+}
+
+/* Element-colored utilities */
+.text-element {
+  color: var(--element-primary);
+}
+
+.bg-element {
+  background-color: var(--element-bg);
+}
+
+.border-element {
+  border-color: var(--element-primary);
+}
+
+.glow-element {
+  box-shadow: 0 0 20px var(--element-glow);
+}
+
+/* Element progress bar */
+.progress-bar-element {
+  background: var(--element-gradient);
+  box-shadow: 0 0 12px var(--element-glow);
+}
+
+/* Element badge */
+.badge-element {
+  background: var(--element-bg);
+  color: var(--element-primary);
+  border: 1px solid var(--element-primary);
+}
+
+/* Element glass card accent */
+.glass-card-element {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 3px solid var(--element-primary);
+  box-shadow: 0 0 20px var(--element-glow);
+}
+
+/* Element floating button glow */
+@keyframes element-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--element-glow);
+  }
+  50% {
+    box-shadow: 0 0 35px var(--element-glow), 0 0 50px var(--element-glow);
+  }
+}
+
+.animate-element-pulse {
+  animation: element-pulse-glow 3s ease-in-out infinite;
+}
