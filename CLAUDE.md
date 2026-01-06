@@ -83,11 +83,12 @@ The reveal flow has a **dev mode** for quick testing that bypasses normal user f
 ### Pre-Launch Checklist
 Before going live, complete ALL of these steps:
 
-**🔐 Auth (CRITICAL - currently bypassed for testing):**
-- [ ] Set `BYPASS_AUTH = false` in `src/lib/auth-bypass.ts`
-- [ ] Set `BYPASS_AUTH = false` in `src/lib/supabase/middleware.ts`
-- [ ] Test magic link authentication end-to-end
-- [ ] Verify Supabase redirect URLs are correct for production domain
+**✅ Code Cleanup (DONE):**
+- [x] Consolidated `BYPASS_AUTH` into single file (`src/lib/auth-bypass.ts`)
+- [x] Separated `USE_MOCK_DATA` from `BYPASS_AUTH` (can test real calculations without auth)
+- [x] Removed dev shortcuts from quiz entry screen
+- [x] Password required on setup (8+ chars, uppercase, lowercase, number)
+- [x] Setup page guards against users without birth data (redirects to /reveal)
 
 **💳 Stripe (NEW ACCOUNT - fully configured ✅):**
 - [x] Dual-key system implemented (sandbox + live keys can coexist)
@@ -97,15 +98,33 @@ Before going live, complete ALL of these steps:
 - [x] Live webhook created (https://www.astropowermap.com/api/stripe/webhook)
 - [x] All keys added to `.env.local`
 
-**⚠️ FINAL STEP FOR LAUNCH (update Vercel only):**
-1. [ ] Add these to **Vercel Dashboard** → Settings → Environment Variables:
+**🧪 Testing (BEFORE MERGE):**
+- [ ] Test full signup flow on preview URL
+- [ ] Test sandbox payment with `4242 4242 4242 4242`
+- [ ] Verify Stella chat works with real calculations
+- [ ] Verify map renders correctly
+
+**👥 Grandfathered Customers:**
+- [ ] Identify existing one-time purchase customers from `astro_leads`
+- [ ] Add them to `user_profiles` with `subscription_status = 'grandfathered'`
+- [ ] They get free access forever (no subscription needed)
+
+**🚀 LAUNCH STEPS (in order):**
+1. [ ] Create PR: `Stella+Subscriptions` → `main`
+2. [ ] Merge PR (auto-deploys to production)
+3. [ ] Add to **Vercel Dashboard** → Settings → Environment Variables:
    - `STRIPE_MODE=live`
-   - `NEXT_PUBLIC_STRIPE_MODE=live`
-   - `STRIPE_SECRET_KEY_LIVE=sk_live_...` (copy from .env.local)
-   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE=pk_live_...` (copy from .env.local)
-   - `STRIPE_WEBHOOK_SECRET_LIVE=whsec_...` (copy from .env.local)
-2. [ ] Deploy to production (merge to main)
-3. [ ] Test one real payment with your own card before announcing launch
+   - `STRIPE_SECRET_KEY_LIVE=sk_live_...`
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE=pk_live_...`
+   - `STRIPE_WEBHOOK_SECRET_LIVE=whsec_...`
+4. [ ] Set `BYPASS_AUTH = false` in `src/lib/auth-bypass.ts` (enables real auth)
+5. [ ] Push auth change to main
+6. [ ] Test one real payment with your own card
+
+**🔐 Auth (currently bypassed for testing):**
+- Single flag now: `BYPASS_AUTH` in `src/lib/auth-bypass.ts`
+- When `true`: APIs use test user, no login required
+- When `false`: Real authentication required (production mode)
 
 ## 🚨 CRITICAL: Branch Protection (ABSOLUTE RULE)
 **NEVER push to `main` branch — NO EXCEPTIONS**
