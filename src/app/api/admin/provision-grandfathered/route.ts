@@ -20,7 +20,7 @@ import { sendGrandfatheredInviteEmail } from "@/lib/resend";
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email, sendEmail = false } = await request.json();
+    const { email, sendEmail = false, baseUrl: customBaseUrl } = await request.json();
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Build simple setup URL (no magic link needed)
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.astropowermap.com";
+    // Allow custom baseUrl for testing on preview deployments
+    const baseUrl = customBaseUrl || process.env.NEXT_PUBLIC_APP_URL || "https://www.astropowermap.com";
     const setupUrl = `${baseUrl}/setup?type=grandfathered&email=${encodeURIComponent(normalizedEmail)}`;
 
     console.log(`Setup URL for ${normalizedEmail.substring(0, 3)}***: ${setupUrl}`);

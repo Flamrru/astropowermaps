@@ -136,6 +136,10 @@ function SetupContent() {
       // Update localStorage with email
       localStorage.setItem("stella_email", email);
 
+      // Clear any previous onboarding state (important for new accounts!)
+      localStorage.removeItem("stella-onboarding-completed");
+      localStorage.removeItem("stella-onboarding-state");
+
       // Trigger the NEW onboarding flow (5-step: Home → Map → Calendar reveal)
       localStorage.setItem("stella-onboarding-start", "true");
 
