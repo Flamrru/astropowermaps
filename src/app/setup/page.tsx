@@ -14,14 +14,18 @@ import {
   AlertCircle,
   Check,
   Mail,
+  Gift,
 } from "lucide-react";
 
 /**
  * Stella+ Account Setup Page
  *
- * Shown after successful payment (Stripe redirects here).
- * Collects display name and creates password.
- * No magic link required - uses localStorage email from checkout.
+ * Two modes:
+ * 1. New subscriber (after Stripe payment) - shows "Payment Successful!"
+ * 2. Grandfathered user (from email link) - shows "Welcome Back!"
+ *
+ * Grandfathered users get a simple link with their email in the URL,
+ * then create their account the same way as new users.
  */
 
 function SetupContent() {
@@ -35,15 +39,25 @@ function SetupContent() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Get session ID from URL (passed by Stripe return_url)
-  const sessionId = searchParams.get("sid");
+  // Get params from URL
+  const sessionId = searchParams.get("sid"); // Stripe session ID
+  const setupType = searchParams.get("type"); // "grandfathered" for existing customers
+  const emailParam = searchParams.get("email"); // Email for grandfathered users
+  const isGrandfathered = setupType === "grandfathered";
 
-  // Load email from localStorage on mount
+  // Load email - for grandfathered users, get from URL param
+  // For new users, get from localStorage (set during checkout)
   useEffect(() => {
-    const savedEmail = localStorage.getItem("stella_email") || "";
-    setEmail(savedEmail);
+    if (isGrandfathered && emailParam) {
+      // Grandfathered user - email is in URL
+      setEmail(decodeURIComponent(emailParam));
+    } else {
+      // New subscriber - get email from localStorage
+      const savedEmail = localStorage.getItem("stella_email") || "";
+      setEmail(savedEmail);
+    }
     setIsInitializing(false);
-  }, []);
+  }, [isGrandfathered, emailParam]);
 
   // Password validation
   const passwordErrors: string[] = [];
@@ -88,7 +102,10 @@ function SetupContent() {
     setIsLoading(true);
 
     try {
-      // Create account via API (sets password on existing user created by webhook)
+      const supabase = createClient();
+
+      // Both flows use the same create-account API
+      // The API detects grandfathered users and sets their status accordingly
       const response = await fetch("/api/auth/create-account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -97,6 +114,7 @@ function SetupContent() {
           password,
           displayName: displayName.trim(),
           sessionId,
+          isGrandfathered, // Tell API this is a grandfathered user
         }),
       });
 
@@ -106,7 +124,6 @@ function SetupContent() {
       }
 
       // Sign in the user automatically after account creation
-      const supabase = createClient();
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -114,11 +131,9 @@ function SetupContent() {
 
       if (signInError) {
         console.error("Auto sign-in failed:", signInError);
-        // Don't fail completely - account was created, they can log in manually
-        // But still try to redirect to home
       }
 
-      // Update localStorage with email (in case they changed it)
+      // Update localStorage with email
       localStorage.setItem("stella_email", email);
 
       // Trigger the NEW onboarding flow (5-step: Home → Map → Calendar reveal)
@@ -167,11 +182,19 @@ function SetupContent() {
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center"
             style={{
-              background: "linear-gradient(135deg, #4ade80, #22c55e)",
-              boxShadow: "0 0 40px rgba(74, 222, 128, 0.5)",
+              background: isGrandfathered
+                ? "linear-gradient(135deg, #C9A227, #E8C547)"
+                : "linear-gradient(135deg, #4ade80, #22c55e)",
+              boxShadow: isGrandfathered
+                ? "0 0 40px rgba(201, 162, 39, 0.5)"
+                : "0 0 40px rgba(74, 222, 128, 0.5)",
             }}
           >
-            <Check className="w-10 h-10 text-black" strokeWidth={3} />
+            {isGrandfathered ? (
+              <Gift className="w-10 h-10 text-black" strokeWidth={2} />
+            ) : (
+              <Check className="w-10 h-10 text-black" strokeWidth={3} />
+            )}
           </div>
         </motion.div>
 
@@ -182,13 +205,28 @@ function SetupContent() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
         >
-          <h1 className="heading-display text-2xl text-white mb-2">
-            Payment Successful!
-          </h1>
-          <p className="text-white/60 text-sm">
-            Create your{" "}
-            <span className="text-gold-glow font-medium">Stella+</span> account
-          </p>
+          {isGrandfathered ? (
+            <>
+              <h1 className="heading-display text-2xl text-white mb-2">
+                Welcome Back!
+              </h1>
+              <p className="text-white/60 text-sm">
+                Your{" "}
+                <span className="text-gold-glow font-medium">Stella+</span>{" "}
+                access is ready
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="heading-display text-2xl text-white mb-2">
+                Payment Successful!
+              </h1>
+              <p className="text-white/60 text-sm">
+                Create your{" "}
+                <span className="text-gold-glow font-medium">Stella+</span> account
+              </p>
+            </>
+          )}
         </motion.div>
 
         {/* Form Card */}
@@ -222,7 +260,7 @@ function SetupContent() {
               )}
             </AnimatePresence>
 
-            {/* Email (editable) */}
+            {/* Email */}
             <div className="mb-4">
               <label
                 htmlFor="email"
@@ -238,17 +276,22 @@ function SetupContent() {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => !isGrandfathered && setEmail(e.target.value)}
                   placeholder="your@email.com"
                   required
                   autoComplete="email"
-                  className="input-glass w-full pl-12 pr-4 py-4 rounded-xl text-white placeholder:text-white/30 text-base"
+                  readOnly={isGrandfathered}
+                  className={`input-glass w-full pl-12 pr-4 py-4 rounded-xl text-white placeholder:text-white/30 text-base ${
+                    isGrandfathered ? "opacity-70 cursor-not-allowed" : ""
+                  }`}
                   style={{ minHeight: "56px" }}
                 />
               </div>
-              <p className="text-white/40 text-xs mt-1">
-                You can change this if needed
-              </p>
+              {!isGrandfathered && (
+                <p className="text-white/40 text-xs mt-1">
+                  You can change this if needed
+                </p>
+              )}
             </div>
 
             {/* Display Name */}
@@ -388,11 +431,11 @@ function SetupContent() {
               {isLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Creating account...</span>
+                  <span>{isGrandfathered ? "Activating..." : "Creating account..."}</span>
                 </>
               ) : (
                 <>
-                  <span>Create Account & View Map</span>
+                  <span>{isGrandfathered ? "Activate My Access" : "Create Account & View Map"}</span>
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
