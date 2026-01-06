@@ -90,11 +90,11 @@ export async function POST(request: NextRequest) {
         },
       ],
 
-      // Return URL after successful payment - go to account setup page
+      // Return URL after successful payment - go to setup page
       // Pass our app's session_id (for lead lookup) and dev mode flag if testing
       return_url: body.devMode
-        ? `${origin}/account-setup?sid=${body.session_id}&d=1`
-        : `${origin}/account-setup?sid=${body.session_id}`,
+        ? `${origin}/setup?sid=${body.session_id}&d=1`
+        : `${origin}/setup?sid=${body.session_id}`,
 
       // Store our session_id in metadata for webhook
       metadata: {

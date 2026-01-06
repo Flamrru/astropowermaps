@@ -6,10 +6,11 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
  *
  * Creates a Supabase auth user with email + password after payment.
  * If user already exists (from webhook), updates their password.
+ * Also sets display name on the user profile.
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, sessionId } = await request.json();
+    const { email, password, displayName, sessionId } = await request.json();
 
     // Validate required fields
     if (!email || !password) {
@@ -19,9 +20,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters" },
+        { error: "Password must be at least 8 characters" },
         { status: 400 }
       );
     }
@@ -45,10 +46,11 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Update profile status to active
+      // Update profile status to active and set display name
       await supabaseAdmin
         .from("user_profiles")
         .update({
+          display_name: displayName || null,
           account_status: "active",
           setup_completed_at: new Date().toISOString(),
         })
@@ -80,9 +82,10 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (lead && lead.birth_date) {
-          // Create profile with birth data
+          // Create profile with birth data and display name
           await supabaseAdmin.from("user_profiles").insert({
             user_id: newUser.user.id,
+            display_name: displayName || null,
             account_status: "active",
             setup_completed_at: new Date().toISOString(),
             birth_date: lead.birth_date,

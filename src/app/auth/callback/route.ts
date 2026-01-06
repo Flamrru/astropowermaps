@@ -6,8 +6,9 @@ import { NextResponse } from "next/server";
  *
  * Handles auth redirects from Supabase:
  * - Password reset links (type=recovery)
- * - Email confirmation links
- * - Magic links (deprecated, but still handled)
+ *
+ * Note: Magic links are no longer used. Account setup happens
+ * via /setup page after Stripe payment (no auth required).
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -41,9 +42,10 @@ export async function GET(request: Request) {
           .eq("user_id", user.id)
           .single();
 
-        // If no profile or pending setup, redirect to setup
+        // If no profile or pending setup, redirect to home
+        // (DashboardShell will handle proper routing based on account status)
         if (!profile || profile.account_status === "pending_setup") {
-          return NextResponse.redirect(`${origin}/setup`);
+          return NextResponse.redirect(`${origin}/home`);
         }
       }
 
