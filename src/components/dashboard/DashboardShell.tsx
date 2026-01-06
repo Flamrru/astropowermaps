@@ -201,7 +201,27 @@ export default function DashboardShell({
           },
         });
 
-        // Fetch AI content in parallel
+        // Calculate Big Three from profile FIRST (critical for map)
+        // This must happen regardless of AI content fetch success
+        if (profile.birth_date && profile.birth_lat && profile.birth_lng) {
+          const birthData: BirthData = {
+            date: profile.birth_date,
+            time: profile.birth_time || "12:00",
+            timeUnknown: !profile.birth_time,
+            location: {
+              name: profile.birth_place || "Unknown",
+              lat: profile.birth_lat,
+              lng: profile.birth_lng,
+              timezone: profile.birth_timezone || "UTC",
+            },
+          };
+          const bigThree = calculateBigThree(birthData);
+          dispatch({ type: "SET_BIRTH_DATA", payload: birthData });
+          dispatch({ type: "SET_BIG_THREE", payload: bigThree });
+          dispatch({ type: "SET_ELEMENT", payload: bigThree.sun.element });
+        }
+
+        // Fetch AI content in parallel (non-blocking)
         try {
           const [scoreRes, forecastRes, ritualRes] = await Promise.all([
             fetch("/api/content/daily-score", { method: "POST" }),
@@ -239,32 +259,12 @@ export default function DashboardShell({
           if (ritual) {
             dispatch({ type: "SET_TODAY_RITUAL", payload: ritual });
           }
-
-          // Calculate Big Three from profile
-          if (profile.birth_date && profile.birth_lat && profile.birth_lng) {
-            const birthData: BirthData = {
-              date: profile.birth_date,
-              time: profile.birth_time || "12:00",
-              timeUnknown: !profile.birth_time,
-              location: {
-                name: profile.birth_place || "Unknown",
-                lat: profile.birth_lat,
-                lng: profile.birth_lng,
-                timezone: profile.birth_timezone || "UTC",
-              },
-            };
-            const bigThree = calculateBigThree(birthData);
-            dispatch({ type: "SET_BIRTH_DATA", payload: birthData });
-            dispatch({ type: "SET_BIG_THREE", payload: bigThree });
-            dispatch({ type: "SET_ELEMENT", payload: bigThree.sun.element });
-          }
-
-          dispatch({ type: "SET_LOADING", payload: false });
         } catch (fetchError) {
           console.error("Error fetching AI content:", fetchError);
-          // Still show dashboard but with loading states for content
-          dispatch({ type: "SET_LOADING", payload: false });
+          // AI content failed but dashboard still works - birth data is already set
         }
+
+        dispatch({ type: "SET_LOADING", payload: false });
       } catch (error) {
         console.error("Dashboard init error:", error);
         dispatch({ type: "SET_LOADING", payload: false });
