@@ -1,11 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-
-/**
- * Auth bypass flag
- * Set to false to enable real authentication
- */
-const BYPASS_AUTH = true;
+import { BYPASS_AUTH } from "@/lib/auth-bypass";
 
 /**
  * Refreshes the user's session and handles auth redirects.

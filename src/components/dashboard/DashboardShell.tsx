@@ -20,7 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 import { calculateBigThree } from "@/lib/astro/zodiac";
 import type { BirthData } from "@/lib/astro/types";
 import BottomNav from "./BottomNav";
-import { BYPASS_AUTH } from "@/lib/auth-bypass";
+import { BYPASS_AUTH, USE_MOCK_DATA, TEST_USER_ID } from "@/lib/auth-bypass";
 import { OnboardingProvider } from "@/components/onboarding";
 
 // ============================================
@@ -129,9 +129,10 @@ export default function DashboardShell({
   const router = useRouter();
   const [state, dispatch] = useReducer(dashboardReducer, initialDashboardState);
 
-  // Check for dev mode: ?dev=true or ?d=dashboard or BYPASS_AUTH enabled
+  // Check for dev mode (mock data): ?dev=true or ?d=dashboard or USE_MOCK_DATA enabled
+  // Note: BYPASS_AUTH is separate - it allows testing without login, but still uses real calculations
   const isDevMode =
-    BYPASS_AUTH ||
+    USE_MOCK_DATA ||
     searchParams.get("dev") === "true" ||
     searchParams.get("d") === "dashboard";
 
@@ -139,30 +140,43 @@ export default function DashboardShell({
   useEffect(() => {
     const initDashboard = async () => {
       if (isDevMode) {
-        // Dev mode: Load mock data immediately
+        // Dev mode: Load mock data immediately (no API calls)
         console.log("🧪 Dashboard Dev Mode: Loading mock data");
         dispatch({ type: "HYDRATE_DEV_DATA", payload: DEV_DASHBOARD_STATE });
         return;
       }
 
-      // Production: Check for authenticated user
+      // Real mode: Use real calculations (either authenticated user or test user with BYPASS_AUTH)
       try {
         const supabase = createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        let userId: string;
+        let userEmail: string = "";
 
-        if (!user) {
-          // Not authenticated, redirect to login
-          router.push("/login?redirect=/home");
-          return;
+        if (BYPASS_AUTH) {
+          // Auth bypass: Use test user but still fetch real data
+          console.log("🔓 Auth Bypass: Using test user with REAL calculations");
+          userId = TEST_USER_ID;
+          userEmail = "test@stellaplus.app";
+        } else {
+          // Production: Check for authenticated user
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+
+          if (!user) {
+            // Not authenticated, redirect to login
+            router.push("/login?redirect=/home");
+            return;
+          }
+          userId = user.id;
+          userEmail = user.email || "";
         }
 
         // Check user profile status
         const { data: profile } = await supabase
           .from("user_profiles")
           .select("account_status, display_name, birth_date, birth_time, birth_place, birth_lat, birth_lng, birth_timezone, created_at")
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .single();
 
         // If no profile or pending setup, redirect to setup
@@ -179,8 +193,8 @@ export default function DashboardShell({
         dispatch({
           type: "SET_SUBSCRIBER",
           payload: {
-            id: user.id,
-            email: user.email || "",
+            id: userId,
+            email: userEmail,
             displayName: profile.display_name || "Stargazer",
             subscriptionStatus: "active", // TODO: Check actual subscription
             createdAt: profile.created_at || new Date().toISOString(),
@@ -320,7 +334,13 @@ export default function DashboardShell({
         {/* Dev mode indicator */}
         {isDevMode && (
           <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500/90 text-black text-xs text-center py-1 font-medium">
-            🧪 Dev Mode — Using mock data (Leo ☀️ / Scorpio 🌙 / Virgo ⬆️)
+            🧪 Mock Data Mode — Using hardcoded data (Leo ☀️ / Scorpio 🌙 / Virgo ⬆️)
+          </div>
+        )}
+        {/* Auth bypass indicator (real calculations, test user) */}
+        {!isDevMode && BYPASS_AUTH && (
+          <div className="fixed top-0 left-0 right-0 z-50 bg-emerald-500/90 text-black text-xs text-center py-1 font-medium">
+            🔓 Auth Bypass — Using REAL calculations with test user
           </div>
         )}
 
@@ -328,7 +348,7 @@ export default function DashboardShell({
         <div
           data-element={element}
           className="min-h-screen cosmic-bg"
-          style={{ paddingTop: isDevMode ? "24px" : 0 }}
+          style={{ paddingTop: (isDevMode || BYPASS_AUTH) ? "24px" : 0 }}
         >
           {/* Star background */}
           <div className="stars-layer" />

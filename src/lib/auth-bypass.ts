@@ -12,6 +12,13 @@
 export const BYPASS_AUTH = true;
 
 /**
+ * Mock data flag (separate from auth bypass!)
+ * - true = Load hardcoded mock data (Leo/Scorpio/Virgo) - fast, no API calls
+ * - false = Use real astronomical calculations + AI-generated content
+ */
+export const USE_MOCK_DATA = false;
+
+/**
  * Test user ID for bypassing auth
  * This should be a real user in your database with a profile
  */
