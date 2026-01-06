@@ -17,7 +17,8 @@ import type {
 } from "@/lib/dashboard-types";
 import { DEV_DASHBOARD_STATE } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/client";
-import { calculateBigThree } from "@/lib/astro/zodiac";
+// Note: calculateBigThree moved to server-side API (/api/user/birth-data)
+// because astronomia library doesn't work client-side
 import type { BirthData } from "@/lib/astro/types";
 import BottomNav from "./BottomNav";
 import { BYPASS_AUTH, USE_MOCK_DATA, TEST_USER_ID } from "@/lib/auth-bypass";
@@ -205,29 +206,21 @@ export default function DashboardShell({
           },
         });
 
-        // Calculate Big Three from profile FIRST (critical for map)
-        // This must happen regardless of AI content fetch success
-        if (profile.birth_date && profile.birth_lat && profile.birth_lng) {
-          try {
-            const birthData: BirthData = {
-              date: profile.birth_date,
-              time: profile.birth_time || "12:00",
-              timeUnknown: !profile.birth_time,
-              location: {
-                name: profile.birth_place || "Unknown",
-                lat: profile.birth_lat,
-                lng: profile.birth_lng,
-                timezone: profile.birth_timezone || "UTC",
-              },
-            };
-            const bigThree = calculateBigThree(birthData);
-            dispatch({ type: "SET_BIRTH_DATA", payload: birthData });
-            dispatch({ type: "SET_BIG_THREE", payload: bigThree });
-            dispatch({ type: "SET_ELEMENT", payload: bigThree.sun.element });
-          } catch (calcError) {
-            console.error("Birth data calculation error:", calcError);
-            // Continue without birth data - dashboard still works, map won't
+        // Fetch birth data and Big Three from server API
+        // (astronomia library only works server-side)
+        try {
+          const birthDataRes = await fetch("/api/user/birth-data");
+          if (birthDataRes.ok) {
+            const birthDataResult = await birthDataRes.json();
+            if (birthDataResult.success && birthDataResult.birthData && birthDataResult.bigThree) {
+              dispatch({ type: "SET_BIRTH_DATA", payload: birthDataResult.birthData });
+              dispatch({ type: "SET_BIG_THREE", payload: birthDataResult.bigThree });
+              dispatch({ type: "SET_ELEMENT", payload: birthDataResult.bigThree.sun.element });
+            }
           }
+        } catch (birthDataError) {
+          console.error("Birth data fetch error:", birthDataError);
+          // Continue without birth data - dashboard still works, map won't
         }
 
         // Fetch AI content in parallel (non-blocking)
