@@ -98,6 +98,14 @@ export async function POST(request: NextRequest) {
         const { data: lead } = await leadQuery.single();
 
         if (lead && lead.birth_date) {
+          // Try to get stripe_customer_id from purchase record
+          const { data: purchase } = await supabaseAdmin
+            .from("astro_purchases")
+            .select("stripe_customer_id")
+            .eq("session_id", lead.session_id)
+            .eq("status", "completed")
+            .single();
+
           const { error: insertError } = await supabaseAdmin.from("user_profiles").insert({
             user_id: existingUser.id,
             display_name: displayName || null,
@@ -111,6 +119,7 @@ export async function POST(request: NextRequest) {
             birth_lat: lead.birth_location_lat,
             birth_lng: lead.birth_location_lng,
             birth_timezone: lead.birth_location_timezone,
+            stripe_customer_id: purchase?.stripe_customer_id || null,
           });
 
           if (insertError) {
@@ -172,6 +181,14 @@ export async function POST(request: NextRequest) {
       if (lead && lead.birth_date) {
         const subscriptionStatus = isGrandfathered ? "grandfathered" : "active";
 
+        // Try to get stripe_customer_id from purchase record
+        const { data: purchase } = await supabaseAdmin
+          .from("astro_purchases")
+          .select("stripe_customer_id")
+          .eq("session_id", lead.session_id)
+          .eq("status", "completed")
+          .single();
+
         // Create profile with birth data and display name
         const { error: insertError } = await supabaseAdmin.from("user_profiles").insert({
           user_id: newUser.user.id,
@@ -186,6 +203,7 @@ export async function POST(request: NextRequest) {
           birth_lat: lead.birth_location_lat,
           birth_lng: lead.birth_location_lng,
           birth_timezone: lead.birth_location_timezone,
+          stripe_customer_id: purchase?.stripe_customer_id || null,
         });
 
         if (insertError) {
