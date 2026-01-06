@@ -24,6 +24,10 @@ interface CheckoutPayload {
   email: string;
   planId?: PlanId; // Optional for backward compatibility, defaults to "trial_7day"
   devMode?: boolean; // True if testing in dev mode (no real lead in DB)
+  // Meta CAPI tracking data for deduplication
+  metaEventId?: string;  // Event ID for deduplication with client pixel
+  fbp?: string;          // Facebook Browser ID (_fbp cookie)
+  fbc?: string;          // Facebook Click ID (from fbclid URL param)
 }
 
 /**
@@ -80,10 +84,30 @@ export async function POST(request: NextRequest) {
     // Stripe handles subscription creation automatically!
     const stripe = getStripe();
 
+    // Check if customer already exists to prevent duplicate Stripe customers
+    // This is important when users re-purchase after cancelling
+    let existingCustomerId: string | undefined;
+    try {
+      const existingCustomers = await stripe.customers.list({
+        email: body.email,
+        limit: 1,
+      });
+      if (existingCustomers.data.length > 0) {
+        existingCustomerId = existingCustomers.data[0].id;
+        console.log(`Reusing existing Stripe customer: ${existingCustomerId}`);
+      }
+    } catch (err) {
+      console.error("Failed to check for existing customer:", err);
+      // Continue without existing customer - will create new one
+    }
+
     const checkoutSession = await stripe.checkout.sessions.create({
       ui_mode: "embedded",
       mode: "subscription",
-      customer_email: body.email,
+      // Use existing customer if found, otherwise let Stripe create new one
+      ...(existingCustomerId
+        ? { customer: existingCustomerId }
+        : { customer_email: body.email }),
 
       // Mixed cart: one-time trial fee + recurring subscription
       line_items: [
@@ -126,6 +150,10 @@ export async function POST(request: NextRequest) {
         plan_id: planId,
         trial_days: plan.trialDays.toString(),
         product_type: "stella_plus_subscription",
+        // Meta CAPI tracking data for deduplication
+        meta_event_id: body.metaEventId || "",
+        fbp: body.fbp || "",
+        fbc: body.fbc || "",
       },
     });
 

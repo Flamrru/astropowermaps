@@ -11,6 +11,30 @@ import { BirthLocation, BirthTimeWindow } from "@/lib/astro/types";
 import tzlookup from "tz-lookup";
 import { fromZonedTime } from "date-fns-tz";
 
+// Helper to get cookie value
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  return match ? match[2] : null;
+}
+
+// Helper to extract Facebook Click ID (fbc) from URL or cookie
+function extractFbc(): string | null {
+  if (typeof window === "undefined") return null;
+  const urlParams = new URLSearchParams(window.location.search);
+  const fbclid = urlParams.get("fbclid");
+  // If fbclid in URL, format as fbc; otherwise try cookie
+  if (fbclid) {
+    return `fb.1.${Date.now()}.${fbclid}`;
+  }
+  return getCookie("_fbc");
+}
+
+// Generate unique event ID for Meta deduplication
+function generateMetaEventId(prefix: string): string {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
 // Time window options
 const TIME_WINDOWS: { id: BirthTimeWindow; label: string; hint: string }[] = [
   { id: "morning", label: "Morning", hint: "6am-12pm" },
@@ -140,6 +164,13 @@ export default function Screen08CombinedCapture() {
       const localDateTime = `${date}T${finalTime}:00`;
       const birthDatetimeUtc = fromZonedTime(localDateTime, timezone).toISOString();
 
+      // Generate Meta event ID for deduplication (client + server will use same ID)
+      const metaEventId = generateMetaEventId("lead");
+
+      // Extract Facebook identifiers for CAPI
+      const fbp = getCookie("_fbp");
+      const fbc = extractFbc();
+
       // 1. Save lead to database (with birth data for permanent token access)
       const response = await fetch("/api/lead", {
         method: "POST",
@@ -166,6 +197,10 @@ export default function Screen08CombinedCapture() {
             },
             birthDatetimeUtc,
           },
+          // Meta CAPI tracking data for deduplication
+          metaEventId,
+          fbp: fbp || undefined,
+          fbc: fbc || undefined,
         }),
       });
 
@@ -173,9 +208,10 @@ export default function Screen08CombinedCapture() {
         throw new Error("Failed to save lead");
       }
 
-      // 2. Fire Meta Pixel Lead event
+      // 2. Fire Meta Pixel Lead event with eventID for deduplication with CAPI
       trackMetaEvent("Lead", {
         content_name: "2026 Power Map Combined Capture",
+        eventID: metaEventId,  // Same ID will be used by server-side CAPI
       });
 
       // 3. Update quiz state with email

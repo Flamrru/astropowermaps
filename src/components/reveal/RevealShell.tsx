@@ -12,7 +12,6 @@ import {
 } from "@/lib/reveal-state";
 import AstroMap from "@/components/astro-map/AstroMap";
 import { saveAstroData } from "@/lib/astro-storage";
-import { trackMetaEvent } from "@/components/MetaPixel";
 import { calculatePowerMonths } from "@/lib/astro/power-months";
 import { calculateNatalPositions } from "@/lib/astro/calculations";
 import { YearForecast as TransitYearForecast } from "@/lib/astro/transit-types";
@@ -177,15 +176,7 @@ export default function RevealShell({ children }: RevealShellProps) {
           }
         }
 
-        // 2. Track Purchase event (client-side pixel)
-        trackMetaEvent("Purchase", {
-          value: 19.0,
-          currency: "USD",
-          content_type: "product",
-          content_name: "2026 Astro Power Map",
-        });
-
-        // 3. Restore state from localStorage (saved during reveal flow)
+        // 2. Restore state from localStorage (saved during reveal flow)
         let sessionData = null;
         let astroFromQuiz = null;
         try {

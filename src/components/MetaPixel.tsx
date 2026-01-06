@@ -8,7 +8,8 @@ declare global {
     fbq: (
       action: string,
       eventOrPixelId: string,
-      params?: Record<string, unknown>
+      params?: Record<string, unknown>,
+      options?: { eventID?: string }  // 4th arg for deduplication
     ) => void;
     _fbq: unknown;
   }
@@ -49,13 +50,21 @@ export default function MetaPixel() {
 /**
  * Track a Meta Pixel event from any component
  * @param eventName - Standard events: 'Lead', 'Purchase', 'CompleteRegistration', etc.
- * @param params - Optional event parameters
+ * @param params - Optional event parameters (include eventID for deduplication with CAPI)
  */
 export function trackMetaEvent(
   eventName: string,
   params?: Record<string, unknown>
 ) {
   if (typeof window !== "undefined" && window.fbq) {
-    window.fbq("track", eventName, params);
+    // Extract eventID if present (for deduplication with server-side CAPI)
+    const { eventID, ...eventParams } = params || {};
+
+    if (eventID) {
+      // Use 4-argument form for deduplication with CAPI
+      window.fbq("track", eventName, eventParams, { eventID: eventID as string });
+    } else {
+      window.fbq("track", eventName, eventParams);
+    }
   }
 }

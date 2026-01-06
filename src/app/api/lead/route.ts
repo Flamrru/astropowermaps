@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { addSubscriberToLeads } from "@/lib/mailerlite";
+import { sendLeadEvent } from "@/lib/meta-capi";
 
 interface BirthDataPayload {
   date: string;
@@ -32,6 +33,10 @@ interface LeadPayload {
   session_id: string;
   timestamp?: string;
   birthData?: BirthDataPayload;
+  // Meta CAPI tracking data for deduplication
+  metaEventId?: string;  // Event ID for deduplication with client pixel
+  fbp?: string;          // Facebook Browser ID (_fbp cookie)
+  fbc?: string;          // Facebook Click ID (from fbclid URL param)
 }
 
 /**
@@ -185,8 +190,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Add to MailerLite Leads group (async, don't block response)
+    // Send Lead event to Meta Conversions API (async, don't block response)
+    const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0] || "";
+    const userAgent = request.headers.get("user-agent") || "";
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://astropowermaps.com";
+
+    sendLeadEvent({
+      email: body.email,
+      eventId: body.metaEventId,  // Same ID as client pixel for deduplication
+      clientIpAddress: clientIp || undefined,
+      clientUserAgent: userAgent || undefined,
+      fbp: body.fbp,
+      fbc: body.fbc,
+      eventSourceUrl: baseUrl,
+    }).catch((err) => console.error("Meta CAPI Lead error:", err));
+
+    // Add to MailerLite Leads group (async, don't block response)
     const mapUrl = `${baseUrl}/map?sid=${body.session_id}`;
 
     // Parse quiz interests from JSON array (e.g., '["Career / business growth", "Love / relationships"]')

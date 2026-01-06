@@ -358,14 +358,25 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   const amountPaid = session.amount_total ? session.amount_total / 100 : 19.0;
   const currency = session.currency?.toUpperCase() || "USD";
 
+  // Get Meta tracking data from session metadata (stored during checkout creation)
+  const metaEventId = session.metadata?.meta_event_id;
+  const fbp = session.metadata?.fbp;
+  const fbc = session.metadata?.fbc;
+
   const { success: metaSuccess, eventId } = await sendPurchaseEvent({
     email,
     value: amountPaid,
     currency,
+    // Deduplication: use same event ID as client-side pixel
+    eventId: metaEventId || undefined,
+    // Facebook identifiers for better match rate
+    fbp: fbp || undefined,
+    fbc: fbc || undefined,
+    eventSourceUrl: `${baseUrl}/reveal`,
   });
 
   if (metaSuccess) {
-    console.log(`Meta CAPI: Purchase event sent for ${appSessionId}, eventId: ${eventId}`);
+    console.log(`Meta CAPI: Purchase event sent for ${appSessionId}, eventId: ${eventId}, deduped: ${Boolean(metaEventId)}`);
   }
 
   // Send confirmation email with permanent map link via Resend

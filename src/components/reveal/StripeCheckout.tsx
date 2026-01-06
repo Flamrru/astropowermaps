@@ -13,6 +13,30 @@ import { SUBSCRIPTION_PLANS, type PlanId } from "@/lib/subscription-plans";
 import { motion } from "framer-motion";
 import { Lock, Eye, EyeOff, Check, ArrowRight } from "lucide-react";
 
+// Helper to get cookie value
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+  return match ? match[2] : null;
+}
+
+// Helper to extract Facebook Click ID (fbc) from URL or cookie
+function extractFbc(): string | null {
+  if (typeof window === "undefined") return null;
+  const urlParams = new URLSearchParams(window.location.search);
+  const fbclid = urlParams.get("fbclid");
+  // If fbclid in URL, format as fbc; otherwise try cookie
+  if (fbclid) {
+    return `fb.1.${Date.now()}.${fbclid}`;
+  }
+  return getCookie("_fbc");
+}
+
+// Generate unique event ID for Meta deduplication
+function generateMetaEventId(prefix: string): string {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
 interface StripeCheckoutProps {
   planId?: PlanId; // Selected plan from PricingSelector
   onComplete?: () => void;
@@ -57,6 +81,14 @@ export default function StripeCheckout({
         localStorage.setItem("stella_email", email);
       }
 
+      // Generate Meta event ID for deduplication (client + server will use same ID)
+      const metaEventId = generateMetaEventId("purchase");
+      localStorage.setItem("meta_purchase_event_id", metaEventId);
+
+      // Extract Facebook identifiers for CAPI
+      const fbp = getCookie("_fbp");
+      const fbc = extractFbc();
+
       const response = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,6 +97,10 @@ export default function StripeCheckout({
           email,
           planId, // Pass selected plan to API
           devMode: isDevMode, // Pass dev mode flag
+          // Meta tracking data for CAPI deduplication
+          metaEventId,
+          fbp: fbp || undefined,
+          fbc: fbc || undefined,
         }),
       });
 
@@ -84,13 +120,17 @@ export default function StripeCheckout({
 
   // Handle checkout completion - show password form
   const handleComplete = useCallback(() => {
-    // Track Purchase event client-side (backup for CAPI)
+    // Retrieve event ID for deduplication with CAPI (stored in fetchClientSecret)
+    const metaEventId = localStorage.getItem("meta_purchase_event_id");
+
+    // Track Purchase event client-side with eventID for deduplication
     trackMetaEvent("Purchase", {
       value: plan.trialPriceCents / 100,
       currency: "USD",
       content_type: "subscription",
       content_name: `Stella+ ${plan.name}`,
       content_ids: [planId],
+      eventID: metaEventId || undefined,  // Same ID will be used by CAPI
     });
 
     // Mark payment as complete in reveal state

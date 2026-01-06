@@ -9,13 +9,14 @@
 1. [Stripe: Trial Payment + Subscription](#stripe-trial-payment--subscription)
 2. [Vercel Environment Variables](#vercel-environment-variables)
 3. [Missing stripe_customer_id in Profile](#missing-stripe_customer_id-in-profile)
+4. [Duplicate Stripe Customers on Re-purchase](#duplicate-stripe-customers-on-re-purchase)
 
 ---
 
 ## Stripe: Trial Payment + Subscription
 
 **Date:** 2026-01-07
-**Status:** TESTING - Mixed cart approach deployed, fallback ready
+**Status:** ✅ SOLVED - Mixed cart approach CONFIRMED WORKING
 
 ### The Problem
 We need to charge users an upfront trial fee ($2.99/$5.99/$9.99) and then automatically start a $19.99/month subscription after the trial period ends.
@@ -96,7 +97,7 @@ subscription_data: {
 
 ---
 
-#### Approach 3: Subscription Mode + Mixed Cart (TESTING)
+#### Approach 3: Subscription Mode + Mixed Cart (✅ WORKS - CONFIRMED)
 **File:** `src/app/api/stripe/create-checkout-session/route.ts`
 
 ```typescript
@@ -129,13 +130,18 @@ const checkoutSession = await stripe.checkout.sessions.create({
 ```
 
 **Pros:**
-- Stripe creates subscription automatically
-- No webhook needed for subscription creation
-- Simpler flow
+- Stripe creates subscription automatically ✅
+- No webhook needed for subscription creation ✅
+- Simpler flow ✅
+- One-time fee charged immediately on first invoice ✅
 
-**Cons:**
-- Uncertain if one-time item charges during trial or waits
-- Less proven than Approach 1
+**Confirmed by live transaction (2026-01-07):**
+```
+Invoice: in_1SmjQe24zElYF83GJ1FRV4wE
+Line 1: "Stella+ 7-Day Trial" - $5.99 (paid immediately)
+Line 2: "Trial period for Stella+ Monthly" - $0 (trial)
+Subscription: sub_1SmjQe24zElYF83GlNl3e3kK (status: trialing)
+```
 
 ---
 
@@ -282,6 +288,57 @@ stripe customers list --email="user@example.com" --api-key="$STRIPE_SECRET_KEY_L
 - `src/app/api/auth/create-account/route.ts`
 - `src/app/api/stripe/webhook/route.ts`
 - `src/app/api/stripe/portal/route.ts`
+
+---
+
+## Duplicate Stripe Customers on Re-purchase
+
+**Date:** 2026-01-07
+**Status:** ✅ SOLVED
+
+### The Problem
+When a user cancels their subscription and re-purchases, Stripe creates a **new customer** instead of reusing the existing one. This causes:
+- User profile has old customer ID (with cancelled subscription)
+- New subscription is under a new customer ID
+- "Manage billing" portal shows nothing (wrong customer)
+
+### Root Cause
+Using `customer_email` in checkout lets Stripe create a new customer every time. It doesn't automatically link to existing customers.
+
+### Solution
+Check for existing customers before creating checkout session:
+
+```typescript
+// Check if customer already exists to prevent duplicates
+let existingCustomerId: string | undefined;
+try {
+  const existingCustomers = await stripe.customers.list({
+    email: body.email,
+    limit: 1,
+  });
+  if (existingCustomers.data.length > 0) {
+    existingCustomerId = existingCustomers.data[0].id;
+  }
+} catch (err) {
+  // Continue without existing customer
+}
+
+const checkoutSession = await stripe.checkout.sessions.create({
+  // Use existing customer if found, otherwise let Stripe create new
+  ...(existingCustomerId
+    ? { customer: existingCustomerId }
+    : { customer_email: body.email }),
+  // ... rest of config
+});
+```
+
+### Key Learnings
+1. **`customer_email` creates new customers** - it doesn't look up existing ones
+2. **Use `customer` parameter** with existing ID to reuse customers
+3. **Always search by email first** before creating checkout sessions
+
+### Related Files
+- `src/app/api/stripe/create-checkout-session/route.ts`
 
 ---
 
