@@ -5,7 +5,7 @@ import {
   SUBSCRIPTION_PLANS,
   type PlanId,
 } from "@/lib/subscription-plans";
-import { getStripeSecretKey, getStripePrices } from "@/lib/stripe-config";
+import { getStripeSecretKey } from "@/lib/stripe-config";
 
 // Lazy-initialize Stripe to avoid build-time errors when env vars aren't set
 function getStripe() {
@@ -24,15 +24,14 @@ interface CheckoutPayload {
 }
 
 /**
- * Create a Stripe Checkout Session for subscription with paid trial
+ * Create a Stripe Checkout Session for trial payment
  *
- * Uses Stripe's recommended pattern:
- * 1. Subscription mode checkout with trial_period_days
- * 2. add_invoice_items charges trial fee ($2.99/5.99/9.99) on first invoice
- * 3. Stripe automatically creates subscription with trial
- * 4. After trial ends, customer is charged $19.99/month automatically
+ * Flow:
+ * 1. User pays trial fee ($2.99/5.99/9.99) via one-time payment
+ * 2. Webhook creates subscription with trial period (customer won't be charged until trial ends)
+ * 3. After trial, subscription auto-charges $19.99/month
  *
- * This is cleaner than payment mode + webhook subscription creation.
+ * This approach is cleaner than mixing one-time and subscription charges in a single checkout.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -57,72 +56,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the monthly subscription price ID
-    const prices = getStripePrices();
-    const monthlyPriceId = prices.MONTHLY;
-
-    if (!monthlyPriceId) {
-      console.error("Monthly price ID not configured");
-      return NextResponse.json(
-        { error: "Payment system not configured" },
-        { status: 500 }
-      );
-    }
-
     // Create idempotency key to prevent duplicate charges
     const idempotencyKey = `checkout_${body.session_id}_${planId}_${Date.now()}`;
 
     // Get the base URL for return URL
     const origin = request.headers.get("origin") || "http://localhost:3000";
 
-    // Create Stripe Checkout Session in SUBSCRIPTION mode
-    // Stripe handles subscription creation automatically - much cleaner!
+    // Create Stripe Checkout Session for ONE-TIME trial payment
+    // The subscription will be created in the webhook after payment succeeds
     const stripe = getStripe();
-
-    // Build checkout session params
-    // Using type assertion because Stripe SDK types don't include add_invoice_items yet
-    const checkoutParams = {
-      ui_mode: "embedded" as const,
-      mode: "subscription" as const,
+    const checkoutSession = await stripe.checkout.sessions.create({
+      ui_mode: "embedded",
+      mode: "payment", // One-time payment for trial fee
       customer_email: body.email,
+      customer_creation: "always", // Create Stripe customer for subscription
 
-      // Monthly subscription price ($19.99/mo)
+      // Save payment method for future subscription charges
+      payment_intent_data: {
+        setup_future_usage: "off_session", // Allow charging later without customer present
+      },
+
+      // Trial fee line item
       line_items: [
         {
-          price: monthlyPriceId,
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: `Stella+ ${plan.name}`,
+              description: `${plan.trialDays}-day trial access to Stella+. After trial ends, you'll be charged $19.99/month. Cancel anytime.`,
+            },
+            unit_amount: plan.trialPriceCents,
+          },
           quantity: 1,
         },
       ],
 
-      subscription_data: {
-        // Trial period - customer won't be charged subscription until this ends
-        trial_period_days: plan.trialDays,
-
-        // One-time trial fee charged immediately on first invoice
-        // This is the $2.99/$5.99/$9.99 upfront charge
-        add_invoice_items: [
-          {
-            price_data: {
-              currency: "usd",
-              product_data: {
-                name: `Stella+ ${plan.name}`,
-                description: `${plan.trialDays}-day trial access to Stella+`,
-              },
-              unit_amount: plan.trialPriceCents,
-            },
-            quantity: 1,
-          },
-        ],
-
-        // Metadata on subscription for tracking
-        metadata: {
-          app_session_id: body.session_id,
-          plan_id: planId,
-          created_from: "checkout",
-        },
-      },
-
       // Return URL after successful payment - go to setup page
+      // Pass our app's session_id (for lead lookup) and dev mode flag if testing
       return_url: body.devMode
         ? `${origin}/setup?sid=${body.session_id}&d=1`
         : `${origin}/setup?sid=${body.session_id}`,
@@ -133,13 +103,12 @@ export async function POST(request: NextRequest) {
         email: body.email,
         plan_id: planId,
         trial_days: plan.trialDays.toString(),
-        product_type: "stella_plus_subscription",
+        monthly_price_cents: plan.monthlyPriceCents.toString(),
+        product_type: "stella_plus_trial",
+        // Flag to tell webhook to create subscription
+        create_subscription: "true",
       },
-    };
-
-    const checkoutSession = await stripe.checkout.sessions.create(
-      checkoutParams as Stripe.Checkout.SessionCreateParams
-    );
+    });
 
     // Store pending purchase record in Supabase
     const { error: dbError } = await supabaseAdmin.from("astro_purchases").insert({
