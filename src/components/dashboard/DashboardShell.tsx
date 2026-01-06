@@ -298,7 +298,7 @@ export default function DashboardShell({
     );
   }
 
-  // Error state (non-dev mode without auth)
+  // Error state - show friendly retry screen
   if (state.error && !isDevMode) {
     return (
       <div className="min-h-screen cosmic-bg flex items-center justify-center p-6">
@@ -309,16 +309,39 @@ export default function DashboardShell({
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="glass-card rounded-2xl p-8">
-            <h1 className="heading-display text-2xl text-gold mb-4">
-              Dashboard Preview
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
+              style={{
+                background: "rgba(239, 68, 68, 0.1)",
+                border: "1px solid rgba(239, 68, 68, 0.3)",
+              }}>
+              <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h1 className="text-xl font-semibold text-white mb-2">
+              Connection Issue
             </h1>
-            <p className="text-white/70 mb-6">{state.error}</p>
-            <a
-              href="/home?dev=true"
-              className="gold-button-premium rounded-full px-6 py-3 inline-block"
-            >
-              Enter Dev Mode
-            </a>
+            <p className="text-white/60 mb-6">
+              We couldn&apos;t load your dashboard. This is usually temporary.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => window.location.reload()}
+                className="gold-button-premium rounded-full px-6 py-3"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={async () => {
+                  const supabase = createClient();
+                  await supabase.auth.signOut();
+                  window.location.href = "/login";
+                }}
+                className="text-white/50 text-sm hover:text-white/70 transition-colors"
+              >
+                Sign out and try again
+              </button>
+            </div>
           </div>
         </motion.div>
       </div>
