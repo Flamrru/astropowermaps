@@ -9,7 +9,7 @@
  * Auth bypass flag
  * Set to false to enable real authentication
  */
-export const BYPASS_AUTH = true;
+export const BYPASS_AUTH = false;
 
 /**
  * Mock data flag (separate from auth bypass!)
