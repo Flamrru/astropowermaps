@@ -7,6 +7,7 @@
 
 import { BirthData, PlanetPosition } from "./types";
 import { birthDataToJulianDay } from "./calculations";
+import * as sidereal from "astronomia/sidereal";
 
 // ============================================
 // Types
@@ -206,9 +207,6 @@ export function calculateRisingSign(birthData: BirthData): ZodiacInfo {
       totalDegree: 0,
     };
   }
-
-  const { birthDataToJulianDay } = require("./calculations");
-  const sidereal = require("astronomia/sidereal");
 
   const jd = birthDataToJulianDay(birthData);
   const lat = birthData.location.lat;
