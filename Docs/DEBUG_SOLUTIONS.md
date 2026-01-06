@@ -8,6 +8,7 @@
 ## Table of Contents
 1. [Stripe: Trial Payment + Subscription](#stripe-trial-payment--subscription)
 2. [Vercel Environment Variables](#vercel-environment-variables)
+3. [Missing stripe_customer_id in Profile](#missing-stripe_customer_id-in-profile)
 
 ---
 
@@ -220,6 +221,67 @@ Always use `printf` for Vercel env vars, or set them manually in the dashboard.
 ### Related Files
 - `path/to/file.ts`
 ```
+
+---
+
+## Missing stripe_customer_id in Profile
+
+**Date:** 2026-01-07
+**Status:** SOLVED
+
+### The Problem
+Users see "No Stripe customer found. Please contact support." when clicking "Manage billing" on the profile page.
+
+### Root Cause
+Race condition between webhook and `/api/auth/create-account`:
+
+1. User pays → Stripe webhook fires
+2. Webhook creates auth user (no password yet)
+3. User completes /setup and creates password BEFORE webhook finishes
+4. `/api/auth/create-account` creates profile WITHOUT `stripe_customer_id`
+5. Webhook runs later but profile already exists → upsert might not update
+
+The `/api/auth/create-account` route was inserting profiles without fetching `stripe_customer_id` from the purchase record.
+
+### Solution
+Updated `create-account/route.ts` to fetch `stripe_customer_id` from `astro_purchases` when creating profiles:
+
+```typescript
+// Try to get stripe_customer_id from purchase record
+const { data: purchase } = await supabaseAdmin
+  .from("astro_purchases")
+  .select("stripe_customer_id")
+  .eq("session_id", lead.session_id)
+  .eq("status", "completed")
+  .single();
+
+const { error: insertError } = await supabaseAdmin.from("user_profiles").insert({
+  user_id: existingUser.id,
+  // ... other fields
+  stripe_customer_id: purchase?.stripe_customer_id || null,
+});
+```
+
+### Manual Fix for Existing Users
+If a user is missing `stripe_customer_id`, update manually:
+
+```bash
+# 1. Find customer in Stripe
+stripe customers list --email="user@example.com" --api-key="$STRIPE_SECRET_KEY_LIVE"
+
+# 2. Update profile in Supabase
+# Use the Supabase dashboard or API to set stripe_customer_id
+```
+
+### Key Learnings
+1. **Always include Stripe data** when creating profiles - don't rely solely on webhook
+2. **Race conditions** between webhook and user actions need careful handling
+3. **The `astro_purchases` table** stores `stripe_customer_id` and can be used as source of truth
+
+### Related Files
+- `src/app/api/auth/create-account/route.ts`
+- `src/app/api/stripe/webhook/route.ts`
+- `src/app/api/stripe/portal/route.ts`
 
 ---
 
