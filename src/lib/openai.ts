@@ -29,31 +29,32 @@ export const MODELS = {
  */
 export const GENERATION_SETTINGS = {
   /** Daily content (scores, forecasts) - fast, concise */
+  // Note: gpt-5-mini uses ~500+ tokens for reasoning, need 2000+ total
   daily: {
     model: MODELS.FAST,
     reasoning_effort: "medium" as const,
     verbosity: "low" as const,
-    max_completion_tokens: 500,
+    max_completion_tokens: 2000,
   },
   /** Weekly forecasts - slightly more detailed */
   weekly: {
     model: MODELS.FAST,
     reasoning_effort: "medium" as const,
     verbosity: "medium" as const,
-    max_completion_tokens: 1500,
+    max_completion_tokens: 4000,
   },
   /** Ritual prompts - creative, concise */
   ritual: {
     model: MODELS.FAST,
     reasoning_effort: "low" as const,
     verbosity: "low" as const,
-    max_completion_tokens: 300,
+    max_completion_tokens: 1500,
   },
   /** Stella chat - wise, conversational, mobile-friendly */
   chat: {
     model: MODELS.QUALITY,
     reasoning_effort: "low" as const,
     verbosity: "low" as const,
-    max_completion_tokens: 800, // Needs room for reasoning + response
+    max_completion_tokens: 2000, // Needs room for reasoning + response
   },
 } as const;
