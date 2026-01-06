@@ -142,8 +142,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(ritualPrompt);
   } catch (error) {
     console.error("Ritual prompt error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to generate ritual prompt" },
+      { error: "Failed to generate ritual prompt", details: errorMessage },
       { status: 500 }
     );
   }

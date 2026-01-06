@@ -151,8 +151,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(dailyScore);
   } catch (error) {
     console.error("Daily score error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to generate daily score" },
+      { error: "Failed to generate daily score", details: errorMessage },
       { status: 500 }
     );
   }

@@ -143,8 +143,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(weeklyForecast);
   } catch (error) {
     console.error("Weekly forecast error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to generate weekly forecast" },
+      { error: "Failed to generate weekly forecast", details: errorMessage },
       { status: 500 }
     );
   }
