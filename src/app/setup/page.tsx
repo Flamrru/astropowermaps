@@ -47,16 +47,23 @@ export default function SetupPage() {
 
       setUserEmail(user.email ?? null);
 
-      // Check if already set up
+      // Check if profile exists and has birth data
       const { data: profile } = await supabase
         .from("user_profiles")
-        .select("account_status, display_name")
+        .select("account_status, display_name, birth_date")
         .eq("user_id", user.id)
         .single();
 
       if (profile && profile.account_status === "active") {
         // Already set up, redirect to home
         router.push("/home");
+        return;
+      }
+
+      // If no profile or no birth data, they haven't completed purchase flow
+      if (!profile || !profile.birth_date) {
+        console.log("No profile with birth data - redirecting to purchase flow");
+        router.push("/reveal");
         return;
       }
 
