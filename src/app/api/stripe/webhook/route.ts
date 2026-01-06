@@ -113,7 +113,6 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   const appSessionId = session.metadata?.app_session_id;
   const email = session.metadata?.email || session.customer_email;
   const planId = session.metadata?.plan_id;
-  const createSubscription = session.metadata?.create_subscription === "true";
   const trialDays = parseInt(session.metadata?.trial_days || "0", 10);
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://astropowermaps.com";
 
@@ -127,12 +126,18 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
     return;
   }
 
-  const stripe = getStripe();
+  // In subscription mode, Stripe creates the subscription automatically
+  // We just extract it from the session - no manual creation needed!
   let subscriptionId: string | null = session.subscription as string | null;
 
-  // ========================================
-  // CREATE SUBSCRIPTION AFTER TRIAL PAYMENT
-  // ========================================
+  if (session.mode === "subscription" && subscriptionId) {
+    console.log(`Subscription created by Stripe: ${subscriptionId}`);
+  }
+
+  // Legacy support: create subscription for old payment-mode checkouts
+  const createSubscription = session.metadata?.create_subscription === "true";
+  const stripe = getStripe();
+
   if (createSubscription && session.mode === "payment" && trialDays > 0) {
     try {
       const customerId = session.customer as string;
