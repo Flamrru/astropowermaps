@@ -86,8 +86,23 @@ export default function SetupPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      setError("Password must contain at least one uppercase letter");
+      return;
+    }
+
+    if (!/[a-z]/.test(password)) {
+      setError("Password must contain at least one lowercase letter");
+      return;
+    }
+
+    if (!/[0-9]/.test(password)) {
+      setError("Password must contain at least one number");
       return;
     }
 
@@ -316,7 +331,7 @@ export default function SetupPage() {
                 Create a password
               </label>
               <p className="text-xs text-white/40 mb-2">
-                You&apos;ll use this to log in to your account.
+                Min 8 characters, with uppercase, lowercase & number
               </p>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -327,7 +342,7 @@ export default function SetupPage() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="e.g. MyPass123"
                   autoComplete="new-password"
                   className="input-glass w-full pl-12 pr-12 py-4 rounded-xl text-white placeholder:text-white/30 text-base"
                   style={{ minHeight: "56px" }}
