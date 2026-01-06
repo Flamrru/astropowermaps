@@ -113,7 +113,6 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   const appSessionId = session.metadata?.app_session_id;
   const email = session.metadata?.email || session.customer_email;
   const planId = session.metadata?.plan_id;
-  const createSubscription = session.metadata?.create_subscription === "true";
   const trialDays = parseInt(session.metadata?.trial_days || "0", 10);
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://astropowermaps.com";
 
@@ -127,126 +126,28 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
     return;
   }
 
-  const stripe = getStripe();
-  let subscriptionId: string | null = session.subscription as string | null;
+  // In subscription mode, Stripe creates the subscription automatically
+  // We just need to extract it from the session
+  const subscriptionId: string | null = session.subscription as string | null;
 
-  // ========================================
-  // CREATE SUBSCRIPTION AFTER TRIAL PAYMENT
-  // ========================================
-  if (createSubscription && session.mode === "payment" && trialDays > 0) {
-    try {
-      const customerId = session.customer as string;
-
-      // Get the payment method from the payment intent
-      const paymentIntent = await stripe.paymentIntents.retrieve(
-        session.payment_intent as string
-      );
-      const paymentMethodId = paymentIntent.payment_method as string;
-
-      if (!paymentMethodId) {
-        console.error("No payment method found on payment intent");
-      } else {
-        // Set payment method as default for customer
-        await stripe.customers.update(customerId, {
-          invoice_settings: {
-            default_payment_method: paymentMethodId,
-          },
-        });
-
-        // Calculate trial end date
-        const trialEnd = Math.floor(Date.now() / 1000) + trialDays * 24 * 60 * 60;
-
-        // Create or get the monthly price
-        // For simplicity, we create the price inline. In production, use a pre-created price ID.
-        const monthlyPriceCents = parseInt(session.metadata?.monthly_price_cents || "1999", 10);
-
-        // First, find or create the Stella+ product
-        const products = await stripe.products.list({
-          limit: 1,
-        });
-
-        let productId: string;
-        const existingProduct = products.data.find(
-          (p) => p.metadata?.app === "astropowermaps" && p.metadata?.type === "stella_plus"
-        );
-
-        if (existingProduct) {
-          productId = existingProduct.id;
-        } else {
-          const newProduct = await stripe.products.create({
-            name: "Stella+ Monthly",
-            description: "Your personal AI astrologer with daily cosmic guidance.",
-            metadata: {
-              app: "astropowermaps",
-              type: "stella_plus",
-            },
-          });
-          productId = newProduct.id;
-        }
-
-        // Find or create the monthly price
-        const prices = await stripe.prices.list({
-          product: productId,
-          limit: 10,
-        });
-
-        let priceId: string;
-        const existingPrice = prices.data.find(
-          (p) =>
-            p.recurring?.interval === "month" &&
-            p.unit_amount === monthlyPriceCents &&
-            p.active
-        );
-
-        if (existingPrice) {
-          priceId = existingPrice.id;
-        } else {
-          const newPrice = await stripe.prices.create({
-            product: productId,
-            unit_amount: monthlyPriceCents,
-            currency: "usd",
-            recurring: {
-              interval: "month",
-            },
-          });
-          priceId = newPrice.id;
-        }
-
-        // Create subscription with trial
-        const subscription = await stripe.subscriptions.create({
-          customer: customerId,
-          items: [{ price: priceId }],
-          trial_end: trialEnd,
-          default_payment_method: paymentMethodId,
-          metadata: {
-            app_session_id: appSessionId,
-            plan_id: planId || "",
-            created_from: "trial_checkout",
-          },
-        });
-
-        subscriptionId = subscription.id;
-        console.log(`Subscription created: ${subscriptionId} (trial ends: ${new Date(trialEnd * 1000).toISOString()})`);
-      }
-    } catch (subError) {
-      console.error("Failed to create subscription:", subError);
-      // Don't fail the whole webhook - user still paid for trial
-    }
+  if (session.mode === "subscription" && subscriptionId) {
+    console.log(`Subscription created by Stripe: ${subscriptionId}`);
   }
 
   // Update astro_purchases to completed
+  // Note: subscription mode uses invoice, not payment_intent
   const { error: purchaseError } = await supabaseAdmin
     .from("astro_purchases")
     .update({
       status: "completed",
       completed_at: new Date().toISOString(),
       stripe_customer_id: session.customer as string,
-      stripe_payment_intent_id: session.payment_intent as string || null,
+      stripe_payment_intent_id: session.invoice as string || session.payment_intent as string || null,
       metadata: {
         checkout_session_id: session.id,
         plan_id: planId,
         subscription_id: subscriptionId,
-        subscription_mode: Boolean(subscriptionId),
+        subscription_mode: session.mode === "subscription",
       },
     })
     .eq("session_id", appSessionId)
