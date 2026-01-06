@@ -21,6 +21,7 @@ import { createClient } from "@/lib/supabase/client";
 // because astronomia library doesn't work client-side
 import type { BirthData } from "@/lib/astro/types";
 import BottomNav from "./BottomNav";
+import CosmicLoader from "./CosmicLoader";
 import { BYPASS_AUTH, USE_MOCK_DATA, TEST_USER_ID } from "@/lib/auth-bypass";
 import { OnboardingProvider } from "@/components/onboarding";
 
@@ -283,21 +284,9 @@ export default function DashboardShell({
   // Determine element for theming (based on Sun sign)
   const element: Element | null = state.bigThree?.sun?.element ?? null;
 
-  // Loading state
+  // Loading state - beautiful cosmic loader
   if (state.isLoading) {
-    return (
-      <div className="min-h-screen cosmic-bg flex items-center justify-center">
-        <div className="stars-layer" />
-        <motion.div
-          className="relative z-10 text-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <div className="w-12 h-12 border-2 border-gold-main border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-white/60">Loading your cosmic dashboard...</p>
-        </motion.div>
-      </div>
-    );
+    return <CosmicLoader />;
   }
 
   // Error state - show friendly retry screen
