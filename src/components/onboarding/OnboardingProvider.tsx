@@ -178,9 +178,6 @@ export default function OnboardingProvider({
     const alreadyCompleted = localStorage.getItem(STORAGE_KEY_COMPLETED) === "true";
     const alreadyActive = state.isActive;
 
-    // Debug logging
-    console.log("🔍 Onboarding check:", { shouldStart, alreadyCompleted, alreadyActive, pathname });
-
     if (shouldStart && !alreadyCompleted && !alreadyActive) {
       localStorage.removeItem(STORAGE_KEY_START);
       const newState = {
