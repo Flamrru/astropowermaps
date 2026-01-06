@@ -31,13 +31,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<Astrocart
       );
     }
 
-    // Validate time format (HH:MM)
-    if (!birthData.time || !/^\d{2}:\d{2}$/.test(birthData.time)) {
+    // Validate time format (HH:MM or HH:MM:SS)
+    if (!birthData.time || !/^\d{2}:\d{2}(:\d{2})?$/.test(birthData.time)) {
       return NextResponse.json(
         { success: false, error: "Invalid time format. Use HH:MM (24-hour)." },
         { status: 400 }
       );
     }
+
+    // Normalize time to HH:MM format (strip seconds if present)
+    birthData.time = birthData.time.substring(0, 5);
 
     // Validate location
     if (
