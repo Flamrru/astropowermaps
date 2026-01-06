@@ -143,6 +143,12 @@ function SetupContent() {
       // Trigger the NEW onboarding flow (5-step: Home → Map → Calendar reveal)
       localStorage.setItem("stella-onboarding-start", "true");
 
+      // Debug: Verify localStorage was set
+      console.log("✅ Setup complete! localStorage set:", {
+        email: localStorage.getItem("stella_email"),
+        onboardingStart: localStorage.getItem("stella-onboarding-start"),
+      });
+
       // Redirect to home where onboarding will start
       window.location.href = "/home";
     } catch (err) {
