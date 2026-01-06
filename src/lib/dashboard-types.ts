@@ -5,7 +5,8 @@
  * Big Three, daily scores, forecasts, and rituals.
  */
 
-import type { ZodiacSign, Element, ZodiacInfo, BigThree } from "./astro/zodiac";
+// Import from zodiac-types (client-safe, no astronomia)
+import type { ZodiacSign, Element, ZodiacInfo, BigThree } from "./astro/zodiac-types";
 import type { BirthData } from "./astro/types";
 
 // Re-export zodiac types for convenience

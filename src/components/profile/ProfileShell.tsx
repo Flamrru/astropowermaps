@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import type { BigThree } from "@/lib/dashboard-types";
-import { calculateBigThree } from "@/lib/astro/zodiac";
+// Note: calculateBigThree moved to server-side API (/api/user/birth-data)
 import BottomNav from "@/components/dashboard/BottomNav";
 import StellaFloatingButton from "@/components/dashboard/StellaFloatingButton";
 
@@ -164,22 +164,18 @@ export default function ProfileShell({ children }: ProfileShellProps) {
       const data = await response.json();
       const profile: UserProfile = data.profile;
 
-      // Calculate Big Three
+      // Fetch Big Three from server API (astronomia doesn't work client-side)
       let bigThree: BigThree | null = null;
       try {
-        bigThree = calculateBigThree({
-          date: profile.birthDate,
-          time: profile.birthTime || "12:00",
-          timeUnknown: profile.birthTimeUnknown,
-          location: {
-            name: profile.birthPlace,
-            lat: profile.birthLat,
-            lng: profile.birthLng,
-            timezone: profile.birthTimezone,
-          },
-        });
+        const birthDataRes = await fetch("/api/user/birth-data");
+        if (birthDataRes.ok) {
+          const birthDataResult = await birthDataRes.json();
+          if (birthDataResult.success && birthDataResult.bigThree) {
+            bigThree = birthDataResult.bigThree;
+          }
+        }
       } catch (e) {
-        console.error("Failed to calculate Big Three:", e);
+        console.error("Failed to fetch Big Three:", e);
       }
 
       setState({

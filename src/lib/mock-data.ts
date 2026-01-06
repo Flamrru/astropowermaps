@@ -14,7 +14,7 @@ import type {
   QuickReply,
   DashboardState,
 } from "./dashboard-types";
-import type { BigThree, Element } from "./astro/zodiac";
+import type { BigThree, Element } from "./astro/zodiac-types";
 import type { BirthData } from "./astro/types";
 
 // ============================================
