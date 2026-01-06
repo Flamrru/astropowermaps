@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Link from "next/link";
 import { useQuiz } from "@/lib/quiz-state";
 import { ArrowRight } from "lucide-react";
 
@@ -110,34 +109,6 @@ export default function Screen01Entry() {
               </span>
             </div>
           </motion.div>
-
-          {/* ================================================================
-              ⚠️⚠️⚠️ TESTING ONLY - DELETE BEFORE PRODUCTION ⚠️⚠️⚠️
-              ================================================================ */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-            className="flex gap-3 mb-4"
-          >
-            <Link
-              href="/home?dev=true"
-              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-500 text-white text-center font-bold text-sm shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all"
-            >
-              ⭐ Stella+
-              <span className="block text-[10px] font-normal opacity-80 mt-0.5">DEV ONLY</span>
-            </Link>
-            <Link
-              href="/reveal?d=9"
-              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-center font-bold text-sm shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transition-all"
-            >
-              💳 Paywall
-              <span className="block text-[10px] font-normal opacity-80 mt-0.5">DEV ONLY</span>
-            </Link>
-          </motion.div>
-          {/* ================================================================
-              END OF TESTING BLOCK
-              ================================================================ */}
 
           {/* CTA Button with premium glow */}
           <motion.div
