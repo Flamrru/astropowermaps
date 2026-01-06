@@ -109,6 +109,18 @@ export const ELEMENTS: Record<
  * getZodiacFromLongitude(0)   // Aries at 0°
  */
 export function getZodiacFromLongitude(longitude: number): ZodiacInfo {
+  // Handle NaN or invalid input (can happen if birth lat/lng is null)
+  if (!Number.isFinite(longitude)) {
+    // Return Aries 0° as fallback
+    return {
+      sign: "Aries",
+      symbol: "♈",
+      element: "fire",
+      degree: 0,
+      totalDegree: 0,
+    };
+  }
+
   // Normalize to 0-360 range
   const normalized = ((longitude % 360) + 360) % 360;
 

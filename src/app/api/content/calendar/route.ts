@@ -145,16 +145,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
+    // Parse and validate birth coordinates
+    const lat = typeof profile.birth_lat === 'number' ? profile.birth_lat : parseFloat(profile.birth_lat);
+    const lng = typeof profile.birth_lng === 'number' ? profile.birth_lng : parseFloat(profile.birth_lng);
+
+    // Validate coordinates (use 0,0 as fallback if invalid)
+    const validLat = Number.isFinite(lat) ? lat : 0;
+    const validLng = Number.isFinite(lng) ? lng : 0;
+
     // Convert profile to BirthData format
     const birthData: BirthData = {
       date: profile.birth_date,
       time: profile.birth_time || "12:00", // Default to noon if unknown
       timeUnknown: !profile.birth_time,
       location: {
-        name: profile.birth_place,
-        lat: parseFloat(profile.birth_lat),
-        lng: parseFloat(profile.birth_lng),
-        timezone: profile.birth_timezone,
+        name: profile.birth_place || "Unknown",
+        lat: validLat,
+        lng: validLng,
+        timezone: profile.birth_timezone || "UTC",
       },
     };
 

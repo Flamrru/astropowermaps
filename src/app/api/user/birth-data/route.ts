@@ -46,7 +46,7 @@ export async function GET() {
     }
 
     // 3. Check if birth data is complete
-    if (!profile.birth_date || !profile.birth_lat || !profile.birth_lng) {
+    if (!profile.birth_date || profile.birth_lat == null || profile.birth_lng == null) {
       return NextResponse.json({
         success: true,
         birthData: null,
@@ -55,15 +55,30 @@ export async function GET() {
       });
     }
 
-    // 4. Convert to BirthData format
+    // 4. Parse and validate coordinates
+    const lat = typeof profile.birth_lat === 'number' ? profile.birth_lat : parseFloat(profile.birth_lat);
+    const lng = typeof profile.birth_lng === 'number' ? profile.birth_lng : parseFloat(profile.birth_lng);
+
+    // Validate that coordinates are valid numbers
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      console.error("Invalid birth coordinates:", { lat: profile.birth_lat, lng: profile.birth_lng });
+      return NextResponse.json({
+        success: true,
+        birthData: null,
+        bigThree: null,
+        message: "Invalid birth location coordinates",
+      });
+    }
+
+    // 5. Convert to BirthData format
     const birthData: BirthData = {
       date: profile.birth_date,
       time: profile.birth_time || "12:00",
       timeUnknown: profile.birth_time_unknown || !profile.birth_time,
       location: {
         name: profile.birth_place || "Unknown",
-        lat: parseFloat(profile.birth_lat),
-        lng: parseFloat(profile.birth_lng),
+        lat,
+        lng,
         timezone: profile.birth_timezone || "UTC",
       },
     };
