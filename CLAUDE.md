@@ -25,6 +25,7 @@ Mobile-first astrology app with quiz funnel, astrocartography map, and reveal on
 - Architecture: docs/ARCHITECTURE.md
 - Status: docs/STATUS.md
 - Changelog: CHANGELOG.md
+- **Debug Solutions: docs/DEBUG_SOLUTIONS.md** — Check before debugging known issues!
 
 ## Commands
 ```bash
