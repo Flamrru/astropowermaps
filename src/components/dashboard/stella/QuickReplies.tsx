@@ -179,3 +179,44 @@ export const LIFE_TRANSITS_QUICK_REPLIES: QuickReply[] = [
     isPersonalized: true,
   },
 ];
+
+/**
+ * 2026 Report-specific quick replies when Stella is opened from the 2026 Report tab
+ */
+export const YEAR_2026_QUICK_REPLIES: QuickReply[] = [
+  {
+    id: "2026-overview",
+    text: "My 2026 overview",
+    prompt: "What are the main themes and opportunities for me in 2026?",
+    category: "general",
+    isPersonalized: true,
+  },
+  {
+    id: "2026-love",
+    text: "Love in 2026",
+    prompt: "What does 2026 hold for my love life and relationships?",
+    category: "love",
+    isPersonalized: true,
+  },
+  {
+    id: "2026-career",
+    text: "Career in 2026",
+    prompt: "What career opportunities and challenges should I expect in 2026?",
+    category: "career",
+    isPersonalized: true,
+  },
+  {
+    id: "2026-best-months",
+    text: "Best months",
+    prompt: "Which months in 2026 will be most powerful for me and why?",
+    category: "general",
+    isPersonalized: true,
+  },
+  {
+    id: "2026-challenges",
+    text: "Challenges ahead",
+    prompt: "What challenges might I face in 2026 and how can I prepare?",
+    category: "general",
+    isPersonalized: true,
+  },
+];

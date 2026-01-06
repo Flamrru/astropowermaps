@@ -89,29 +89,23 @@ Before going live, complete ALL of these steps:
 - [ ] Test magic link authentication end-to-end
 - [ ] Verify Supabase redirect URLs are correct for production domain
 
-**💳 Stripe (NEW ACCOUNT - sandbox tested ✅):**
+**💳 Stripe (NEW ACCOUNT - fully configured ✅):**
 - [x] Dual-key system implemented (sandbox + live keys can coexist)
 - [x] Sandbox products created and tested locally
 - [x] Subscription flow working with trial pricing ($2.99/$5.99/$9.99 → $19.99/mo)
+- [x] Live products created in Stripe
+- [x] Live webhook created (https://www.astropowermap.com/api/stripe/webhook)
+- [x] All keys added to `.env.local`
 
-**⚠️ PRODUCTION STRIPE SETUP (do this when launching):**
-1. [ ] In Stripe Dashboard, toggle OFF "Test mode" to access live keys
-2. [ ] Copy live keys and add to `.env.local`:
-   - `STRIPE_SECRET_KEY_LIVE=sk_live_...`
-   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE=pk_live_...`
-3. [ ] Run: `STRIPE_MODE=live npx tsx scripts/setup-stripe-products.ts`
-4. [ ] Copy output to `LIVE_PRICES` in `src/lib/stripe-config.ts`
-5. [ ] Create production webhook in Stripe Dashboard:
-   - URL: `https://YOUR_DOMAIN/api/stripe/webhook`
-   - Events: `checkout.session.*`, `customer.subscription.*`
-   - Copy signing secret → `STRIPE_WEBHOOK_SECRET_LIVE`
-6. [ ] Add ALL live keys to **Vercel Dashboard** → Environment Variables:
+**⚠️ FINAL STEP FOR LAUNCH (update Vercel only):**
+1. [ ] Add these to **Vercel Dashboard** → Settings → Environment Variables:
    - `STRIPE_MODE=live`
    - `NEXT_PUBLIC_STRIPE_MODE=live`
-   - `STRIPE_SECRET_KEY_LIVE`
-   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE`
-   - `STRIPE_WEBHOOK_SECRET_LIVE`
-7. [ ] Test one real payment with your own card before announcing launch
+   - `STRIPE_SECRET_KEY_LIVE=sk_live_...` (copy from .env.local)
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE=pk_live_...` (copy from .env.local)
+   - `STRIPE_WEBHOOK_SECRET_LIVE=whsec_...` (copy from .env.local)
+2. [ ] Deploy to production (merge to main)
+3. [ ] Test one real payment with your own card before announcing launch
 
 ## 🚨 CRITICAL: Branch Protection (ABSOLUTE RULE)
 **NEVER push to `main` branch — NO EXCEPTIONS**

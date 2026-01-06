@@ -132,17 +132,14 @@ export const SANDBOX_PRICES = {
 
 /**
  * Live Stripe Price IDs
- * Created with sk_live_... key
- *
- * To populate: Run `STRIPE_MODE=live npx tsx scripts/setup-stripe-products.ts`
- * with your live key in .env.local
+ * Created: 2026-01-06
  */
 export const LIVE_PRICES = {
-  PRODUCT_ID: "", // prod_xxx from live
-  MONTHLY: "", // price_xxx ($19.99/month recurring)
-  TRIAL_3DAY: "", // price_xxx ($2.99 one-time)
-  TRIAL_7DAY: "", // price_xxx ($5.99 one-time)
-  TRIAL_14DAY: "", // price_xxx ($9.99 one-time)
+  PRODUCT_ID: "prod_TjyPosxufr6NyV",
+  MONTHLY: "price_1SmUSo24zElYF83GwqEY7603",
+  TRIAL_3DAY: "price_1SmUSo24zElYF83GjfNr9sm6",
+  TRIAL_7DAY: "price_1SmUSp24zElYF83GVaK13YFO",
+  TRIAL_14DAY: "price_1SmUSp24zElYF83GmsTPZYdc",
 } as const;
 
 // ============================================

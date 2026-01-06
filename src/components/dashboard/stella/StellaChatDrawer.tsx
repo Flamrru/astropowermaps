@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
 import TypingIndicator from "./TypingIndicator";
-import QuickReplies, { DEFAULT_QUICK_REPLIES, CALENDAR_QUICK_REPLIES, LIFE_TRANSITS_QUICK_REPLIES } from "./QuickReplies";
+import QuickReplies, { DEFAULT_QUICK_REPLIES, CALENDAR_QUICK_REPLIES, LIFE_TRANSITS_QUICK_REPLIES, YEAR_2026_QUICK_REPLIES } from "./QuickReplies";
 import type { ChatMessage as ChatMessageType } from "@/lib/dashboard-types";
 
 interface StellaChatDrawerProps {
@@ -321,9 +321,11 @@ export default function StellaChatDrawer({
                   }))
                 : viewContext === "life-transits"
                   ? LIFE_TRANSITS_QUICK_REPLIES
-                  : viewContext === "calendar"
-                    ? CALENDAR_QUICK_REPLIES
-                    : DEFAULT_QUICK_REPLIES
+                  : viewContext === "2026-report"
+                    ? YEAR_2026_QUICK_REPLIES
+                    : viewContext === "calendar"
+                      ? CALENDAR_QUICK_REPLIES
+                      : DEFAULT_QUICK_REPLIES
             }
             onSelect={handleQuickReply}
             disabled={isLoading}

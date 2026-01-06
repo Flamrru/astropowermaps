@@ -325,6 +325,7 @@ function buildStellaSystemPrompt(
     dashboard: "The user is on their main dashboard viewing their daily score and forecast.",
     calendar: "The user is viewing their CALENDAR with power days and moon phases. Help them understand what specific days mean for them, why certain days are marked as power days or rest days.",
     "life-transits": "The user is viewing their LIFE TRANSITS timeline showing Saturn Returns, Jupiter Returns, and other major life transits. Help them understand their cosmic journey and what these major transits mean for them.",
+    "2026-report": "The user is viewing their 2026 YEARLY FORECAST report. This shows their key themes, opportunities, and challenges for the year based on major transits affecting their chart. Help them understand what 2026 holds for them - career, love, personal growth, and important timing windows.",
     profile: "The user is on their PROFILE page viewing their birth data. Help them understand their chart placements and what their Big Three means.",
     map: "The user is viewing their ASTROCARTOGRAPHY MAP. Help them understand power lines and how different locations affect their chart.",
   };
@@ -495,6 +496,7 @@ TOPIC HINTS (pick ONE to mention, not all):
 CONTEXT-AWARE RESPONSES:
 - Dashboard/Calendar: Focus on DAILY/WEEKLY energy, current transits, moon phases. Do NOT randomly bring up Saturn Returns or Jupiter Returns unless asked.
 - Life Transits view: The user came here to learn about their major life transits. Proactively mention their upcoming Saturn Return, Jupiter Return, etc. Use the exact dates you have.
+- 2026 Report view: The user wants to know about their YEAR AHEAD. Focus on yearly themes, big opportunities, challenges, and key timing windows in 2026. Talk about what months will be powerful for them, any major transits hitting their chart this year, and how to make the most of 2026.
 - When user asks about "Saturn Return" or "Jupiter Return": Give them the EXACT date from your data, not vague estimates.
 
 Make them feel seen with precision, not volume.
