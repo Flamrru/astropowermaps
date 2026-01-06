@@ -46,15 +46,67 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Update profile status to active and set display name
-      await supabaseAdmin
+      // Check if profile exists
+      const { data: existingProfile } = await supabaseAdmin
         .from("user_profiles")
-        .update({
-          display_name: displayName || null,
-          account_status: "active",
-          setup_completed_at: new Date().toISOString(),
-        })
-        .eq("user_id", existingUser.id);
+        .select("id")
+        .eq("user_id", existingUser.id)
+        .single();
+
+      if (existingProfile) {
+        // Update existing profile
+        const { error: profileError } = await supabaseAdmin
+          .from("user_profiles")
+          .update({
+            display_name: displayName || null,
+            account_status: "active",
+            setup_completed_at: new Date().toISOString(),
+          })
+          .eq("user_id", existingUser.id);
+
+        if (profileError) {
+          console.error("Failed to update profile:", profileError);
+        } else {
+          console.log(`Profile updated to active for ${email.substring(0, 3)}***`);
+        }
+      } else {
+        // Profile doesn't exist - create it from lead data
+        console.log(`No profile found for ${email.substring(0, 3)}***, creating from lead...`);
+
+        // Try to get birth data from lead using email
+        const { data: lead } = await supabaseAdmin
+          .from("astro_leads")
+          .select("*")
+          .eq("email", email)
+          .eq("has_purchased", true)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (lead && lead.birth_date) {
+          const { error: insertError } = await supabaseAdmin.from("user_profiles").insert({
+            user_id: existingUser.id,
+            display_name: displayName || null,
+            account_status: "active",
+            setup_completed_at: new Date().toISOString(),
+            birth_date: lead.birth_date,
+            birth_time: lead.birth_time || null,
+            birth_time_unknown: lead.birth_time_unknown || false,
+            birth_place: lead.birth_location_name,
+            birth_lat: lead.birth_location_lat,
+            birth_lng: lead.birth_location_lng,
+            birth_timezone: lead.birth_location_timezone,
+          });
+
+          if (insertError) {
+            console.error("Failed to create profile:", insertError);
+          } else {
+            console.log(`Profile created for ${email.substring(0, 3)}***`);
+          }
+        } else {
+          console.error(`No lead with birth data found for ${email.substring(0, 3)}***`);
+        }
+      }
 
       console.log(`Password set for existing user: ${email.substring(0, 3)}***`);
     } else {
