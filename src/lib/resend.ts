@@ -73,11 +73,11 @@ export async function sendConfirmationEmail({
 
               <p style="margin: 0 0 24px 0; color: #b5b5b5; font-size: 15px;">Thank you for joining Stella+! Your personalized astrocartography map is ready to explore.</p>
 
-              <!-- Login Button -->
+              <!-- Login Button (Outlook-compatible with solid fallback) -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
                 <tr>
                   <td align="center">
-                    <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #E8C547 0%, #C9A227 100%); color: #0a0a0f; text-align: center; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px;">Log In to Your Account →</a>
+                    <a href="${loginUrl}" style="display: inline-block; background-color: #D4AF37; background: linear-gradient(135deg, #E8C547 0%, #C9A227 100%); color: #0a0a0f; text-align: center; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px; mso-padding-alt: 0; mso-text-raise: 0;"><!--[if mso]><span style="font-family: sans-serif; font-size: 16px; font-weight: 600; color: #0a0a0f;">Log In to Your Account →</span><![endif]--><!--[if !mso]><!-->Log In to Your Account →<!--<![endif]--></a>
                   </td>
                 </tr>
               </table>
@@ -200,11 +200,11 @@ export async function sendGrandfatheredInviteEmail({
 
               <p style="margin: 0 0 24px 0; color: #b5b5b5; font-size: 15px;">As a thank you for believing in us from the start, <strong style="color: #ffffff;">your access is on us</strong>.</p>
 
-              <!-- Setup Button -->
+              <!-- Setup Button (Outlook-compatible with solid fallback) -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
                 <tr>
                   <td align="center">
-                    <a href="${setupUrl}" style="display: inline-block; background: linear-gradient(135deg, #E8C547 0%, #C9A227 100%); color: #0a0a0f; text-align: center; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px;">Activate My Access →</a>
+                    <a href="${setupUrl}" style="display: inline-block; background-color: #D4AF37; background: linear-gradient(135deg, #E8C547 0%, #C9A227 100%); color: #0a0a0f; text-align: center; padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 16px; mso-padding-alt: 0; mso-text-raise: 0;"><!--[if mso]><span style="font-family: sans-serif; font-size: 16px; font-weight: 600; color: #0a0a0f;">Activate My Access →</span><![endif]--><!--[if !mso]><!-->Activate My Access →<!--<![endif]--></a>
                   </td>
                 </tr>
               </table>
