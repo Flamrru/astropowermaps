@@ -108,14 +108,24 @@ export async function sendConfirmationEmail({
           <!-- Support -->
           <tr>
             <td align="center" style="padding-top: 24px;">
-              <p style="font-size: 13px; color: #666666; margin: 0;">Questions? <a href="mailto:${SUPPORT_EMAIL}" style="color: #C9A227; text-decoration: none;">${SUPPORT_EMAIL}</a></p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                <tr>
+                  <td style="padding: 16px; text-align: center;">
+                    <p style="font-size: 13px; color: #888888; margin: 0 0 8px 0;">Need help? We're here for you.</p>
+                    <a href="mailto:${SUPPORT_EMAIL}" style="color: #C9A227; text-decoration: none; font-size: 14px; font-weight: 600;">${SUPPORT_EMAIL}</a>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td align="center" style="padding-top: 32px;">
-              <p style="font-size: 11px; color: #444444; margin: 0;">© 2025 AstroPowerMap. All rights reserved.</p>
+            <td align="center" style="padding-top: 24px;">
+              <p style="font-size: 11px; color: #444444; margin: 0;">© 2026 AstroPowerMap. All rights reserved.</p>
+              <p style="font-size: 11px; color: #333333; margin: 8px 0 0 0;">
+                <a href="https://www.astropowermap.com" style="color: #666666; text-decoration: none;">astropowermap.com</a>
+              </p>
             </td>
           </tr>
 
@@ -236,14 +246,24 @@ export async function sendGrandfatheredInviteEmail({
           <!-- Support -->
           <tr>
             <td align="center" style="padding-top: 24px;">
-              <p style="font-size: 13px; color: #666666; margin: 0;">Questions? <a href="mailto:${SUPPORT_EMAIL}" style="color: #C9A227; text-decoration: none;">${SUPPORT_EMAIL}</a></p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: rgba(255, 255, 255, 0.03); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                <tr>
+                  <td style="padding: 16px; text-align: center;">
+                    <p style="font-size: 13px; color: #888888; margin: 0 0 8px 0;">Need help? We're here for you.</p>
+                    <a href="mailto:${SUPPORT_EMAIL}" style="color: #C9A227; text-decoration: none; font-size: 14px; font-weight: 600;">${SUPPORT_EMAIL}</a>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td align="center" style="padding-top: 32px;">
-              <p style="font-size: 11px; color: #444444; margin: 0;">© 2025 AstroPowerMap. All rights reserved.</p>
+            <td align="center" style="padding-top: 24px;">
+              <p style="font-size: 11px; color: #444444; margin: 0;">© 2026 AstroPowerMap. All rights reserved.</p>
+              <p style="font-size: 11px; color: #333333; margin: 8px 0 0 0;">
+                <a href="https://www.astropowermap.com" style="color: #666666; text-decoration: none;">astropowermap.com</a>
+              </p>
             </td>
           </tr>
 
