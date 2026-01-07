@@ -28,7 +28,9 @@ export default function SubscriptionCard() {
       const data = await response.json();
 
       if (response.ok && data.url) {
-        window.open(data.url, "_blank");
+        // Use location.href instead of window.open to avoid iOS popup blocker
+        // iOS blocks window.open() after async operations (fetch)
+        window.location.href = data.url;
       } else {
         setPortalError(data.error || "Unable to open billing portal");
       }
