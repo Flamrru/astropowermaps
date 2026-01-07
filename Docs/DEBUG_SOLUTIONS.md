@@ -16,6 +16,7 @@
 2. [Vercel Environment Variables](#vercel-environment-variables)
 3. [Missing stripe_customer_id in Profile](#missing-stripe_customer_id-in-profile)
 4. [Duplicate Stripe Customers on Re-purchase](#duplicate-stripe-customers-on-re-purchase)
+5. [iOS Safari Popup Blocker (Manage Billing)](#ios-safari-popup-blocker-manage-billing)
 
 ---
 
@@ -470,4 +471,70 @@ If events appear but don't attribute to ads:
 
 ---
 
-*Last updated: 2026-01-07*
+## iOS Safari Popup Blocker (Manage Billing)
+
+**Date:** 2026-01-08
+**Status:** ✅ SOLVED
+
+### The Problem
+"Manage billing" button works on desktop but **spins forever on iPhone**. The Stripe billing portal never opens on iOS Safari.
+
+### Root Cause
+iOS Safari blocks `window.open()` when called **after an async operation** (like `fetch()`).
+
+```
+1. User taps button ✅ (user gesture detected)
+2. fetch("/api/stripe/portal") starts... ⏳
+3. ~200ms pass waiting for response
+4. window.open(url, "_blank") called ❌
+   → iOS: "This isn't from a user gesture anymore!"
+5. Popup silently blocked, spinner keeps spinning
+```
+
+**Why desktop works:** Desktop browsers are more lenient with popup timing after async delays.
+
+### Solution
+Use `window.location.href` instead of `window.open()` — navigations aren't blocked:
+
+```typescript
+// ❌ BROKEN on iOS - popup blocked after async fetch
+if (response.ok && data.url) {
+  window.open(data.url, "_blank");
+}
+
+// ✅ WORKS on iOS - navigation in same tab
+if (response.ok && data.url) {
+  window.location.href = data.url;
+}
+```
+
+### Alternative (Keep New Tab)
+If you need a new tab, pre-open the window **before** the async call:
+
+```typescript
+const handleOpenPortal = async () => {
+  const newWindow = window.open('', '_blank');  // Open immediately!
+
+  const response = await fetch("/api/stripe/portal", { method: "POST" });
+  const data = await response.json();
+
+  if (response.ok && data.url) {
+    newWindow.location.href = data.url;  // Redirect the pre-opened window
+  } else {
+    newWindow.close();  // Close if error
+  }
+};
+```
+
+### Key Learnings
+1. **iOS Safari popup blocker** is stricter than desktop browsers
+2. **`window.open()` after `await`** = blocked on iOS
+3. **`window.location.href`** is a navigation, not a popup — always allowed
+4. **Test mobile early** — iOS has unique browser behaviors
+
+### Related Files
+- `src/components/profile/SubscriptionCard.tsx`
+
+---
+
+*Last updated: 2026-01-08*
