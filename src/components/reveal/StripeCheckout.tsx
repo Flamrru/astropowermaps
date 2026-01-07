@@ -68,6 +68,16 @@ export default function StripeCheckout({
   // Fetch client secret from our API
   const fetchClientSecret = useCallback(async () => {
     try {
+      // Track InitiateCheckout when user reaches payment step
+      trackMetaEvent("InitiateCheckout", {
+        value: plan.trialPriceCents / 100,
+        currency: "USD",
+        content_type: "subscription",
+        content_name: `Stella+ ${plan.name}`,
+        content_ids: [planId],
+      });
+      console.log("[StripeCheckout] InitiateCheckout event fired");
+
       // Validate email - use fallback if invalid
       const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
       const email = isValidEmail(state.email) ? state.email : "test@example.com";
