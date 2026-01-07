@@ -225,7 +225,10 @@ export function calculateRisingSign(birthData: BirthData): ZodiacInfo {
   const lng = birthData.location.lng;
 
   // Calculate Greenwich Mean Sidereal Time
-  const gmst = sidereal.mean(jd) * (180 / Math.PI); // Convert to degrees
+  // NOTE: sidereal.mean() returns GMST in seconds, not radians!
+  // Convert seconds to degrees: (seconds / 86400) * 360
+  const gmstSeconds = sidereal.mean(jd);
+  const gmst = ((gmstSeconds / 86400) * 360 + 360) % 360;
 
   // Local Sidereal Time = GMST + birth longitude
   const lst = (gmst + lng + 360) % 360;
