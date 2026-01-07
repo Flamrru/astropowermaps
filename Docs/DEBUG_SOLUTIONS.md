@@ -356,4 +356,112 @@ const checkoutSession = await stripe.checkout.sessions.create({
 
 ---
 
+## Meta Pixel / CAPI Not Showing in Events Manager
+
+**Date:** 2026-01-07
+**Status:** ✅ SOLVED
+
+### The Problem
+Events sent via Meta Conversions API (CAPI) don't appear in Meta Events Manager, even though Vercel logs show `events_received: 1`.
+
+### Common Causes
+
+#### 1. Looking in Wrong Place
+Meta Events Manager has TWO places to see events:
+- **Overview tab**: Shows aggregated data, can take 20-60 minutes to update
+- **Test Events tab**: Shows real-time events BUT requires `test_event_code`
+
+#### 2. Stripe Redirect Breaking Client Pixel
+When users go through Stripe checkout:
+1. User clicks pay → redirected to Stripe
+2. Stripe processes payment
+3. User redirected back → **client session may be broken**
+4. Client-side pixel might not fire
+
+**Solution:** Rely on server-side CAPI via webhook (already implemented).
+
+#### 3. Ad Blocker Blocking Client Pixel
+Browser console shows: `GET https://connect.facebook.net/en_US/fbevents.js net::ERR_BLOCKED_BY_CLIENT`
+
+**Solution:** Server-side CAPI still works - this is expected behavior.
+
+#### 4. Missing test_event_code for Debugging
+Without `test_event_code`, events don't appear in "Test Events" tab.
+
+### How to Debug
+
+#### Step 1: Get Your Test Event Code
+1. Go to [business.facebook.com/events_manager](https://business.facebook.com/events_manager)
+2. Select your Pixel
+3. Click **"Test Events"** tab
+4. Copy the "Server" test event code (e.g., `TEST12345`)
+
+#### Step 2: Use the Test Endpoint
+```bash
+curl -X POST https://www.astropowermap.com/api/meta/test-capi \
+  -H "Content-Type: application/json" \
+  -d '{
+    "password": "YOUR_ADMIN_PASSWORD",
+    "test_event_code": "TEST12345",
+    "email": "test@example.com",
+    "event_name": "Purchase",
+    "value": 5.99
+  }'
+```
+
+#### Step 3: Verify in Events Manager
+1. Stay on "Test Events" tab
+2. Event should appear **within seconds**
+3. Shows event_id, parameters, and any errors
+
+#### Step 4: Enable Test Mode in Production (Optional)
+Add to Vercel environment variables:
+```
+META_TEST_EVENT_CODE=TEST12345
+```
+
+All CAPI events will now appear in "Test Events" tab instantly.
+
+### Where to Look for Events
+
+| Tab | What It Shows | Update Speed |
+|-----|--------------|--------------|
+| **Overview** | Aggregated production events | 20-60 minutes |
+| **Test Events** | Events with test_event_code | Instant |
+| **Diagnostics** | Errors and warnings | Real-time |
+
+### Verifying CAPI is Working
+
+Check Vercel logs for:
+```
+Meta CAPI: Purchase event sent successfully {
+  eventId: 'purchase_xxx',
+  events_received: 1,  ← This confirms Meta received it!
+}
+```
+
+If you see `events_received: 1`, the event WAS received by Meta.
+
+### Event Match Quality (EMQ)
+
+If events appear but don't attribute to ads:
+1. Go to Events Manager → Your Pixel → Overview
+2. Check "Event Match Quality" score
+3. Score below 6.0 means poor attribution
+
+**Improve EMQ by sending more user data:**
+- `em` (email) - ✅ We send this
+- `client_ip_address` - ✅ We send this
+- `client_user_agent` - ✅ We send this
+- `fbc` (Facebook Click ID) - ✅ We send this
+- `fbp` (Facebook Browser ID) - ✅ We send this
+
+### Related Files
+- `src/lib/meta-capi.ts` - CAPI implementation
+- `src/app/api/meta/test-capi/route.ts` - Test endpoint
+- `src/app/api/stripe/webhook/route.ts` - Sends Purchase event
+- `src/app/api/lead/route.ts` - Sends Lead event
+
+---
+
 *Last updated: 2026-01-07*
