@@ -40,7 +40,7 @@ export async function sendConfirmationEmail({
 
   try {
     const { error } = await resend.emails.send({
-      from: "AstroPowerMap <noreply@astropowermap.com>",
+      from: "Stella <stella@astropowermap.com>",
       to: [email],
       subject: "Welcome to Stella+ — Your Power Map is Ready ✨",
       html: `<!DOCTYPE html>
@@ -163,7 +163,7 @@ export async function sendGrandfatheredInviteEmail({
 
   try {
     const { error } = await resend.emails.send({
-      from: "AstroPowerMap <noreply@astropowermap.com>",
+      from: "Stella <stella@astropowermap.com>",
       to: [email],
       subject: "You've Been Upgraded to Stella+ 🎁",
       html: `<!DOCTYPE html>
