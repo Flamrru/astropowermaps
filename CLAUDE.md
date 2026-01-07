@@ -99,11 +99,11 @@ Before going live, complete ALL of these steps:
 - [x] Live webhook created (https://www.astropowermap.com/api/stripe/webhook)
 - [x] All keys added to `.env.local`
 
-**🧪 Testing (BEFORE MERGE):**
-- [ ] Test full signup flow on preview URL
-- [ ] Test sandbox payment with `4242 4242 4242 4242`
-- [ ] Verify Stella chat works with real calculations
-- [ ] Verify map renders correctly
+**🧪 Testing (✅ DONE):**
+- [x] Test full signup flow on preview URL
+- [x] Test sandbox payment with `4242 4242 4242 4242`
+- [x] Verify Stella chat works with real calculations
+- [x] Verify map renders correctly
 
 **👥 Grandfathered Customers (✅ DONE 2026-01-07):**
 - [x] Identified 35 existing one-time purchase customers from `astro_leads`
@@ -111,22 +111,15 @@ Before going live, complete ALL of these steps:
 - [x] When they click link and set password → `subscription_status = 'grandfathered'`
 - [x] They get free access forever (no subscription needed)
 
-**🚀 LAUNCH STEPS (in order):**
-1. [ ] Create PR: `Stella+Subscriptions` → `main`
-2. [ ] Merge PR (auto-deploys to production)
-3. [ ] Add to **Vercel Dashboard** → Settings → Environment Variables:
-   - `STRIPE_MODE=live`
-   - `STRIPE_SECRET_KEY_LIVE=sk_live_...`
-   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE=pk_live_...`
-   - `STRIPE_WEBHOOK_SECRET_LIVE=whsec_...`
-4. [ ] Set `BYPASS_AUTH = false` in `src/lib/auth-bypass.ts` (enables real auth)
-5. [ ] Push auth change to main
-6. [ ] Test one real payment with your own card
+**🚀 LAUNCH (✅ LIVE as of 2026-01-07):**
+- [x] Merged to main (live on production)
+- [x] Vercel env vars configured (STRIPE_MODE=live)
+- [x] `BYPASS_AUTH = false` (real auth enabled)
+- [x] Tested real payments ($2.99, $5.99 trials)
 
-**🔐 Auth (currently bypassed for testing):**
-- Single flag now: `BYPASS_AUTH` in `src/lib/auth-bypass.ts`
-- When `true`: APIs use test user, no login required
-- When `false`: Real authentication required (production mode)
+**🔐 Auth (PRODUCTION MODE):**
+- `BYPASS_AUTH = false` in `src/lib/auth-bypass.ts`
+- Real authentication required for all users
 
 ## 🚨 CRITICAL: Branch Protection (ABSOLUTE RULE)
 **NEVER push to `main` branch — NO EXCEPTIONS**
