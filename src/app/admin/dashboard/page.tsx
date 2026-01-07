@@ -3,6 +3,15 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
+interface UserProfile {
+  user_id: string;
+  account_status: "pending_setup" | "active" | null;
+  subscription_status: "none" | "trialing" | "active" | "past_due" | "cancelled" | "paused" | "grandfathered" | null;
+  subscription_trial_end: string | null;
+  subscription_cancelled_at: string | null;
+  stripe_customer_id: string | null;
+}
+
 interface Lead {
   id: string;
   email: string;
@@ -26,6 +35,8 @@ interface Lead {
   // Purchase info
   purchase_amount: number | null;
   purchase_date: string | null;
+  // User profile with subscription
+  profile: UserProfile | null;
 }
 
 interface Analytics {
@@ -105,6 +116,15 @@ interface MailerLiteData {
 
 type Period = "today" | "week" | "month" | "all";
 
+interface SubscriptionStats {
+  trialing: number;
+  active: number;
+  cancelled: number;
+  grandfathered: number;
+  past_due: number;
+  noAccount: number;
+}
+
 // Q1 and Q2 answer options for analytics
 const Q1_OPTIONS = ["Yes, definitely", "Maybe once or twice", "Not sure"];
 const Q2_OPTIONS = [
@@ -144,6 +164,14 @@ export default function AdminDashboardPage() {
     notPurchased: 0,
   });
   const [mailerlite, setMailerlite] = useState<MailerLiteData | null>(null);
+  const [subscriptionStats, setSubscriptionStats] = useState<SubscriptionStats>({
+    trialing: 0,
+    active: 0,
+    cancelled: 0,
+    grandfathered: 0,
+    past_due: 0,
+    noAccount: 0,
+  });
   const [period, setPeriod] = useState<Period>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -191,6 +219,14 @@ export default function AdminDashboardPage() {
         withoutBirthData: 0,
         purchased: 0,
         notPurchased: 0,
+      });
+      setSubscriptionStats(data.subscriptionStats || {
+        trialing: 0,
+        active: 0,
+        cancelled: 0,
+        grandfathered: 0,
+        past_due: 0,
+        noAccount: 0,
       });
       setLastUpdated(new Date());
       setError("");
@@ -505,6 +541,48 @@ export default function AdminDashboardPage() {
             <RevenueBySourceTable data={revenue.bySource} />
           </div>
         )}
+
+        {/* Subscription Status */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+            </svg>
+            Subscription Status
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <SubscriptionStatCard
+              label="Trialing"
+              value={subscriptionStats.trialing}
+              color="blue"
+            />
+            <SubscriptionStatCard
+              label="Active"
+              value={subscriptionStats.active}
+              color="green"
+            />
+            <SubscriptionStatCard
+              label="Cancelled"
+              value={subscriptionStats.cancelled}
+              color="red"
+            />
+            <SubscriptionStatCard
+              label="Grandfathered"
+              value={subscriptionStats.grandfathered}
+              color="purple"
+            />
+            <SubscriptionStatCard
+              label="Past Due"
+              value={subscriptionStats.past_due}
+              color="yellow"
+            />
+            <SubscriptionStatCard
+              label="No Account"
+              value={subscriptionStats.noAccount}
+              color="gray"
+            />
+          </div>
+        </div>
 
         {/* MailerLite Email Marketing Stats */}
         {mailerlite && mailerlite.configured && (
@@ -863,6 +941,9 @@ export default function AdminDashboardPage() {
                       Status
                     </th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden md:table-cell">
+                      Subscription
+                    </th>
+                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden lg:table-cell">
                       Q1 Answer
                     </th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden lg:table-cell">
@@ -915,6 +996,9 @@ export default function AdminDashboardPage() {
                         )}
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden md:table-cell">
+                        <SubscriptionBadge status={lead.profile?.subscription_status || null} />
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 hidden lg:table-cell">
                         {lead.quiz_q1 ? (
                           <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-white/5 text-[var(--text-soft)] border border-white/10">
                             {lead.quiz_q1}
@@ -1175,6 +1259,39 @@ function LeadDetailModal({ lead, onClose }: { lead: Lead; onClose: () => void })
               </div>
             </div>
           </div>
+
+          {/* Subscription Status */}
+          {lead.profile && (
+            <div>
+              <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3 flex items-center gap-2">
+                <span>🎫</span> Subscription
+              </h3>
+              <div className="glass-card rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-[var(--text-muted)]">Status</span>
+                  <SubscriptionBadge status={lead.profile.subscription_status} />
+                </div>
+                {lead.profile.subscription_trial_end && (
+                  <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/10">
+                    <span className="text-sm text-[var(--text-muted)]">Trial Ends</span>
+                    <span className="text-sm text-white">{formatDate(lead.profile.subscription_trial_end)}</span>
+                  </div>
+                )}
+                {lead.profile.subscription_cancelled_at && (
+                  <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/10">
+                    <span className="text-sm text-red-400">Cancelled</span>
+                    <span className="text-sm text-white">{formatDate(lead.profile.subscription_cancelled_at)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--text-muted)]">Account</span>
+                  <span className={`text-sm ${lead.profile.account_status === "active" ? "text-green-400" : "text-yellow-400"}`}>
+                    {lead.profile.account_status === "active" ? "Active" : "Pending Setup"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Timestamps */}
           <div>
@@ -1524,5 +1641,54 @@ function RevenueBySourceTable({ data }: { data: RevenueBySource[] }) {
         </table>
       </div>
     </div>
+  );
+}
+
+// Subscription stat card component
+function SubscriptionStatCard({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number;
+  color: "blue" | "green" | "red" | "purple" | "yellow" | "gray";
+}) {
+  const colorStyles = {
+    blue: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+    green: "bg-green-500/20 text-green-400 border-green-500/30",
+    red: "bg-red-500/20 text-red-400 border-red-500/30",
+    purple: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+    yellow: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+    gray: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+  };
+
+  return (
+    <div className={`p-4 rounded-xl border ${colorStyles[color]}`}>
+      <div className="text-2xl font-bold">{value}</div>
+      <div className="text-xs opacity-80 mt-1">{label}</div>
+    </div>
+  );
+}
+
+// Subscription badge component for table
+function SubscriptionBadge({ status }: { status: string | null }) {
+  if (!status || status === "none") {
+    return <span className="text-xs text-gray-500">—</span>;
+  }
+
+  const styles: Record<string, string> = {
+    trialing: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+    active: "bg-green-500/20 text-green-400 border-green-500/30",
+    cancelled: "bg-red-500/20 text-red-400 border-red-500/30",
+    grandfathered: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+    past_due: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+    paused: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  };
+
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-xs border ${styles[status] || styles.paused}`}>
+      {status.replace("_", " ")}
+    </span>
   );
 }

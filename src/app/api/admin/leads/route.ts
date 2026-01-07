@@ -347,9 +347,58 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Fetch user profiles with subscription data
+    const { data: profiles } = await supabaseAdmin
+      .from("user_profiles")
+      .select(`
+        user_id,
+        account_status,
+        subscription_status,
+        subscription_trial_end,
+        subscription_cancelled_at,
+        stripe_customer_id
+      `);
+
+    // Get auth users to map emails to profiles
+    const { data: authUsersData } = await supabaseAdmin.auth.admin.listUsers();
+    const authUsers = authUsersData?.users || [];
+
+    // Create email → profile map
+    const emailToProfile = new Map<string, {
+      user_id: string;
+      account_status: string | null;
+      subscription_status: string | null;
+      subscription_trial_end: string | null;
+      subscription_cancelled_at: string | null;
+      stripe_customer_id: string | null;
+    }>();
+
+    authUsers.forEach(user => {
+      const profile = profiles?.find(p => p.user_id === user.id);
+      if (profile && user.email) {
+        emailToProfile.set(user.email.toLowerCase(), profile);
+      }
+    });
+
+    // Attach profile data to leads
+    const leadsWithProfiles = leadsWithPurchaseStatus.map(lead => ({
+      ...lead,
+      profile: emailToProfile.get(lead.email.toLowerCase()) || null,
+    }));
+
+    // Calculate subscription stats
+    const subscriptionStats = {
+      trialing: profiles?.filter(p => p.subscription_status === "trialing").length || 0,
+      active: profiles?.filter(p => p.subscription_status === "active").length || 0,
+      cancelled: profiles?.filter(p => p.subscription_status === "cancelled").length || 0,
+      grandfathered: profiles?.filter(p => p.subscription_status === "grandfathered").length || 0,
+      past_due: profiles?.filter(p => p.subscription_status === "past_due").length || 0,
+      noAccount: leadsWithPurchaseStatus.length - emailToProfile.size,
+    };
+
     return NextResponse.json({
       period,
-      leads: leadsWithPurchaseStatus,
+      leads: leadsWithProfiles,
       stats,
       funnel: funnelCounts,
       revenue: {
@@ -360,6 +409,7 @@ export async function GET(request: NextRequest) {
         bySource,
       },
       analytics,
+      subscriptionStats,
     });
   } catch (error) {
     console.error("Error fetching leads:", error);

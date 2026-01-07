@@ -3,6 +3,12 @@
 > A knowledge base of solved issues, working patterns, and lessons learned.
 > Reference this before implementing similar features to avoid repeating mistakes.
 
+**Guidelines for this file:**
+- Keep entries **brief and actionable** — just the fix, not the journey
+- Include only the **concrete code snippet** that solved the problem
+- Focus on **what worked**, not all the things that didn't
+- Each entry should be readable in under 2 minutes
+
 ---
 
 ## Table of Contents
