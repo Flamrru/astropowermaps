@@ -15,9 +15,12 @@ declare global {
   }
 }
 
-const PIXEL_ID = "848967188002206";
+const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
 export default function MetaPixel() {
+  // Don't render if no pixel ID configured
+  if (!PIXEL_ID) return null;
+
   return (
     <>
       <Script id="meta-pixel-base" strategy="afterInteractive">
@@ -30,7 +33,7 @@ export default function MetaPixel() {
           t.src=v;s=b.getElementsByTagName(e)[0];
           s.parentNode.insertBefore(t,s)}(window, document,'script',
           'https://connect.facebook.net/en_US/fbevents.js');
-          fbq('init', '848967188002206');
+          fbq('init', '${PIXEL_ID}');
           fbq('track', 'PageView');
         `}
       </Script>
