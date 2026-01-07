@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { subDays } from "date-fns";
+import DateRangeSelector from "@/components/admin/DateRangeSelector";
+import TrendChart from "@/components/admin/TrendChart";
 
 interface UserProfile {
   user_id: string;
@@ -114,7 +117,73 @@ interface MailerLiteData {
   };
 }
 
+// Legacy period type (kept for backwards compatibility)
 type Period = "today" | "week" | "month" | "all";
+
+// New date range system (Facebook-style)
+type DatePreset =
+  | "today"
+  | "yesterday"
+  | "last_7_days"
+  | "last_14_days"
+  | "last_30_days"
+  | "last_90_days"
+  | "this_month"
+  | "last_month"
+  | "since_launch"
+  | "custom";
+
+interface DateRange {
+  from: Date;
+  to: Date;
+  preset: DatePreset;
+}
+
+// Subscription launch date (Jan 7, 2026 01:00 Swiss time)
+const SUBSCRIPTION_LAUNCH = new Date("2026-01-07T00:00:00+01:00");
+
+// Trend chart data point
+interface TrendDataPoint {
+  date: string;
+  label: string;
+  current: number;
+  previous: number;
+}
+
+// Comparison data for metrics
+interface ComparisonData {
+  current: number;
+  previous: number;
+  changePercent: number;
+}
+
+// Enhanced funnel step with more metrics
+interface EnhancedFunnelStep {
+  key: string;
+  label: string;
+  count: number;
+  percentOfTotal: number;
+  dropFromPrevious: number;
+  dropPercent: number;
+}
+
+// Milestone conversions
+interface MilestoneData {
+  quizStart: number;
+  lead: number;
+  trial: number;
+  paid: number;
+  quizToLead: number;
+  leadToTrial: number;
+  trialToPaid: number;
+  overallConversion: number;
+}
+
+// Trend data for charts
+interface TrendChartData {
+  leads: TrendDataPoint[];
+  revenue: TrendDataPoint[];
+}
 
 interface SubscriptionStats {
   trialing: number;
@@ -181,11 +250,47 @@ export default function AdminDashboardPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const router = useRouter();
 
+  // New date range state (Facebook-style)
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const from = subDays(new Date(), 30);
+    from.setHours(0, 0, 0, 0);
+    return { from, to: new Date(), preset: "last_30_days" };
+  });
+
+  // New trend and comparison state
+  const [trends, setTrends] = useState<TrendChartData>({ leads: [], revenue: [] });
+  const [comparison, setComparison] = useState<{
+    leads: ComparisonData;
+    revenue: ComparisonData;
+    purchases: ComparisonData;
+  }>({
+    leads: { current: 0, previous: 0, changePercent: 0 },
+    revenue: { current: 0, previous: 0, changePercent: 0 },
+    purchases: { current: 0, previous: 0, changePercent: 0 },
+  });
+  const [enhancedFunnel, setEnhancedFunnel] = useState<EnhancedFunnelStep[]>([]);
+  const [funnelWarning, setFunnelWarning] = useState<string | null>(null);
+  const [milestones, setMilestones] = useState<MilestoneData>({
+    quizStart: 0,
+    lead: 0,
+    trial: 0,
+    paid: 0,
+    quizToLead: 0,
+    leadToTrial: 0,
+    trialToPaid: 0,
+    overallConversion: 0,
+  });
+
   // Fetch leads function (reusable for refresh)
-  const fetchLeads = useCallback(async (showLoading = true, selectedPeriod: Period = period) => {
+  const fetchLeads = useCallback(async (showLoading = true, range: DateRange = dateRange) => {
     if (showLoading) setIsLoading(true);
     try {
-      const res = await fetch(`/api/admin/leads?period=${selectedPeriod}`);
+      // Build URL with date range params
+      const fromStr = range.from.toISOString().split("T")[0];
+      const toStr = range.to.toISOString().split("T")[0];
+      const url = `/api/admin/leads?from=${fromStr}&to=${toStr}`;
+
+      const res = await fetch(url);
       if (res.status === 401) {
         router.replace("/admin");
         return;
@@ -228,6 +333,27 @@ export default function AdminDashboardPage() {
         past_due: 0,
         noAccount: 0,
       });
+
+      // Set new data from API
+      setTrends(data.trends || { leads: [], revenue: [] });
+      setComparison(data.comparison || {
+        leads: { current: 0, previous: 0, changePercent: 0 },
+        revenue: { current: 0, previous: 0, changePercent: 0 },
+        purchases: { current: 0, previous: 0, changePercent: 0 },
+      });
+      setEnhancedFunnel(data.enhancedFunnel || []);
+      setFunnelWarning(data.funnelWarning || null);
+      setMilestones(data.milestones || {
+        quizStart: 0,
+        lead: 0,
+        trial: 0,
+        paid: 0,
+        quizToLead: 0,
+        leadToTrial: 0,
+        trialToPaid: 0,
+        overallConversion: 0,
+      });
+
       setLastUpdated(new Date());
       setError("");
     } catch (err) {
@@ -235,7 +361,7 @@ export default function AdminDashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [router, period]);
+  }, [router, dateRange]);
 
   // Fetch MailerLite stats
   const fetchMailerLiteStats = useCallback(async () => {
@@ -261,15 +387,41 @@ export default function AdminDashboardPage() {
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchLeads(false, period); // Don't show loading spinner on auto-refresh
+      fetchLeads(false, dateRange); // Don't show loading spinner on auto-refresh
     }, 30000);
     return () => clearInterval(interval);
-  }, [fetchLeads, period]);
+  }, [fetchLeads, dateRange]);
 
-  // Handle period change
+  // Handle date range change (new system)
+  const handleDateRangeChange = (newRange: DateRange) => {
+    setDateRange(newRange);
+    fetchLeads(true, newRange);
+  };
+
+  // Handle period change (legacy - kept for compatibility)
   const handlePeriodChange = (newPeriod: Period) => {
     setPeriod(newPeriod);
-    fetchLeads(true, newPeriod);
+    // Convert legacy period to date range
+    const now = new Date();
+    let from = new Date();
+    switch (newPeriod) {
+      case "today":
+        from.setHours(0, 0, 0, 0);
+        break;
+      case "week":
+        from = subDays(now, 7);
+        from.setHours(0, 0, 0, 0);
+        break;
+      case "month":
+        from = subDays(now, 30);
+        from.setHours(0, 0, 0, 0);
+        break;
+      case "all":
+        from = new Date("2024-01-01");
+        break;
+    }
+    const range: DateRange = { from, to: now, preset: "custom" };
+    handleDateRangeChange(range);
   };
 
   // Quiz analytics calculations
@@ -464,26 +616,13 @@ export default function AdminDashboardPage() {
 
       {/* Main content */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Period Tabs */}
-        <div className="mb-6 overflow-x-auto">
-          <div className="flex gap-2 min-w-max">
-            {(["today", "week", "month", "all"] as Period[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => handlePeriodChange(p)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  period === p
-                    ? "bg-[var(--gold-main)] text-black"
-                    : "bg-white/5 text-[var(--text-soft)] hover:bg-white/10 border border-white/10"
-                }`}
-              >
-                {p === "today" && "Today"}
-                {p === "week" && "This Week"}
-                {p === "month" && "This Month"}
-                {p === "all" && "All Time"}
-              </button>
-            ))}
-          </div>
+        {/* Date Range Selector (Facebook-style) */}
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-white">Dashboard Analytics</h1>
+          <DateRangeSelector
+            value={dateRange}
+            onChange={handleDateRangeChange}
+          />
         </div>
 
         {/* Revenue Cards */}
@@ -539,6 +678,110 @@ export default function AdminDashboardPage() {
         {revenue.bySource.length > 0 && (
           <div className="mb-8">
             <RevenueBySourceTable data={revenue.bySource} />
+          </div>
+        )}
+
+        {/* Trends Section - Leads & Revenue over time */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-[var(--gold-main)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            Trends
+            <span className="text-xs font-normal text-[var(--text-faint)] ml-2">vs previous period</span>
+          </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <TrendChart
+              title="Leads Over Time"
+              data={trends.leads}
+              comparison={comparison.leads}
+            />
+            <TrendChart
+              title="Revenue Over Time"
+              data={trends.revenue}
+              comparison={comparison.revenue}
+              valueFormatter={(v) => `$${(v / 100).toFixed(0)}`}
+              color="#22c55e"
+            />
+          </div>
+        </div>
+
+        {/* Key Milestones - Conversion Flow */}
+        {milestones.quizStart > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+              Key Milestones
+            </h2>
+            <div
+              className="rounded-xl p-6"
+              style={{
+                background: "rgba(255, 255, 255, 0.03)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+              }}
+            >
+              {/* Milestone Flow Visualization */}
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-2">
+                {/* Quiz Start */}
+                <div className="flex-1 text-center">
+                  <div className="text-3xl font-bold text-white">{milestones.quizStart.toLocaleString()}</div>
+                  <div className="text-sm text-[var(--text-muted)] mt-1">Quiz Start</div>
+                </div>
+
+                {/* Arrow with conversion rate */}
+                <div className="flex items-center gap-2 text-[var(--gold-main)]">
+                  <div className="hidden lg:block w-12 h-px bg-gradient-to-r from-white/20 to-[var(--gold-main)]" />
+                  <div className="text-sm font-medium px-2 py-1 rounded-lg bg-[var(--gold-main)]/10">
+                    {milestones.quizToLead.toFixed(1)}%
+                  </div>
+                  <div className="hidden lg:block w-12 h-px bg-gradient-to-r from-[var(--gold-main)] to-white/20" />
+                </div>
+
+                {/* Lead */}
+                <div className="flex-1 text-center">
+                  <div className="text-3xl font-bold text-[var(--gold-bright)]">{milestones.lead.toLocaleString()}</div>
+                  <div className="text-sm text-[var(--text-muted)] mt-1">Leads</div>
+                </div>
+
+                {/* Arrow with conversion rate */}
+                <div className="flex items-center gap-2 text-blue-400">
+                  <div className="hidden lg:block w-12 h-px bg-gradient-to-r from-white/20 to-blue-400" />
+                  <div className="text-sm font-medium px-2 py-1 rounded-lg bg-blue-500/10">
+                    {milestones.leadToTrial.toFixed(1)}%
+                  </div>
+                  <div className="hidden lg:block w-12 h-px bg-gradient-to-r from-blue-400 to-white/20" />
+                </div>
+
+                {/* Trial */}
+                <div className="flex-1 text-center">
+                  <div className="text-3xl font-bold text-blue-400">{milestones.trial.toLocaleString()}</div>
+                  <div className="text-sm text-[var(--text-muted)] mt-1">Trials</div>
+                </div>
+
+                {/* Arrow with conversion rate */}
+                <div className="flex items-center gap-2 text-green-400">
+                  <div className="hidden lg:block w-12 h-px bg-gradient-to-r from-white/20 to-green-400" />
+                  <div className="text-sm font-medium px-2 py-1 rounded-lg bg-green-500/10">
+                    {milestones.trialToPaid.toFixed(1)}%
+                  </div>
+                  <div className="hidden lg:block w-12 h-px bg-gradient-to-r from-green-400 to-white/20" />
+                </div>
+
+                {/* Paid */}
+                <div className="flex-1 text-center">
+                  <div className="text-3xl font-bold text-green-400">{milestones.paid.toLocaleString()}</div>
+                  <div className="text-sm text-[var(--text-muted)] mt-1">Paid</div>
+                </div>
+              </div>
+
+              {/* Overall conversion */}
+              <div className="mt-6 pt-4 border-t border-white/10 text-center">
+                <span className="text-sm text-[var(--text-muted)]">Overall conversion (Quiz → Paid): </span>
+                <span className="text-sm font-semibold text-green-400">{milestones.overallConversion.toFixed(2)}%</span>
+              </div>
+            </div>
           </div>
         )}
 
@@ -738,7 +981,7 @@ export default function AdminDashboardPage() {
 
         {/* Funnel Analytics */}
         <div className="mb-8">
-          <FunnelChart data={funnel} />
+          <FunnelChart data={funnel} enhancedData={enhancedFunnel} warning={funnelWarning} />
         </div>
 
         {/* Answer Analytics Section */}
@@ -1421,77 +1664,125 @@ function BarChart({
 }
 
 // Funnel chart component
-function FunnelChart({ data }: { data: FunnelData }) {
-  const steps = [
-    { key: "quiz_start", label: "Quiz Started", icon: "🚀", color: "gold" },
-    { key: "q1_answered", label: "Q1 Answered", icon: "✓", color: "gold" },
-    { key: "q2_answered", label: "Q2 Answered", icon: "✓", color: "gold" },
-    { key: "email_screen", label: "Email Screen", icon: "📧", color: "gold" },
-    { key: "lead", label: "Lead Captured", icon: "🎯", color: "gold" },
-    { key: "purchase", label: "Purchased", icon: "💰", color: "green" },
-  ];
+function FunnelChart({ data, enhancedData, warning }: { data: FunnelData; enhancedData?: EnhancedFunnelStep[]; warning?: string | null }) {
+  // Default step config for icons and colors
+  const stepConfig: Record<string, { icon: string; color: string }> = {
+    quiz_start: { icon: "🚀", color: "gold" },
+    q1_answered: { icon: "✓", color: "gold" },
+    q2_answered: { icon: "✓", color: "gold" },
+    email_screen: { icon: "📧", color: "gold" },
+    lead: { icon: "🎯", color: "gold" },
+    purchase: { icon: "💰", color: "green" },
+  };
 
-  const maxValue = Math.max(...steps.map((s) => data[s.key as keyof FunnelData] || 0), 1);
+  // Use enhanced data if available, otherwise fall back to basic data
+  const hasEnhanced = enhancedData && enhancedData.length > 0;
+
+  const steps = hasEnhanced
+    ? enhancedData.map((step) => ({
+        key: step.key,
+        label: step.label,
+        count: step.count,
+        percentOfTotal: step.percentOfTotal,
+        dropPercent: step.dropPercent,
+        icon: stepConfig[step.key]?.icon || "•",
+        color: stepConfig[step.key]?.color || "gold",
+      }))
+    : [
+        { key: "quiz_start", label: "Quiz Started", count: data.quiz_start, percentOfTotal: 100, dropPercent: 0, icon: "🚀", color: "gold" },
+        { key: "q1_answered", label: "Q1 Answered", count: data.q1_answered, percentOfTotal: data.quiz_start > 0 ? (data.q1_answered / data.quiz_start) * 100 : 0, dropPercent: data.quiz_start > 0 ? ((data.quiz_start - data.q1_answered) / data.quiz_start) * 100 : 0, icon: "✓", color: "gold" },
+        { key: "q2_answered", label: "Q2 Answered", count: data.q2_answered, percentOfTotal: data.quiz_start > 0 ? (data.q2_answered / data.quiz_start) * 100 : 0, dropPercent: data.q1_answered > 0 ? ((data.q1_answered - data.q2_answered) / data.q1_answered) * 100 : 0, icon: "✓", color: "gold" },
+        { key: "email_screen", label: "Email Screen", count: data.email_screen, percentOfTotal: data.quiz_start > 0 ? (data.email_screen / data.quiz_start) * 100 : 0, dropPercent: data.q2_answered > 0 ? ((data.q2_answered - data.email_screen) / data.q2_answered) * 100 : 0, icon: "📧", color: "gold" },
+        { key: "lead", label: "Lead Captured", count: data.lead, percentOfTotal: data.quiz_start > 0 ? (data.lead / data.quiz_start) * 100 : 0, dropPercent: data.email_screen > 0 ? ((data.email_screen - data.lead) / data.email_screen) * 100 : 0, icon: "🎯", color: "gold" },
+        { key: "purchase", label: "Purchased", count: data.purchase, percentOfTotal: data.quiz_start > 0 ? (data.purchase / data.quiz_start) * 100 : 0, dropPercent: data.lead > 0 ? ((data.lead - data.purchase) / data.lead) * 100 : 0, icon: "💰", color: "green" },
+      ];
+
+  const maxCount = Math.max(...steps.map((s) => s.count), 1);
 
   return (
     <div className="glass-card rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-lg font-semibold text-white">Quiz Funnel</h3>
           <p className="text-xs text-[var(--text-faint)]">
-            Track where users drop off in your quiz
+            Unique sessions at each step (deduplicated)
           </p>
         </div>
       </div>
 
-      <div className="space-y-4">
+      {/* Warning for pre-tracking dates */}
+      {warning && (
+        <div className="mb-4 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+          <p className="text-xs text-amber-400 flex items-center gap-2">
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            {warning}
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-1">
         {steps.map((step, idx) => {
-          const count = data[step.key as keyof FunnelData] || 0;
-          const prevCount = idx > 0 ? data[steps[idx - 1].key as keyof FunnelData] || 0 : count;
-          const dropOffRate = prevCount > 0 && idx > 0 ? ((prevCount - count) / prevCount) * 100 : 0;
-          const barWidth = maxValue > 0 ? (count / maxValue) * 100 : 0;
+          const barWidth = maxCount > 0 ? (step.count / maxCount) * 100 : 0;
+          const showDropOff = idx > 0 && step.dropPercent > 0;
 
           return (
             <div key={step.key}>
-              <div className="flex justify-between items-center mb-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">{step.icon}</span>
-                  <span className="text-sm text-[var(--text-soft)]">{step.label}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  {idx > 0 && dropOffRate > 0 && (
-                    <span className="text-xs text-red-400/70">
-                      -{dropOffRate.toFixed(0)}%
+              {/* Drop-off indicator between steps */}
+              {showDropOff && (
+                <div className="flex items-center justify-center py-1">
+                  <div className="flex items-center gap-2 text-red-400/70">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                    <span className="text-xs font-medium">
+                      -{step.dropPercent.toFixed(0)}% dropped
                     </span>
-                  )}
-                  <span className="text-sm font-semibold text-white tabular-nums">
-                    {count.toLocaleString()}
-                  </span>
+                  </div>
                 </div>
-              </div>
-              {/* Funnel bar */}
-              <div className="h-3 bg-white/5 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-700 ease-out"
-                  style={{
-                    width: `${barWidth}%`,
-                    background:
-                      step.color === "green"
-                        ? "linear-gradient(90deg, #22c55e, #4ade80)"
-                        : "linear-gradient(90deg, var(--gold-dark), var(--gold-main))",
-                    boxShadow:
-                      step.color === "green"
-                        ? "0 0 8px rgba(34, 197, 94, 0.4)"
-                        : "0 0 8px rgba(201, 162, 39, 0.3)",
-                  }}
-                />
+              )}
+
+              {/* Step bar */}
+              <div className="py-2">
+                <div className="flex justify-between items-center mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{step.icon}</span>
+                    <span className="text-sm text-[var(--text-soft)]">{step.label}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-[var(--text-faint)]">
+                      ({step.percentOfTotal.toFixed(1)}%)
+                    </span>
+                    <span className="text-sm font-semibold text-white tabular-nums min-w-[60px] text-right">
+                      {step.count.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                {/* Funnel bar */}
+                <div className="h-4 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700 ease-out"
+                    style={{
+                      width: `${barWidth}%`,
+                      background:
+                        step.color === "green"
+                          ? "linear-gradient(90deg, #22c55e, #4ade80)"
+                          : "linear-gradient(90deg, var(--gold-dark), var(--gold-main))",
+                      boxShadow:
+                        step.color === "green"
+                          ? "0 0 8px rgba(34, 197, 94, 0.4)"
+                          : "0 0 8px rgba(201, 162, 39, 0.3)",
+                    }}
+                  />
+                </div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Conversion rates */}
+      {/* Conversion rates summary */}
       {data.quiz_start > 0 && (
         <div className="mt-6 pt-4 border-t border-white/10 space-y-3">
           <div className="flex justify-between items-center">

@@ -4,9 +4,15 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 
 const COOKIE_NAME = "admin_session";
 
+// Subscription launch date (Jan 7, 2026 Swiss time)
+const SUBSCRIPTION_LAUNCH = new Date("2026-01-07T00:00:00+01:00");
+
+// Funnel tracking start date (Dec 31, 2025 - when we started tracking funnel events)
+const FUNNEL_TRACKING_START = new Date("2025-12-31T00:00:00+00:00");
+
 type Period = "today" | "week" | "month" | "all";
 
-// Get the start date for a period
+// Get the start date for a legacy period
 function getPeriodStart(period: Period): Date | null {
   const now = new Date();
   switch (period) {
@@ -30,6 +36,79 @@ function getPeriodStart(period: Period): Date | null {
   }
 }
 
+// Parse date range from query params (new system)
+function parseDateRange(searchParams: URLSearchParams): { from: Date | null; to: Date | null } {
+  const fromStr = searchParams.get("from");
+  const toStr = searchParams.get("to");
+
+  if (fromStr && toStr) {
+    const from = new Date(fromStr);
+    const to = new Date(toStr);
+    // Set to end of day for 'to' date
+    to.setHours(23, 59, 59, 999);
+    return { from, to };
+  }
+
+  return { from: null, to: null };
+}
+
+// Get comparison period (previous period of same length)
+function getComparisonPeriod(from: Date, to: Date): { compareFrom: Date; compareTo: Date } {
+  const daysDiff = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+  const compareFrom = new Date(from);
+  compareFrom.setDate(compareFrom.getDate() - daysDiff);
+  const compareTo = new Date(to);
+  compareTo.setDate(compareTo.getDate() - daysDiff);
+  return { compareFrom, compareTo };
+}
+
+// Determine granularity based on date range
+function getGranularity(daysDiff: number): "daily" | "weekly" | "monthly" {
+  if (daysDiff < 30) return "daily";
+  if (daysDiff < 90) return "weekly";
+  return "monthly";
+}
+
+// Group data points by granularity
+function groupByGranularity(
+  dates: Date[],
+  granularity: "daily" | "weekly" | "monthly"
+): Map<string, number> {
+  const groups = new Map<string, number>();
+
+  dates.forEach(date => {
+    let key: string;
+    if (granularity === "daily") {
+      key = date.toISOString().split("T")[0];
+    } else if (granularity === "weekly") {
+      // Get start of week (Monday)
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      d.setDate(diff);
+      key = d.toISOString().split("T")[0];
+    } else {
+      // Monthly
+      key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    }
+    groups.set(key, (groups.get(key) || 0) + 1);
+  });
+
+  return groups;
+}
+
+// Format date label based on granularity
+function formatLabel(dateKey: string, granularity: "daily" | "weekly" | "monthly"): string {
+  const date = new Date(dateKey);
+  if (granularity === "daily") {
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  } else if (granularity === "weekly") {
+    return `Week of ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  } else {
+    return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+  }
+}
+
 export async function GET(request: NextRequest) {
   // Check authentication
   const cookieStore = await cookies();
@@ -42,20 +121,55 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Get period from query params
+  // Get period from query params (support both new and legacy systems)
   const { searchParams } = new URL(request.url);
+
+  // New system: explicit from/to dates
+  const { from: dateFrom, to: dateTo } = parseDateRange(searchParams);
+
+  // Legacy system: period presets
   const period = (searchParams.get("period") as Period) || "all";
   const periodStart = getPeriodStart(period);
 
+  // Determine the effective date range (new system takes precedence)
+  let effectiveFrom: Date | null = null;
+  let effectiveTo: Date | null = null;
+
+  if (dateFrom && dateTo) {
+    effectiveFrom = dateFrom;
+    effectiveTo = dateTo;
+  } else if (periodStart) {
+    effectiveFrom = periodStart;
+    effectiveTo = new Date(); // Now
+  }
+
+  // Calculate comparison period (previous period of same length)
+  let comparisonFrom: Date | null = null;
+  let comparisonTo: Date | null = null;
+  if (effectiveFrom && effectiveTo) {
+    const { compareFrom, compareTo } = getComparisonPeriod(effectiveFrom, effectiveTo);
+    comparisonFrom = compareFrom;
+    comparisonTo = compareTo;
+  }
+
+  // Calculate days in range for granularity
+  const daysDiff = effectiveFrom && effectiveTo
+    ? Math.ceil((effectiveTo.getTime() - effectiveFrom.getTime()) / (1000 * 60 * 60 * 24))
+    : 365; // Default to yearly granularity for "all"
+  const granularity = getGranularity(daysDiff);
+
   try {
-    // Build leads query with optional period filter
+    // Build leads query with optional date range filter
     let leadsQuery = supabaseAdmin
       .from("astro_leads")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (periodStart) {
-      leadsQuery = leadsQuery.gte("created_at", periodStart.toISOString());
+    if (effectiveFrom) {
+      leadsQuery = leadsQuery.gte("created_at", effectiveFrom.toISOString());
+    }
+    if (effectiveTo) {
+      leadsQuery = leadsQuery.lte("created_at", effectiveTo.toISOString());
     }
 
     const { data: leads, error } = await leadsQuery;
@@ -89,35 +203,74 @@ export async function GET(request: NextRequest) {
       thisMonth: allLeads?.filter(l => new Date(l.created_at) >= monthStart).length || 0,
     };
 
-    // Fetch funnel events with period filter
+    // Fetch funnel events with date range filter (include session_id for deduplication)
     let funnelQuery = supabaseAdmin
       .from("astro_funnel_events")
-      .select("event_name");
+      .select("event_name, session_id, created_at");
 
-    if (periodStart) {
-      funnelQuery = funnelQuery.gte("created_at", periodStart.toISOString());
+    if (effectiveFrom) {
+      funnelQuery = funnelQuery.gte("created_at", effectiveFrom.toISOString());
+    }
+    if (effectiveTo) {
+      funnelQuery = funnelQuery.lte("created_at", effectiveTo.toISOString());
     }
 
     const { data: funnelEvents } = await funnelQuery;
 
-    // Count each funnel event type
-    const funnelCounts: Record<string, number> = {
-      page_view: leads?.length || 0,
-      quiz_start: 0,
-      q1_answered: 0,
-      q2_answered: 0,
-      email_screen: 0,
-      lead: leads?.length || 0,
-      purchase: 0,
+    // Fetch comparison period funnel events
+    let comparisonFunnelEvents: typeof funnelEvents = [];
+    if (comparisonFrom && comparisonTo) {
+      const { data: compFunnel } = await supabaseAdmin
+        .from("astro_funnel_events")
+        .select("event_name, session_id, created_at")
+        .gte("created_at", comparisonFrom.toISOString())
+        .lte("created_at", comparisonTo.toISOString());
+      comparisonFunnelEvents = compFunnel || [];
+    }
+
+    // Deduplicate funnel events: count unique sessions per event type
+    // This prevents counting the same user multiple times if they refresh/restart
+    const deduplicateFunnelEvents = (events: typeof funnelEvents) => {
+      const sessionsByEvent = new Map<string, Set<string>>();
+      events?.forEach((event) => {
+        if (!sessionsByEvent.has(event.event_name)) {
+          sessionsByEvent.set(event.event_name, new Set());
+        }
+        if (event.session_id) {
+          sessionsByEvent.get(event.event_name)!.add(event.session_id);
+        }
+      });
+      return sessionsByEvent;
     };
 
+    const uniqueSessionsByEvent = deduplicateFunnelEvents(funnelEvents);
+
+    // Get all session_ids that have funnel events (for matching leads)
+    const trackedSessionIds = new Set<string>();
     funnelEvents?.forEach((event) => {
-      if (event.event_name in funnelCounts) {
-        funnelCounts[event.event_name]++;
+      if (event.session_id) {
+        trackedSessionIds.add(event.session_id);
       }
     });
 
-    // Fetch purchases with period filter for revenue metrics
+    // Count leads that have a matching session_id in funnel events
+    // This gives us accurate "lead captured" count for the funnel
+    const leadsWithFunnelTracking = leads?.filter(
+      (lead) => lead.session_id && trackedSessionIds.has(lead.session_id)
+    ) || [];
+
+    // Count each funnel event type (deduplicated by session)
+    const funnelCounts: Record<string, number> = {
+      page_view: leads?.length || 0, // Total leads in period (for reference)
+      quiz_start: uniqueSessionsByEvent.get("quiz_start")?.size || 0,
+      q1_answered: uniqueSessionsByEvent.get("q1_answered")?.size || 0,
+      q2_answered: uniqueSessionsByEvent.get("q2_answered")?.size || 0,
+      email_screen: uniqueSessionsByEvent.get("email_screen")?.size || 0,
+      lead: leadsWithFunnelTracking.length, // Only leads with tracked funnel sessions
+      purchase: 0,
+    };
+
+    // Fetch purchases with date range filter for revenue metrics
     // Filter out test purchases (test@example.com and amounts under $1)
     let purchasesQuery = supabaseAdmin
       .from("astro_purchases")
@@ -125,11 +278,38 @@ export async function GET(request: NextRequest) {
       .neq("email", "test@example.com")
       .gte("amount_cents", 100); // Exclude test amounts under $1
 
-    if (periodStart) {
-      purchasesQuery = purchasesQuery.gte("completed_at", periodStart.toISOString());
+    if (effectiveFrom) {
+      purchasesQuery = purchasesQuery.gte("completed_at", effectiveFrom.toISOString());
+    }
+    if (effectiveTo) {
+      purchasesQuery = purchasesQuery.lte("completed_at", effectiveTo.toISOString());
     }
 
     const { data: purchases } = await purchasesQuery;
+
+    // Fetch comparison period purchases
+    let comparisonPurchases: typeof purchases = [];
+    if (comparisonFrom && comparisonTo) {
+      const { data: compPurchases } = await supabaseAdmin
+        .from("astro_purchases")
+        .select("id, email, amount_cents, lead_id, status, completed_at")
+        .neq("email", "test@example.com")
+        .gte("amount_cents", 100)
+        .gte("completed_at", comparisonFrom.toISOString())
+        .lte("completed_at", comparisonTo.toISOString());
+      comparisonPurchases = compPurchases || [];
+    }
+
+    // Fetch comparison period leads
+    let comparisonLeads: typeof leads = [];
+    if (comparisonFrom && comparisonTo) {
+      const { data: compLeads } = await supabaseAdmin
+        .from("astro_leads")
+        .select("*")
+        .gte("created_at", comparisonFrom.toISOString())
+        .lte("created_at", comparisonTo.toISOString());
+      comparisonLeads = compLeads || [];
+    }
 
     // Filter to completed purchases only
     const completedPurchases = purchases?.filter(p => p.status === "completed") || [];
@@ -396,11 +576,174 @@ export async function GET(request: NextRequest) {
       noAccount: leadsWithPurchaseStatus.length - emailToProfile.size,
     };
 
+    // ========== NEW: Trend data for charts ==========
+    // Group leads by date for trend chart
+    const leadDates = leads?.map(l => new Date(l.created_at)) || [];
+    const currentLeadsByDate = groupByGranularity(leadDates, granularity);
+
+    const compLeadDates = comparisonLeads?.map(l => new Date(l.created_at)) || [];
+    const previousLeadsByDate = groupByGranularity(compLeadDates, granularity);
+
+    // Group revenue by date for trend chart
+    const revenueDates = completedPurchases.map(p => ({
+      date: new Date(p.completed_at),
+      amount: p.amount_cents || 0,
+    }));
+    const currentRevenueByDate = new Map<string, number>();
+    revenueDates.forEach(({ date, amount }) => {
+      let key: string;
+      if (granularity === "daily") {
+        key = date.toISOString().split("T")[0];
+      } else if (granularity === "weekly") {
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        d.setDate(diff);
+        key = d.toISOString().split("T")[0];
+      } else {
+        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      }
+      currentRevenueByDate.set(key, (currentRevenueByDate.get(key) || 0) + amount);
+    });
+
+    // Comparison revenue
+    const compRevenueDates = (comparisonPurchases?.filter(p => p.status === "completed") || []).map(p => ({
+      date: new Date(p.completed_at),
+      amount: p.amount_cents || 0,
+    }));
+    const previousRevenueByDate = new Map<string, number>();
+    compRevenueDates.forEach(({ date, amount }) => {
+      let key: string;
+      if (granularity === "daily") {
+        key = date.toISOString().split("T")[0];
+      } else if (granularity === "weekly") {
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        d.setDate(diff);
+        key = d.toISOString().split("T")[0];
+      } else {
+        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      }
+      previousRevenueByDate.set(key, (previousRevenueByDate.get(key) || 0) + amount);
+    });
+
+    // Build trend data arrays
+    const allDateKeys = new Set([...currentLeadsByDate.keys()]);
+    const sortedKeys = Array.from(allDateKeys).sort();
+
+    const leadsTrendData = sortedKeys.map(key => ({
+      date: key,
+      label: formatLabel(key, granularity),
+      current: currentLeadsByDate.get(key) || 0,
+      previous: previousLeadsByDate.get(key) || 0,
+    }));
+
+    const revenueTrendData = sortedKeys.map(key => ({
+      date: key,
+      label: formatLabel(key, granularity),
+      current: currentRevenueByDate.get(key) || 0,
+      previous: previousRevenueByDate.get(key) || 0,
+    }));
+
+    // ========== NEW: Comparison metrics ==========
+    const compCompletedPurchases = comparisonPurchases?.filter(p => p.status === "completed") || [];
+    const compTotalRevenue = compCompletedPurchases.reduce((sum, p) => sum + (p.amount_cents || 0), 0);
+    const compLeadCount = comparisonLeads?.length || 0;
+    const compPurchaseCount = compCompletedPurchases.length;
+
+    // Count trials in each period (users with trialing status created in period)
+    const trialCount = subscriptionStats.trialing;
+    const compTrialCount = 0; // Would need historical data to calculate this properly
+
+    const comparison = {
+      leads: {
+        current: leadCount,
+        previous: compLeadCount,
+        changePercent: compLeadCount > 0 ? ((leadCount - compLeadCount) / compLeadCount) * 100 : 0,
+      },
+      revenue: {
+        current: totalRevenue,
+        previous: compTotalRevenue,
+        changePercent: compTotalRevenue > 0 ? ((totalRevenue - compTotalRevenue) / compTotalRevenue) * 100 : 0,
+      },
+      purchases: {
+        current: purchaseCount,
+        previous: compPurchaseCount,
+        changePercent: compPurchaseCount > 0 ? ((purchaseCount - compPurchaseCount) / compPurchaseCount) * 100 : 0,
+      },
+    };
+
+    // ========== NEW: Enhanced funnel with percentages ==========
+    const funnelSteps = [
+      { key: "quiz_start", label: "Quiz Started", count: funnelCounts.quiz_start },
+      { key: "q1_answered", label: "Q1 Answered", count: funnelCounts.q1_answered },
+      { key: "q2_answered", label: "Q2 Answered", count: funnelCounts.q2_answered },
+      { key: "email_screen", label: "Email Screen", count: funnelCounts.email_screen },
+      { key: "lead", label: "Lead Captured", count: funnelCounts.lead },
+      { key: "purchase", label: "Purchase", count: funnelCounts.purchase },
+    ];
+
+    const firstStepCount = funnelSteps[0]?.count || 1;
+    const enhancedFunnel = funnelSteps.map((step, index) => {
+      const prevCount = index > 0 ? funnelSteps[index - 1].count : step.count;
+      const dropFromPrevious = prevCount - step.count;
+      const dropPercent = prevCount > 0 ? (dropFromPrevious / prevCount) * 100 : 0;
+
+      return {
+        key: step.key,
+        label: step.label,
+        count: step.count,
+        percentOfTotal: (step.count / firstStepCount) * 100,
+        dropFromPrevious,
+        dropPercent,
+      };
+    });
+
+    // ========== NEW: Milestone conversions ==========
+    // Use leads with funnel tracking for accurate funnel metrics
+    const quizStartCount = funnelCounts.quiz_start || 0;
+    const trackedLeadCount = funnelCounts.lead || 0; // Leads with tracked funnel sessions
+    const milestones = {
+      quizStart: quizStartCount,
+      lead: trackedLeadCount,
+      trial: trialCount,
+      paid: subscriptionStats.active,
+      quizToLead: quizStartCount > 0 ? (trackedLeadCount / quizStartCount) * 100 : 0,
+      leadToTrial: trackedLeadCount > 0 ? (trialCount / trackedLeadCount) * 100 : 0,
+      trialToPaid: trialCount > 0 ? (subscriptionStats.active / trialCount) * 100 : 0,
+      overallConversion: quizStartCount > 0 ? (subscriptionStats.active / quizStartCount) * 100 : 0,
+    };
+
+    // Check if date range includes dates before funnel tracking started
+    const includesPreTrackingDates = effectiveFrom && effectiveFrom < FUNNEL_TRACKING_START;
+    const funnelWarning = includesPreTrackingDates
+      ? "Funnel tracking started Dec 31, 2025. Data before this date may be incomplete."
+      : null;
+
+    // Count leads without funnel tracking (for reference)
+    const leadsWithoutFunnelTracking = (leads?.length || 0) - (leadsWithFunnelTracking?.length || 0);
+
     return NextResponse.json({
       period,
+      dateRange: effectiveFrom && effectiveTo ? {
+        from: effectiveFrom.toISOString(),
+        to: effectiveTo.toISOString(),
+        daysDiff,
+        granularity,
+      } : null,
       leads: leadsWithProfiles,
       stats,
       funnel: funnelCounts,
+      funnelWarning,
+      funnelMeta: {
+        totalLeadsInPeriod: leads?.length || 0,
+        leadsWithFunnelTracking: leadsWithFunnelTracking?.length || 0,
+        leadsWithoutFunnelTracking,
+        trackingStartDate: FUNNEL_TRACKING_START.toISOString(),
+      },
+      enhancedFunnel,
+      milestones,
       revenue: {
         total: totalRevenue,
         purchaseCount,
@@ -410,6 +753,11 @@ export async function GET(request: NextRequest) {
       },
       analytics,
       subscriptionStats,
+      trends: {
+        leads: leadsTrendData,
+        revenue: revenueTrendData,
+      },
+      comparison,
     });
   } catch (error) {
     console.error("Error fetching leads:", error);
