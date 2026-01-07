@@ -737,6 +737,15 @@ export async function GET(request: NextRequest) {
       .select("event_name, session_id")
       .lt("created_at", SUBSCRIPTION_LAUNCH.toISOString());
 
+    // Query legacy purchases (one-time payments before subscription launch)
+    const { data: legacyPurchases } = await supabaseAdmin
+      .from("astro_purchases")
+      .select("id, amount_cents")
+      .lt("completed_at", SUBSCRIPTION_LAUNCH.toISOString())
+      .eq("status", "completed")
+      .neq("email", "test@example.com")
+      .gte("amount_cents", 100);
+
     // Deduplicate legacy funnel events by session
     const legacySessionsByEvent = new Map<string, Set<string>>();
     legacyFunnelEvents?.forEach((event) => {
@@ -750,14 +759,22 @@ export async function GET(request: NextRequest) {
 
     const legacyQuizStartCount = legacySessionsByEvent.get("quiz_start")?.size || 0;
     const legacyLeadCount = legacyLeads?.length || 0;
+    const legacyPurchaseCount = legacyPurchases?.length || 0;
+    const legacyRevenue = legacyPurchases?.reduce((sum, p) => sum + (p.amount_cents || 0), 0) || 0;
     const legacyConversionRate = legacyQuizStartCount > 0
       ? (legacyLeadCount / legacyQuizStartCount) * 100
+      : 0;
+    const legacyLeadToPurchase = legacyLeadCount > 0
+      ? (legacyPurchaseCount / legacyLeadCount) * 100
       : 0;
 
     const legacyStats = {
       quizStart: legacyQuizStartCount,
       leads: legacyLeadCount,
+      purchases: legacyPurchaseCount,
+      revenue: legacyRevenue,
       conversionRate: legacyConversionRate,
+      leadToPurchase: legacyLeadToPurchase,
       cutoffDate: SUBSCRIPTION_LAUNCH.toISOString(),
     };
 

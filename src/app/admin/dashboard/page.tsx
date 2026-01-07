@@ -199,7 +199,10 @@ interface SubscriptionStats {
 interface LegacyStats {
   quizStart: number;
   leads: number;
+  purchases: number;
+  revenue: number;
   conversionRate: number;
+  leadToPurchase: number;
   cutoffDate: string;
 }
 
@@ -294,7 +297,10 @@ export default function AdminDashboardPage() {
   const [legacyStats, setLegacyStats] = useState<LegacyStats>({
     quizStart: 0,
     leads: 0,
+    purchases: 0,
+    revenue: 0,
     conversionRate: 0,
+    leadToPurchase: 0,
     cutoffDate: "",
   });
   const [showLegacy, setShowLegacy] = useState(false);
@@ -381,7 +387,10 @@ export default function AdminDashboardPage() {
       setLegacyStats(data.legacyStats || {
         quizStart: 0,
         leads: 0,
+        purchases: 0,
+        revenue: 0,
         conversionRate: 0,
+        leadToPurchase: 0,
         cutoffDate: "",
       });
 
@@ -840,7 +849,7 @@ export default function AdminDashboardPage() {
               className={`overflow-hidden transition-all duration-300 ${showLegacy ? 'max-h-96 opacity-100 mt-3' : 'max-h-0 opacity-0'}`}
             >
               <div className="premium-card" style={{ borderColor: 'rgba(148, 163, 184, 0.15)' }}>
-                {/* Legacy Milestone Flow - Quiz → Leads only */}
+                {/* Legacy Milestone Flow - Quiz → Leads → Purchases (one-time) */}
                 <div className="milestone-flow">
                   {/* Quiz Start */}
                   <div className="milestone-node">
@@ -863,23 +872,26 @@ export default function AdminDashboardPage() {
                     <div className="node-label" style={{ opacity: 0.5 }}>Leads</div>
                   </div>
 
-                  {/* Not tracked indicator */}
-                  <div className="milestone-connector" style={{ color: 'rgba(148, 163, 184, 0.4)' }}>
-                    <div className="connector-line" style={{ opacity: 0.3 }} />
-                    <div className="text-xs text-white/30 px-2 italic">not tracked</div>
-                    <div className="connector-line" style={{ background: 'linear-gradient(90deg, transparent 0%, currentColor 100%)', opacity: 0.3 }} />
+                  {/* Arrow with lead to purchase rate */}
+                  <div className="milestone-connector" style={{ color: 'var(--premium-emerald)' }}>
+                    <div className="connector-line" />
+                    <div className="connector-rate">
+                      {legacyStats.leadToPurchase.toFixed(1)}%
+                    </div>
+                    <div className="connector-line" style={{ background: 'linear-gradient(90deg, transparent 0%, currentColor 100%)' }} />
                   </div>
 
-                  {/* Placeholder for subscribers */}
-                  <div className="milestone-node" style={{ opacity: 0.3 }}>
-                    <div className="node-value" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>—</div>
-                    <div className="node-label" style={{ opacity: 0.4 }}>Subscribers</div>
+                  {/* Purchases (one-time) */}
+                  <div className="milestone-node">
+                    <div className="node-value" style={{ color: 'var(--premium-emerald-bright)' }}>{legacyStats.purchases.toLocaleString()}</div>
+                    <div className="node-label" style={{ opacity: 0.5 }}>Purchases</div>
                   </div>
                 </div>
 
-                {/* Note */}
-                <div className="mt-3 pt-3 border-t border-white/5 text-center">
-                  <span className="text-xs text-white/40">Subscription tracking started Jan 7, 2026. Pre-launch leads don&apos;t have trial/subscriber data.</span>
+                {/* Revenue summary */}
+                <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+                  <span className="text-xs text-white/40">One-time purchases before subscriptions</span>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--premium-emerald-bright)' }}>${(legacyStats.revenue / 100).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -1817,16 +1829,16 @@ function FunnelChart({ data, enhancedData, warning }: { data: FunnelData; enhanc
   const maxCount = Math.max(...steps.map((s) => s.count), 1);
 
   return (
-    <div className="premium-card" style={{ padding: '24px' }}>
-      <div className="section-header" style={{ marginBottom: '16px' }}>
+    <div className="premium-card" style={{ padding: '16px' }}>
+      <div className="section-header" style={{ marginBottom: '12px' }}>
         <div className="section-icon" style={{ background: 'rgba(232, 197, 71, 0.15)', color: 'var(--premium-gold)' }}>
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
           </svg>
         </div>
         <div>
-          <h2 style={{ marginBottom: '2px' }}>Quiz Funnel</h2>
-          <span className="section-subtitle" style={{ marginLeft: 0, fontSize: '0.7rem' }}>Unique sessions at each step (deduplicated)</span>
+          <h2 style={{ marginBottom: '1px', fontSize: '0.9rem' }}>Quiz Funnel</h2>
+          <span className="section-subtitle" style={{ marginLeft: 0, fontSize: '0.65rem' }}>Unique sessions (deduplicated)</span>
         </div>
       </div>
 
@@ -1842,40 +1854,37 @@ function FunnelChart({ data, enhancedData, warning }: { data: FunnelData; enhanc
         </div>
       )}
 
-      <div className="space-y-1">
+      <div className="space-y-0">
         {steps.map((step, idx) => {
           const barWidth = maxCount > 0 ? (step.count / maxCount) * 100 : 0;
           const showDropOff = idx > 0 && step.dropPercent > 0;
 
           return (
-            <div key={step.key} className="funnel-step">
-              {/* Drop-off indicator between steps */}
-              {showDropOff && (
-                <div className="funnel-dropoff">
-                  <span className="funnel-dropoff-badge">
-                    -{step.dropPercent.toFixed(0)}% dropped
-                  </span>
-                </div>
-              )}
-
+            <div key={step.key} className="funnel-step-compact">
               {/* Step bar */}
-              <div className="py-2">
-                <div className="flex justify-between items-center mb-1.5">
+              <div className="py-1.5">
+                <div className="flex justify-between items-center mb-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-base">{step.icon}</span>
-                    <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>{step.label}</span>
+                    <span className="text-sm">{step.icon}</span>
+                    <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>{step.label}</span>
+                    {/* Inline drop-off badge */}
+                    {showDropOff && (
+                      <span className="funnel-dropoff-inline">
+                        -{step.dropPercent.toFixed(0)}%
+                      </span>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)', fontFamily: "'JetBrains Mono', monospace" }}>
-                      ({step.percentOfTotal.toFixed(1)}%)
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.35)', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.65rem' }}>
+                      {step.percentOfTotal.toFixed(0)}%
                     </span>
-                    <span className="text-sm font-semibold text-white tabular-nums min-w-[60px] text-right" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    <span className="text-xs font-semibold text-white tabular-nums min-w-[40px] text-right" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       {step.count.toLocaleString()}
                     </span>
                   </div>
                 </div>
                 {/* Funnel bar with shimmer */}
-                <div className="funnel-bar">
+                <div className="funnel-bar" style={{ height: '6px' }}>
                   <div
                     className="funnel-bar-fill"
                     style={{
@@ -1884,10 +1893,6 @@ function FunnelChart({ data, enhancedData, warning }: { data: FunnelData; enhanc
                         step.color === "green"
                           ? "linear-gradient(90deg, var(--premium-emerald), var(--premium-emerald-bright))"
                           : "linear-gradient(90deg, var(--premium-gold-dim), var(--premium-gold))",
-                      boxShadow:
-                        step.color === "green"
-                          ? "0 0 12px rgba(16, 185, 129, 0.4)"
-                          : "0 0 12px rgba(232, 197, 71, 0.3)",
                     }}
                   />
                 </div>
@@ -1897,24 +1902,24 @@ function FunnelChart({ data, enhancedData, warning }: { data: FunnelData; enhanc
         })}
       </div>
 
-      {/* Conversion rates summary */}
+      {/* Conversion rates summary - compact */}
       {data.quiz_start > 0 && (
-        <div className="mt-6 pt-4 border-t space-y-3" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
-          <div className="flex justify-between items-center">
-            <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Quiz → Lead</span>
-            <span className="text-base font-semibold" style={{ color: 'var(--premium-gold-bright)', fontFamily: "'JetBrains Mono', monospace" }}>
-              {((data.lead / data.quiz_start) * 100).toFixed(1)}%
-            </span>
+        <div className="mt-4 pt-3 border-t" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+          <div className="flex items-center justify-center gap-6 text-xs">
+            <div className="flex items-center gap-2">
+              <span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Quiz→Lead</span>
+              <span className="font-semibold" style={{ color: 'var(--premium-gold-bright)', fontFamily: "'JetBrains Mono', monospace" }}>
+                {((data.lead / data.quiz_start) * 100).toFixed(1)}%
+              </span>
+            </div>
+            <div className="w-px h-3" style={{ background: 'rgba(255,255,255,0.15)' }} />
+            <div className="flex items-center gap-2">
+              <span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Lead→Purchase</span>
+              <span className="font-semibold" style={{ color: 'var(--premium-emerald-bright)', fontFamily: "'JetBrains Mono', monospace" }}>
+                {data.lead > 0 ? ((data.purchase / data.lead) * 100).toFixed(1) : "0.0"}%
+              </span>
+            </div>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Lead → Purchase</span>
-            <span className="text-base font-semibold" style={{ color: 'var(--premium-emerald-bright)', fontFamily: "'JetBrains Mono', monospace" }}>
-              {data.lead > 0 ? ((data.purchase / data.lead) * 100).toFixed(1) : "0.0"}%
-            </span>
-          </div>
-          <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.35)' }}>
-            {data.quiz_start} started → {data.lead} leads → {data.purchase} purchases
-          </p>
         </div>
       )}
     </div>

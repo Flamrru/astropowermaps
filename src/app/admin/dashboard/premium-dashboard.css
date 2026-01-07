@@ -385,6 +385,22 @@
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+/* Compact inline drop-off badge */
+.premium-dashboard .funnel-dropoff-inline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  opacity: 0.8;
+}
+
+.premium-dashboard .funnel-step-compact {
+  position: relative;
+  padding: 0;
+}
+
 /* ============================================
    DATA TABLE
    ============================================ */
