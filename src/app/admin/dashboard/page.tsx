@@ -195,6 +195,14 @@ interface SubscriptionStats {
   noAccount: number;
 }
 
+// Legacy stats (pre-subscription launch)
+interface LegacyStats {
+  quizStart: number;
+  leads: number;
+  conversionRate: number;
+  cutoffDate: string;
+}
+
 // Q1 and Q2 answer options for analytics
 const Q1_OPTIONS = ["Yes, definitely", "Maybe once or twice", "Not sure"];
 const Q2_OPTIONS = [
@@ -282,6 +290,15 @@ export default function AdminDashboardPage() {
     overallConversion: 0,
   });
 
+  // Legacy stats (pre-subscription launch)
+  const [legacyStats, setLegacyStats] = useState<LegacyStats>({
+    quizStart: 0,
+    leads: 0,
+    conversionRate: 0,
+    cutoffDate: "",
+  });
+  const [showLegacy, setShowLegacy] = useState(false);
+
   // Fetch leads function (reusable for refresh)
   const fetchLeads = useCallback(async (showLoading = true, range: DateRange = dateRange) => {
     if (showLoading) setIsLoading(true);
@@ -360,6 +377,12 @@ export default function AdminDashboardPage() {
         leadToTrial: 0,
         trialToPaid: 0,
         overallConversion: 0,
+      });
+      setLegacyStats(data.legacyStats || {
+        quizStart: 0,
+        leads: 0,
+        conversionRate: 0,
+        cutoffDate: "",
       });
 
       setLastUpdated(new Date());
@@ -780,6 +803,89 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
+        {/* Legacy Data Section (Pre-Subscription Launch) - Collapsible */}
+        {legacyStats.leads > 0 && (
+          <div className="mb-8">
+            <button
+              onClick={() => setShowLegacy(!showLegacy)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all legacy-toggle"
+              style={{
+                background: showLegacy ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(148, 163, 184, 0.15)' }}>
+                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <span className="text-sm font-medium text-white/70">Legacy Data (Pre-Launch)</span>
+                  <span className="text-xs text-white/40 ml-2">{legacyStats.leads.toLocaleString()} leads before Jan 7, 2026</span>
+                </div>
+              </div>
+              <svg
+                className={`w-5 h-5 text-white/40 transition-transform duration-200 ${showLegacy ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Collapsible content */}
+            <div
+              className={`overflow-hidden transition-all duration-300 ${showLegacy ? 'max-h-96 opacity-100 mt-3' : 'max-h-0 opacity-0'}`}
+            >
+              <div className="premium-card" style={{ borderColor: 'rgba(148, 163, 184, 0.15)' }}>
+                {/* Legacy Milestone Flow - Quiz → Leads only */}
+                <div className="milestone-flow">
+                  {/* Quiz Start */}
+                  <div className="milestone-node">
+                    <div className="node-value" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{legacyStats.quizStart.toLocaleString()}</div>
+                    <div className="node-label" style={{ opacity: 0.5 }}>Quiz Start</div>
+                  </div>
+
+                  {/* Arrow with conversion rate */}
+                  <div className="milestone-connector" style={{ color: 'rgba(148, 163, 184, 0.6)' }}>
+                    <div className="connector-line" />
+                    <div className="connector-rate" style={{ background: 'rgba(148, 163, 184, 0.1)', borderColor: 'rgba(148, 163, 184, 0.3)' }}>
+                      {legacyStats.conversionRate.toFixed(1)}%
+                    </div>
+                    <div className="connector-line" style={{ background: 'linear-gradient(90deg, transparent 0%, currentColor 100%)' }} />
+                  </div>
+
+                  {/* Leads */}
+                  <div className="milestone-node">
+                    <div className="node-value" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>{legacyStats.leads.toLocaleString()}</div>
+                    <div className="node-label" style={{ opacity: 0.5 }}>Leads</div>
+                  </div>
+
+                  {/* Not tracked indicator */}
+                  <div className="milestone-connector" style={{ color: 'rgba(148, 163, 184, 0.4)' }}>
+                    <div className="connector-line" style={{ opacity: 0.3 }} />
+                    <div className="text-xs text-white/30 px-2 italic">not tracked</div>
+                    <div className="connector-line" style={{ background: 'linear-gradient(90deg, transparent 0%, currentColor 100%)', opacity: 0.3 }} />
+                  </div>
+
+                  {/* Placeholder for subscribers */}
+                  <div className="milestone-node" style={{ opacity: 0.3 }}>
+                    <div className="node-value" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>—</div>
+                    <div className="node-label" style={{ opacity: 0.4 }}>Subscribers</div>
+                  </div>
+                </div>
+
+                {/* Note */}
+                <div className="mt-3 pt-3 border-t border-white/5 text-center">
+                  <span className="text-xs text-white/40">Subscription tracking started Jan 7, 2026. Pre-launch leads don&apos;t have trial/subscriber data.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Subscription Status - Simplified view */}
         <div className="mb-8 animate-in stagger-4">
           <div className="section-header">
@@ -1038,41 +1144,57 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              {/* Age + Countries in a row */}
-              <div className="grid grid-cols-2 gap-4 pt-3 border-t border-white/10">
-                {/* Age Groups - Inline */}
+              {/* Age + Countries - Premium Split Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/10">
+                {/* Age Groups - Mini Bar Chart */}
                 <div>
-                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2">Age Groups</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {Object.entries(analytics.ageRanges)
-                      .filter(([, count]) => count > 0)
-                      .map(([range, count]) => (
-                        <span
-                          key={range}
-                          className="px-2 py-1 rounded text-xs"
-                          style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--premium-sapphire-bright)' }}
-                        >
-                          {range}: <b>{count}</b>
-                        </span>
-                      ))}
+                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">Age Distribution</div>
+                  <div className="space-y-2">
+                    {(() => {
+                      const ageEntries = Object.entries(analytics.ageRanges)
+                        .filter(([, count]) => count > 0)
+                        .sort((a, b) => b[1] - a[1]);
+                      const maxCount = Math.max(...ageEntries.map(([, c]) => c), 1);
+
+                      return ageEntries.map(([range, count]) => {
+                        const barWidth = (count / maxCount) * 100;
+                        return (
+                          <div key={range} className="demographics-bar-row">
+                            <div className="demographics-bar-label">{range}</div>
+                            <div className="demographics-bar-track">
+                              <div
+                                className="demographics-bar-fill"
+                                style={{
+                                  width: `${barWidth}%`,
+                                  background: 'linear-gradient(90deg, var(--premium-sapphire) 0%, var(--premium-sapphire-bright) 100%)'
+                                }}
+                              />
+                            </div>
+                            <div className="demographics-bar-value">{count}</div>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
 
-                {/* Top Countries - Inline */}
+                {/* Top Countries - Premium List */}
                 <div>
-                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2">Top Countries</div>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">Top Countries</div>
+                  <div className="space-y-1.5">
                     {Object.entries(analytics.countries)
                       .sort((a, b) => b[1] - a[1])
-                      .slice(0, 5)
-                      .map(([country, count]) => (
-                        <span
+                      .slice(0, 6)
+                      .map(([country, count], index) => (
+                        <div
                           key={country}
-                          className="px-2 py-1 rounded text-xs"
-                          style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--premium-emerald-bright)' }}
+                          className="country-list-item"
+                          style={{ animationDelay: `${index * 50}ms` }}
                         >
-                          {country}: <b>{count}</b>
-                        </span>
+                          <div className="country-rank">{index + 1}</div>
+                          <div className="country-name">{country}</div>
+                          <div className="country-count">{count}</div>
+                        </div>
                       ))}
                   </div>
                 </div>

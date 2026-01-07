@@ -724,6 +724,43 @@ export async function GET(request: NextRequest) {
     // Count leads without funnel tracking (for reference)
     const leadsWithoutFunnelTracking = (leads?.length || 0) - (leadsWithFunnelTracking?.length || 0);
 
+    // ========== LEGACY STATS (Pre-Subscription Launch) ==========
+    // Query leads created before subscription launch (Jan 7, 2026)
+    const { data: legacyLeads } = await supabaseAdmin
+      .from("astro_leads")
+      .select("id, created_at")
+      .lt("created_at", SUBSCRIPTION_LAUNCH.toISOString());
+
+    // Query funnel events before subscription launch
+    const { data: legacyFunnelEvents } = await supabaseAdmin
+      .from("astro_funnel_events")
+      .select("event_name, session_id")
+      .lt("created_at", SUBSCRIPTION_LAUNCH.toISOString());
+
+    // Deduplicate legacy funnel events by session
+    const legacySessionsByEvent = new Map<string, Set<string>>();
+    legacyFunnelEvents?.forEach((event) => {
+      if (!legacySessionsByEvent.has(event.event_name)) {
+        legacySessionsByEvent.set(event.event_name, new Set());
+      }
+      if (event.session_id) {
+        legacySessionsByEvent.get(event.event_name)!.add(event.session_id);
+      }
+    });
+
+    const legacyQuizStartCount = legacySessionsByEvent.get("quiz_start")?.size || 0;
+    const legacyLeadCount = legacyLeads?.length || 0;
+    const legacyConversionRate = legacyQuizStartCount > 0
+      ? (legacyLeadCount / legacyQuizStartCount) * 100
+      : 0;
+
+    const legacyStats = {
+      quizStart: legacyQuizStartCount,
+      leads: legacyLeadCount,
+      conversionRate: legacyConversionRate,
+      cutoffDate: SUBSCRIPTION_LAUNCH.toISOString(),
+    };
+
     return NextResponse.json({
       period,
       dateRange: effectiveFrom && effectiveTo ? {
@@ -758,6 +795,7 @@ export async function GET(request: NextRequest) {
         revenue: revenueTrendData,
       },
       comparison,
+      legacyStats,
     });
   } catch (error) {
     console.error("Error fetching leads:", error);
