@@ -736,7 +736,7 @@ export default function AdminDashboardPage() {
               <h2>Key Milestones</h2>
             </div>
             <div className="premium-card glow-gold">
-              {/* Milestone Flow Visualization */}
+              {/* Milestone Flow Visualization - Simplified: Quiz → Leads → Subscribers */}
               <div className="milestone-flow">
                 {/* Quiz Start */}
                 <div className="milestone-node">
@@ -757,43 +757,30 @@ export default function AdminDashboardPage() {
                   <div className="node-label">Leads</div>
                 </div>
 
-                {/* Arrow with conversion rate */}
-                <div className="milestone-connector" style={{ color: 'var(--premium-sapphire)' }}>
-                  <div className="connector-line" />
-                  <div className="connector-rate">{milestones.leadToTrial.toFixed(1)}%</div>
-                  <div className="connector-line" style={{ background: 'linear-gradient(90deg, transparent 0%, currentColor 100%)' }} />
-                </div>
-
-                {/* Trial */}
-                <div className="milestone-node">
-                  <div className="node-value" style={{ color: 'var(--premium-sapphire-bright)' }}>{milestones.trial.toLocaleString()}</div>
-                  <div className="node-label">Trials</div>
-                </div>
-
-                {/* Arrow with conversion rate */}
+                {/* Arrow with conversion rate (lead to subscriber = trial + active) */}
                 <div className="milestone-connector" style={{ color: 'var(--premium-emerald)' }}>
                   <div className="connector-line" />
-                  <div className="connector-rate">{milestones.trialToPaid.toFixed(1)}%</div>
+                  <div className="connector-rate">{milestones.lead > 0 ? (((milestones.trial + milestones.paid) / milestones.lead) * 100).toFixed(1) : '0.0'}%</div>
                   <div className="connector-line" style={{ background: 'linear-gradient(90deg, transparent 0%, currentColor 100%)' }} />
                 </div>
 
-                {/* Paid */}
+                {/* Subscribers (trial + active combined - since trials are paid upfront) */}
                 <div className="milestone-node">
-                  <div className="node-value" style={{ color: 'var(--premium-emerald-bright)' }}>{milestones.paid.toLocaleString()}</div>
-                  <div className="node-label">Paid</div>
+                  <div className="node-value" style={{ color: 'var(--premium-emerald-bright)' }}>{(milestones.trial + milestones.paid).toLocaleString()}</div>
+                  <div className="node-label">Subscribers</div>
                 </div>
               </div>
 
               {/* Overall conversion */}
-              <div className="mt-6 pt-4 border-t border-white/10 text-center">
-                <span className="text-sm text-white/50">Overall conversion (Quiz → Paid): </span>
-                <span className="text-sm font-semibold" style={{ color: 'var(--premium-emerald-bright)' }}>{milestones.overallConversion.toFixed(2)}%</span>
+              <div className="mt-4 pt-3 border-t border-white/10 text-center">
+                <span className="text-sm text-white/50">Overall conversion (Quiz → Subscriber): </span>
+                <span className="text-sm font-semibold" style={{ color: 'var(--premium-emerald-bright)' }}>{milestones.quizStart > 0 ? (((milestones.trial + milestones.paid) / milestones.quizStart) * 100).toFixed(2) : '0.00'}%</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* Subscription Status */}
+        {/* Subscription Status - Simplified view */}
         <div className="mb-8 animate-in stagger-4">
           <div className="section-header">
             <div className="section-icon" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--premium-sapphire)' }}>
@@ -803,15 +790,11 @@ export default function AdminDashboardPage() {
             </div>
             <h2>Subscription Status</h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {/* Subscribers = Trialing + Active (combined since trials are paid) */}
             <SubscriptionStatCard
-              label="Trialing"
-              value={subscriptionStats.trialing}
-              color="blue"
-            />
-            <SubscriptionStatCard
-              label="Active"
-              value={subscriptionStats.active}
+              label="Subscribers"
+              value={subscriptionStats.trialing + subscriptionStats.active}
               color="green"
             />
             <SubscriptionStatCard
@@ -819,18 +802,22 @@ export default function AdminDashboardPage() {
               value={subscriptionStats.cancelled}
               color="red"
             />
+            {subscriptionStats.past_due > 0 && (
+              <SubscriptionStatCard
+                label="Past Due"
+                value={subscriptionStats.past_due}
+                color="yellow"
+              />
+            )}
+            {subscriptionStats.grandfathered > 0 && (
+              <SubscriptionStatCard
+                label="Free Access"
+                value={subscriptionStats.grandfathered}
+                color="purple"
+              />
+            )}
             <SubscriptionStatCard
-              label="Grandfathered"
-              value={subscriptionStats.grandfathered}
-              color="purple"
-            />
-            <SubscriptionStatCard
-              label="Past Due"
-              value={subscriptionStats.past_due}
-              color="yellow"
-            />
-            <SubscriptionStatCard
-              label="No Account"
+              label="Leads Only"
               value={subscriptionStats.noAccount}
               color="gray"
             />
@@ -1012,91 +999,82 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* Demographics Analytics */}
-        {(analytics.withBirthData > 0 || analytics.withoutBirthData > 0) && (
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <span className="text-xl">✨</span>
-              Demographics
-            </h2>
-
-            {/* Birth Data Coverage */}
-            <div className="glass-card rounded-xl p-4 mb-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-[var(--text-muted)]">Birth Data Coverage</h3>
-                  <p className="text-xs text-[var(--text-faint)] mt-0.5">
-                    Leads who entered birth data in the reveal flow
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="text-2xl font-bold text-[var(--gold-bright)]">{analytics.withBirthData}</span>
-                  <span className="text-lg text-[var(--text-muted)]"> / {analytics.withBirthData + analytics.withoutBirthData}</span>
-                  <p className="text-xs text-[var(--text-faint)]">
-                    {((analytics.withBirthData / (analytics.withBirthData + analytics.withoutBirthData)) * 100).toFixed(1)}% have birth data
-                  </p>
-                </div>
+        {/* Demographics Analytics - Compact Design */}
+        {analytics.withBirthData > 0 && (
+          <div className="mb-8 animate-in stagger-5">
+            <div className="section-header">
+              <div className="section-icon" style={{ background: 'rgba(168, 85, 247, 0.15)', color: 'var(--premium-amethyst)' }}>
+                <span className="text-base">✨</span>
               </div>
-              {/* Progress bar */}
-              <div className="mt-3 h-2 bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[var(--gold-main)] to-[var(--gold-bright)]"
-                  style={{ width: `${(analytics.withBirthData / (analytics.withBirthData + analytics.withoutBirthData)) * 100}%` }}
-                />
-              </div>
+              <h2>Demographics</h2>
+              <span className="section-subtitle">{analytics.withBirthData} with birth data</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Zodiac Signs */}
-              <div className="glass-card rounded-xl p-4">
-                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3">
-                  Zodiac Signs
-                  <span className="text-xs text-[var(--text-faint)] ml-2">({analytics.withBirthData} with data)</span>
-                </h3>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
+            <div className="premium-card" style={{ padding: '16px' }}>
+              {/* Zodiac Signs - Compact Grid */}
+              <div className="mb-4">
+                <div className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2">Zodiac Distribution</div>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                   {Object.entries(analytics.zodiacSigns)
                     .sort((a, b) => b[1] - a[1])
-                    .slice(0, 6)
-                    .map(([sign, count]) => (
-                      <div key={sign} className="flex justify-between items-center">
-                        <span className="text-sm text-white">{sign}</span>
-                        <span className="text-sm text-[var(--gold-bright)]">{count}</span>
-                      </div>
-                    ))}
+                    .map(([sign, count]) => {
+                      const maxCount = Math.max(...Object.values(analytics.zodiacSigns));
+                      const intensity = maxCount > 0 ? count / maxCount : 0;
+                      return (
+                        <div
+                          key={sign}
+                          className="flex flex-col items-center p-2 rounded-lg transition-all hover:scale-105"
+                          style={{
+                            background: `rgba(232, 197, 71, ${0.05 + intensity * 0.15})`,
+                            border: `1px solid rgba(232, 197, 71, ${0.1 + intensity * 0.2})`,
+                          }}
+                        >
+                          <span className="text-lg">{sign.split(' ')[0]}</span>
+                          <span className="text-[10px] text-white/60 truncate w-full text-center">{sign.split(' ')[1]}</span>
+                          <span className="text-xs font-semibold" style={{ color: 'var(--premium-gold)' }}>{count}</span>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
 
-              {/* Age Ranges */}
-              <div className="glass-card rounded-xl p-4">
-                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3">
-                  Age Groups
-                  <span className="text-xs text-[var(--text-faint)] ml-2">({analytics.withBirthData} known)</span>
-                </h3>
-                <div className="space-y-2">
-                  {Object.entries(analytics.ageRanges)
-                    .filter(([, count]) => count > 0)
-                    .map(([range, count]) => (
-                      <div key={range} className="flex justify-between items-center">
-                        <span className="text-sm text-white">{range}</span>
-                        <span className="text-sm text-[var(--gold-bright)]">{count}</span>
-                      </div>
-                    ))}
+              {/* Age + Countries in a row */}
+              <div className="grid grid-cols-2 gap-4 pt-3 border-t border-white/10">
+                {/* Age Groups - Inline */}
+                <div>
+                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2">Age Groups</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(analytics.ageRanges)
+                      .filter(([, count]) => count > 0)
+                      .map(([range, count]) => (
+                        <span
+                          key={range}
+                          className="px-2 py-1 rounded text-xs"
+                          style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--premium-sapphire-bright)' }}
+                        >
+                          {range}: <b>{count}</b>
+                        </span>
+                      ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Countries */}
-              <div className="glass-card rounded-xl p-4">
-                <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3">Top Countries</h3>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {Object.entries(analytics.countries)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 6)
-                    .map(([country, count]) => (
-                      <div key={country} className="flex justify-between items-center">
-                        <span className="text-sm text-white truncate mr-2">{country}</span>
-                        <span className="text-sm text-[var(--gold-bright)]">{count}</span>
-                      </div>
-                    ))}
+                {/* Top Countries - Inline */}
+                <div>
+                  <div className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2">Top Countries</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(analytics.countries)
+                      .sort((a, b) => b[1] - a[1])
+                      .slice(0, 5)
+                      .map(([country, count]) => (
+                        <span
+                          key={country}
+                          className="px-2 py-1 rounded text-xs"
+                          style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--premium-emerald-bright)' }}
+                        >
+                          {country}: <b>{count}</b>
+                        </span>
+                      ))}
+                  </div>
                 </div>
               </div>
             </div>
