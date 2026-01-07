@@ -1,0 +1,538 @@
+/* Premium Dashboard Styles - Celestial Observatory Theme */
+
+/* ============================================
+   FONTS - Distinctive pairing
+   ============================================ */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ============================================
+   CSS VARIABLES - Premium color system
+   ============================================ */
+.premium-dashboard {
+  --premium-gold: #E8C547;
+  --premium-gold-bright: #F4D76B;
+  --premium-gold-dim: #C9A227;
+  --premium-emerald: #10B981;
+  --premium-emerald-bright: #34D399;
+  --premium-sapphire: #3B82F6;
+  --premium-sapphire-bright: #60A5FA;
+  --premium-amethyst: #A855F7;
+  --premium-ruby: #EF4444;
+  --premium-amber: #F59E0B;
+
+  /* Glass layers */
+  --glass-1: rgba(255, 255, 255, 0.03);
+  --glass-2: rgba(255, 255, 255, 0.05);
+  --glass-3: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border-bright: rgba(255, 255, 255, 0.15);
+
+  /* Shadows */
+  --shadow-glow-gold: 0 0 40px rgba(232, 197, 71, 0.15);
+  --shadow-glow-emerald: 0 0 40px rgba(16, 185, 129, 0.15);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--glass-border);
+
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ============================================
+   ANIMATED BACKGROUND
+   ============================================ */
+.premium-dashboard .constellation-bg {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.premium-dashboard .constellation-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 40%, rgba(232, 197, 71, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 60% at 60% 80%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
+  animation: aurora 20s ease-in-out infinite;
+}
+
+@keyframes aurora {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+/* Floating particles */
+.premium-dashboard .particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: var(--premium-gold);
+  border-radius: 50%;
+  opacity: 0;
+  animation: float-particle 8s ease-in-out infinite;
+}
+
+@keyframes float-particle {
+  0% { opacity: 0; transform: translateY(100vh) scale(0); }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { opacity: 0; transform: translateY(-10vh) scale(1); }
+}
+
+/* ============================================
+   PREMIUM HEADER
+   ============================================ */
+.premium-dashboard .premium-header {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.3) 100%);
+  backdrop-filter: blur(20px) saturate(150%);
+  border-bottom: 1px solid var(--glass-border);
+  position: relative;
+}
+
+.premium-dashboard .premium-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--premium-gold-dim) 20%,
+    var(--premium-gold) 50%,
+    var(--premium-gold-dim) 80%,
+    transparent 100%
+  );
+  opacity: 0.4;
+}
+
+.premium-dashboard .logo-mark {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(232, 197, 71, 0.2) 0%, rgba(232, 197, 71, 0.05) 100%);
+  border: 1px solid rgba(232, 197, 71, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.premium-dashboard .logo-mark::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(from 0deg, transparent, rgba(232, 197, 71, 0.3), transparent);
+  animation: rotate-glow 4s linear infinite;
+}
+
+@keyframes rotate-glow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   PREMIUM CARDS
+   ============================================ */
+.premium-dashboard .premium-card {
+  position: relative;
+  background: linear-gradient(135deg, var(--glass-2) 0%, var(--glass-1) 100%);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.premium-dashboard .premium-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.premium-dashboard .premium-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--glass-border-bright);
+  box-shadow: var(--shadow-card);
+}
+
+/* Card with accent glow */
+.premium-dashboard .premium-card.glow-gold:hover {
+  box-shadow: var(--shadow-glow-gold), var(--shadow-card);
+  border-color: rgba(232, 197, 71, 0.3);
+}
+
+.premium-dashboard .premium-card.glow-emerald:hover {
+  box-shadow: var(--shadow-glow-emerald), var(--shadow-card);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* ============================================
+   METRIC CARDS
+   ============================================ */
+.premium-dashboard .metric-card {
+  padding: 24px;
+  position: relative;
+}
+
+.premium-dashboard .metric-card .metric-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.premium-dashboard .metric-card .metric-icon::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  filter: blur(12px);
+  opacity: 0.5;
+}
+
+.premium-dashboard .metric-card .metric-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  background: linear-gradient(135deg, #fff 30%, rgba(255, 255, 255, 0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.premium-dashboard .metric-card .metric-value.accent-gold {
+  background: linear-gradient(135deg, var(--premium-gold-bright) 0%, var(--premium-gold) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.premium-dashboard .metric-card .metric-value.accent-emerald {
+  background: linear-gradient(135deg, var(--premium-emerald-bright) 0%, var(--premium-emerald) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.premium-dashboard .metric-card .metric-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+
+/* ============================================
+   MILESTONE FLOW
+   ============================================ */
+.premium-dashboard .milestone-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 32px;
+  position: relative;
+}
+
+.premium-dashboard .milestone-node {
+  flex: 1;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.premium-dashboard .milestone-node .node-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.premium-dashboard .milestone-node .node-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+}
+
+.premium-dashboard .milestone-connector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+}
+
+.premium-dashboard .milestone-connector .connector-line {
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, currentColor 0%, transparent 100%);
+  opacity: 0.3;
+}
+
+.premium-dashboard .milestone-connector .connector-rate {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: currentColor;
+  color: rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+}
+
+/* ============================================
+   SUBSCRIPTION STATUS CARDS
+   ============================================ */
+.premium-dashboard .status-card {
+  padding: 20px;
+  border-radius: 14px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.premium-dashboard .status-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: currentColor;
+  opacity: 0.8;
+}
+
+.premium-dashboard .status-card .status-value {
+  font-family: 'Outfit', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.premium-dashboard .status-card .status-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+  margin-top: 4px;
+}
+
+/* ============================================
+   FUNNEL CHART ENHANCEMENT
+   ============================================ */
+.premium-dashboard .funnel-step {
+  position: relative;
+  padding: 16px 0;
+}
+
+.premium-dashboard .funnel-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--glass-2);
+  overflow: hidden;
+  position: relative;
+}
+
+.premium-dashboard .funnel-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  position: relative;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-dashboard .funnel-bar-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.premium-dashboard .funnel-dropoff {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+  opacity: 0.6;
+}
+
+.premium-dashboard .funnel-dropoff-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* ============================================
+   DATA TABLE
+   ============================================ */
+.premium-dashboard .data-table {
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--glass-1);
+  border: 1px solid var(--glass-border);
+}
+
+.premium-dashboard .data-table th {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 16px 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.premium-dashboard .data-table td {
+  padding: 16px 20px;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--glass-border);
+  transition: background 0.2s ease;
+}
+
+.premium-dashboard .data-table tr:hover td {
+  background: var(--glass-2);
+}
+
+.premium-dashboard .data-table .mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+}
+
+/* ============================================
+   SECTION HEADERS
+   ============================================ */
+.premium-dashboard .section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.premium-dashboard .section-header .section-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.premium-dashboard .section-header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+
+.premium-dashboard .section-header .section-subtitle {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-left: 8px;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+.premium-dashboard .animate-in {
+  animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.premium-dashboard .stagger-1 { animation-delay: 0.1s; }
+.premium-dashboard .stagger-2 { animation-delay: 0.15s; }
+.premium-dashboard .stagger-3 { animation-delay: 0.2s; }
+.premium-dashboard .stagger-4 { animation-delay: 0.25s; }
+.premium-dashboard .stagger-5 { animation-delay: 0.3s; }
+.premium-dashboard .stagger-6 { animation-delay: 0.35s; }
+
+/* Number counter animation */
+.premium-dashboard .counter-animate {
+  animation: countUp 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Pulse animation for live data */
+.premium-dashboard .pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--premium-emerald);
+  position: relative;
+}
+
+.premium-dashboard .pulse-dot::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: var(--premium-emerald);
+  opacity: 0.4;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.5); opacity: 0; }
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  .premium-dashboard .metric-card .metric-value {
+    font-size: 1.75rem;
+  }
+
+  .premium-dashboard .milestone-flow {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .premium-dashboard .milestone-connector {
+    transform: rotate(90deg);
+  }
+
+  .premium-dashboard .milestone-connector .connector-line {
+    width: 20px;
+  }
+}

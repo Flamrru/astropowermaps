@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { subDays } from "date-fns";
 import DateRangeSelector from "@/components/admin/DateRangeSelector";
 import TrendChart from "@/components/admin/TrendChart";
+import "./premium-dashboard.css";
 
 interface UserProfile {
   user_id: string;
@@ -285,9 +286,16 @@ export default function AdminDashboardPage() {
   const fetchLeads = useCallback(async (showLoading = true, range: DateRange = dateRange) => {
     if (showLoading) setIsLoading(true);
     try {
-      // Build URL with date range params
-      const fromStr = range.from.toISOString().split("T")[0];
-      const toStr = range.to.toISOString().split("T")[0];
+      // Build URL with date range params (use local date, not UTC)
+      // toISOString() converts to UTC which shifts the date in non-UTC timezones
+      const formatLocalDate = (d: Date) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+      const fromStr = formatLocalDate(range.from);
+      const toStr = formatLocalDate(range.to);
       const url = `/api/admin/leads?from=${fromStr}&to=${toStr}`;
 
       const res = await fetch(url);
@@ -567,27 +575,33 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="cosmic-bg min-h-screen">
+    <div className="premium-dashboard cosmic-bg min-h-screen">
       <div className="stars-layer" />
 
+      {/* Premium animated background */}
+      <div className="constellation-bg">
+        {/* Particles will be rendered via CSS */}
+      </div>
+
       {/* Header */}
-      <header className="relative z-10 border-b border-white/10 bg-black/20 backdrop-blur-xl">
+      <header className="premium-header relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--gold-bright)]/20 to-[var(--gold-dark)]/20 border border-[var(--gold-main)]/30 flex items-center justify-center">
-                <svg className="w-4 h-4 text-[var(--gold-main)]" fill="currentColor" viewBox="0 0 24 24">
+              <div className="logo-mark">
+                <svg className="w-5 h-5 text-[var(--premium-gold)] relative z-10" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
                 </svg>
               </div>
-              <span className="font-semibold text-white">Power Map Admin</span>
+              <span className="font-semibold text-white tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>Power Map Admin</span>
             </div>
 
             {/* Actions */}
             <div className="flex items-center gap-3">
               {lastUpdated && (
-                <span className="text-xs text-[var(--text-faint)] hidden sm:block">
+                <span className="flex items-center gap-2 text-xs text-[var(--text-faint)] hidden sm:block">
+                  <span className="pulse-dot" />
                   Updated {formatTimeAgo(lastUpdated)}
                 </span>
               )}
@@ -626,13 +640,15 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Revenue Cards */}
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Revenue
-          </h2>
+        <div className="mb-8 animate-in stagger-1">
+          <div className="section-header">
+            <div className="section-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--premium-emerald)' }}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2>Revenue</h2>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <RevenueCard
               label="Total Revenue"
@@ -682,14 +698,16 @@ export default function AdminDashboardPage() {
         )}
 
         {/* Trends Section - Leads & Revenue over time */}
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <svg className="w-5 h-5 text-[var(--gold-main)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-            Trends
-            <span className="text-xs font-normal text-[var(--text-faint)] ml-2">vs previous period</span>
-          </h2>
+        <div className="mb-8 animate-in stagger-2">
+          <div className="section-header">
+            <div className="section-icon" style={{ background: 'rgba(232, 197, 71, 0.15)', color: 'var(--premium-gold)' }}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+            <h2>Trends</h2>
+            <span className="section-subtitle">vs previous period</span>
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <TrendChart
               title="Leads Over Time"
@@ -708,91 +726,83 @@ export default function AdminDashboardPage() {
 
         {/* Key Milestones - Conversion Flow */}
         {milestones.quizStart > 0 && (
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-              </svg>
-              Key Milestones
-            </h2>
-            <div
-              className="rounded-xl p-6"
-              style={{
-                background: "rgba(255, 255, 255, 0.03)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
-              }}
-            >
+          <div className="mb-8 animate-in stagger-3">
+            <div className="section-header">
+              <div className="section-icon" style={{ background: 'rgba(168, 85, 247, 0.15)', color: 'var(--premium-amethyst)' }}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+              </div>
+              <h2>Key Milestones</h2>
+            </div>
+            <div className="premium-card glow-gold">
               {/* Milestone Flow Visualization */}
-              <div className="flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-2">
+              <div className="milestone-flow">
                 {/* Quiz Start */}
-                <div className="flex-1 text-center">
-                  <div className="text-3xl font-bold text-white">{milestones.quizStart.toLocaleString()}</div>
-                  <div className="text-sm text-[var(--text-muted)] mt-1">Quiz Start</div>
+                <div className="milestone-node">
+                  <div className="node-value" style={{ color: 'white' }}>{milestones.quizStart.toLocaleString()}</div>
+                  <div className="node-label">Quiz Start</div>
                 </div>
 
                 {/* Arrow with conversion rate */}
-                <div className="flex items-center gap-2 text-[var(--gold-main)]">
-                  <div className="hidden lg:block w-12 h-px bg-gradient-to-r from-white/20 to-[var(--gold-main)]" />
-                  <div className="text-sm font-medium px-2 py-1 rounded-lg bg-[var(--gold-main)]/10">
-                    {milestones.quizToLead.toFixed(1)}%
-                  </div>
-                  <div className="hidden lg:block w-12 h-px bg-gradient-to-r from-[var(--gold-main)] to-white/20" />
+                <div className="milestone-connector" style={{ color: 'var(--premium-gold)' }}>
+                  <div className="connector-line" />
+                  <div className="connector-rate">{milestones.quizToLead.toFixed(1)}%</div>
+                  <div className="connector-line" style={{ background: 'linear-gradient(90deg, transparent 0%, currentColor 100%)' }} />
                 </div>
 
                 {/* Lead */}
-                <div className="flex-1 text-center">
-                  <div className="text-3xl font-bold text-[var(--gold-bright)]">{milestones.lead.toLocaleString()}</div>
-                  <div className="text-sm text-[var(--text-muted)] mt-1">Leads</div>
+                <div className="milestone-node">
+                  <div className="node-value" style={{ color: 'var(--premium-gold-bright)' }}>{milestones.lead.toLocaleString()}</div>
+                  <div className="node-label">Leads</div>
                 </div>
 
                 {/* Arrow with conversion rate */}
-                <div className="flex items-center gap-2 text-blue-400">
-                  <div className="hidden lg:block w-12 h-px bg-gradient-to-r from-white/20 to-blue-400" />
-                  <div className="text-sm font-medium px-2 py-1 rounded-lg bg-blue-500/10">
-                    {milestones.leadToTrial.toFixed(1)}%
-                  </div>
-                  <div className="hidden lg:block w-12 h-px bg-gradient-to-r from-blue-400 to-white/20" />
+                <div className="milestone-connector" style={{ color: 'var(--premium-sapphire)' }}>
+                  <div className="connector-line" />
+                  <div className="connector-rate">{milestones.leadToTrial.toFixed(1)}%</div>
+                  <div className="connector-line" style={{ background: 'linear-gradient(90deg, transparent 0%, currentColor 100%)' }} />
                 </div>
 
                 {/* Trial */}
-                <div className="flex-1 text-center">
-                  <div className="text-3xl font-bold text-blue-400">{milestones.trial.toLocaleString()}</div>
-                  <div className="text-sm text-[var(--text-muted)] mt-1">Trials</div>
+                <div className="milestone-node">
+                  <div className="node-value" style={{ color: 'var(--premium-sapphire-bright)' }}>{milestones.trial.toLocaleString()}</div>
+                  <div className="node-label">Trials</div>
                 </div>
 
                 {/* Arrow with conversion rate */}
-                <div className="flex items-center gap-2 text-green-400">
-                  <div className="hidden lg:block w-12 h-px bg-gradient-to-r from-white/20 to-green-400" />
-                  <div className="text-sm font-medium px-2 py-1 rounded-lg bg-green-500/10">
-                    {milestones.trialToPaid.toFixed(1)}%
-                  </div>
-                  <div className="hidden lg:block w-12 h-px bg-gradient-to-r from-green-400 to-white/20" />
+                <div className="milestone-connector" style={{ color: 'var(--premium-emerald)' }}>
+                  <div className="connector-line" />
+                  <div className="connector-rate">{milestones.trialToPaid.toFixed(1)}%</div>
+                  <div className="connector-line" style={{ background: 'linear-gradient(90deg, transparent 0%, currentColor 100%)' }} />
                 </div>
 
                 {/* Paid */}
-                <div className="flex-1 text-center">
-                  <div className="text-3xl font-bold text-green-400">{milestones.paid.toLocaleString()}</div>
-                  <div className="text-sm text-[var(--text-muted)] mt-1">Paid</div>
+                <div className="milestone-node">
+                  <div className="node-value" style={{ color: 'var(--premium-emerald-bright)' }}>{milestones.paid.toLocaleString()}</div>
+                  <div className="node-label">Paid</div>
                 </div>
               </div>
 
               {/* Overall conversion */}
               <div className="mt-6 pt-4 border-t border-white/10 text-center">
-                <span className="text-sm text-[var(--text-muted)]">Overall conversion (Quiz → Paid): </span>
-                <span className="text-sm font-semibold text-green-400">{milestones.overallConversion.toFixed(2)}%</span>
+                <span className="text-sm text-white/50">Overall conversion (Quiz → Paid): </span>
+                <span className="text-sm font-semibold" style={{ color: 'var(--premium-emerald-bright)' }}>{milestones.overallConversion.toFixed(2)}%</span>
               </div>
             </div>
           </div>
         )}
 
         {/* Subscription Status */}
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-            </svg>
-            Subscription Status
-          </h2>
+        <div className="mb-8 animate-in stagger-4">
+          <div className="section-header">
+            <div className="section-icon" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--premium-sapphire)' }}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+              </svg>
+            </div>
+            <h2>Subscription Status</h2>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             <SubscriptionStatCard
               label="Trialing"
@@ -980,7 +990,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Funnel Analytics */}
-        <div className="mb-8">
+        <div className="mb-8 animate-in stagger-5">
           <FunnelChart data={funnel} enhancedData={enhancedFunnel} warning={funnelWarning} />
         </div>
 
@@ -1094,17 +1104,24 @@ export default function AdminDashboardPage() {
         )}
 
         {/* Search and table */}
-        <div className="glass-card rounded-2xl overflow-hidden">
+        <div className="data-table animate-in stagger-6">
           {/* Table header */}
           <div className="p-4 sm:p-6 border-b border-white/10">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-semibold text-white">Lead Database</h2>
-                  <p className="text-sm text-[var(--text-muted)]">
-                    {filteredLeads.length} {filteredLeads.length === 1 ? "lead" : "leads"}
-                    {statusFilter !== "all" && ` (${statusFilter})`}
-                  </p>
+                <div className="section-header" style={{ marginBottom: 0 }}>
+                  <div className="section-icon" style={{ background: 'rgba(255, 255, 255, 0.08)', color: 'rgba(255, 255, 255, 0.6)' }}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2>Lead Database</h2>
+                    <span className="section-subtitle" style={{ marginLeft: 0 }}>
+                      {filteredLeads.length} {filteredLeads.length === 1 ? "lead" : "leads"}
+                      {statusFilter !== "all" && ` (${statusFilter})`}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Search */}
@@ -1663,7 +1680,7 @@ function BarChart({
   );
 }
 
-// Funnel chart component
+// Funnel chart component - Premium styled
 function FunnelChart({ data, enhancedData, warning }: { data: FunnelData; enhancedData?: EnhancedFunnelStep[]; warning?: string | null }) {
   // Default step config for icons and colors
   const stepConfig: Record<string, { icon: string; color: string }> = {
@@ -1700,20 +1717,23 @@ function FunnelChart({ data, enhancedData, warning }: { data: FunnelData; enhanc
   const maxCount = Math.max(...steps.map((s) => s.count), 1);
 
   return (
-    <div className="glass-card rounded-2xl p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="premium-card" style={{ padding: '24px' }}>
+      <div className="section-header" style={{ marginBottom: '16px' }}>
+        <div className="section-icon" style={{ background: 'rgba(232, 197, 71, 0.15)', color: 'var(--premium-gold)' }}>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          </svg>
+        </div>
         <div>
-          <h3 className="text-lg font-semibold text-white">Quiz Funnel</h3>
-          <p className="text-xs text-[var(--text-faint)]">
-            Unique sessions at each step (deduplicated)
-          </p>
+          <h2 style={{ marginBottom: '2px' }}>Quiz Funnel</h2>
+          <span className="section-subtitle" style={{ marginLeft: 0, fontSize: '0.7rem' }}>Unique sessions at each step (deduplicated)</span>
         </div>
       </div>
 
       {/* Warning for pre-tracking dates */}
       {warning && (
-        <div className="mb-4 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-          <p className="text-xs text-amber-400 flex items-center gap-2">
+        <div className="mb-4 px-3 py-2 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+          <p className="text-xs flex items-center gap-2" style={{ color: 'var(--premium-amber)' }}>
             <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
@@ -1728,18 +1748,13 @@ function FunnelChart({ data, enhancedData, warning }: { data: FunnelData; enhanc
           const showDropOff = idx > 0 && step.dropPercent > 0;
 
           return (
-            <div key={step.key}>
+            <div key={step.key} className="funnel-step">
               {/* Drop-off indicator between steps */}
               {showDropOff && (
-                <div className="flex items-center justify-center py-1">
-                  <div className="flex items-center gap-2 text-red-400/70">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                    </svg>
-                    <span className="text-xs font-medium">
-                      -{step.dropPercent.toFixed(0)}% dropped
-                    </span>
-                  </div>
+                <div className="funnel-dropoff">
+                  <span className="funnel-dropoff-badge">
+                    -{step.dropPercent.toFixed(0)}% dropped
+                  </span>
                 </div>
               )}
 
@@ -1748,31 +1763,31 @@ function FunnelChart({ data, enhancedData, warning }: { data: FunnelData; enhanc
                 <div className="flex justify-between items-center mb-1.5">
                   <div className="flex items-center gap-2">
                     <span className="text-base">{step.icon}</span>
-                    <span className="text-sm text-[var(--text-soft)]">{step.label}</span>
+                    <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>{step.label}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-[var(--text-faint)]">
+                    <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)', fontFamily: "'JetBrains Mono', monospace" }}>
                       ({step.percentOfTotal.toFixed(1)}%)
                     </span>
-                    <span className="text-sm font-semibold text-white tabular-nums min-w-[60px] text-right">
+                    <span className="text-sm font-semibold text-white tabular-nums min-w-[60px] text-right" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       {step.count.toLocaleString()}
                     </span>
                   </div>
                 </div>
-                {/* Funnel bar */}
-                <div className="h-4 bg-white/5 rounded-full overflow-hidden">
+                {/* Funnel bar with shimmer */}
+                <div className="funnel-bar">
                   <div
-                    className="h-full rounded-full transition-all duration-700 ease-out"
+                    className="funnel-bar-fill"
                     style={{
                       width: `${barWidth}%`,
                       background:
                         step.color === "green"
-                          ? "linear-gradient(90deg, #22c55e, #4ade80)"
-                          : "linear-gradient(90deg, var(--gold-dark), var(--gold-main))",
+                          ? "linear-gradient(90deg, var(--premium-emerald), var(--premium-emerald-bright))"
+                          : "linear-gradient(90deg, var(--premium-gold-dim), var(--premium-gold))",
                       boxShadow:
                         step.color === "green"
-                          ? "0 0 8px rgba(34, 197, 94, 0.4)"
-                          : "0 0 8px rgba(201, 162, 39, 0.3)",
+                          ? "0 0 12px rgba(16, 185, 129, 0.4)"
+                          : "0 0 12px rgba(232, 197, 71, 0.3)",
                     }}
                   />
                 </div>
@@ -1784,20 +1799,20 @@ function FunnelChart({ data, enhancedData, warning }: { data: FunnelData; enhanc
 
       {/* Conversion rates summary */}
       {data.quiz_start > 0 && (
-        <div className="mt-6 pt-4 border-t border-white/10 space-y-3">
+        <div className="mt-6 pt-4 border-t space-y-3" style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}>
           <div className="flex justify-between items-center">
-            <span className="text-sm text-[var(--text-muted)]">Quiz → Lead</span>
-            <span className="text-base font-semibold text-[var(--gold-bright)]">
+            <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Quiz → Lead</span>
+            <span className="text-base font-semibold" style={{ color: 'var(--premium-gold-bright)', fontFamily: "'JetBrains Mono', monospace" }}>
               {((data.lead / data.quiz_start) * 100).toFixed(1)}%
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-sm text-[var(--text-muted)]">Lead → Purchase</span>
-            <span className="text-base font-semibold text-green-400">
+            <span className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Lead → Purchase</span>
+            <span className="text-base font-semibold" style={{ color: 'var(--premium-emerald-bright)', fontFamily: "'JetBrains Mono', monospace" }}>
               {data.lead > 0 ? ((data.purchase / data.lead) * 100).toFixed(1) : "0.0"}%
             </span>
           </div>
-          <p className="text-xs text-[var(--text-faint)]">
+          <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.35)' }}>
             {data.quiz_start} started → {data.lead} leads → {data.purchase} purchases
           </p>
         </div>
@@ -1806,7 +1821,7 @@ function FunnelChart({ data, enhancedData, warning }: { data: FunnelData; enhanc
   );
 }
 
-// Revenue card component (green theme)
+// Revenue card component (green theme) - Premium styled
 function RevenueCard({
   label,
   value,
@@ -1820,27 +1835,25 @@ function RevenueCard({
 }) {
   return (
     <div
-      className={`glass-card rounded-xl p-5 ${
-        accent ? "border-green-500/30" : ""
-      }`}
+      className={`premium-card metric-card ${accent ? "glow-emerald" : ""}`}
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-[var(--text-muted)] mb-1">{label}</p>
+          <p className="metric-label">{label}</p>
           <p
-            className={`text-3xl font-bold ${
-              accent ? "text-green-400" : "text-white"
-            }`}
+            className={`metric-value ${accent ? "accent-emerald" : ""}`}
           >
             {value}
           </p>
         </div>
         <div
-          className={`p-2.5 rounded-lg ${
-            accent
-              ? "bg-green-500/10 text-green-400"
-              : "bg-white/5 text-[var(--text-muted)]"
-          }`}
+          className="metric-icon"
+          style={{
+            background: accent
+              ? "linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%)"
+              : "linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%)",
+            color: accent ? "var(--premium-emerald)" : "rgba(255, 255, 255, 0.5)",
+          }}
         >
           {icon}
         </div>
@@ -1935,7 +1948,7 @@ function RevenueBySourceTable({ data }: { data: RevenueBySource[] }) {
   );
 }
 
-// Subscription stat card component
+// Subscription stat card component - Premium styled
 function SubscriptionStatCard({
   label,
   value,
@@ -1945,19 +1958,35 @@ function SubscriptionStatCard({
   value: number;
   color: "blue" | "green" | "red" | "purple" | "yellow" | "gray";
 }) {
-  const colorStyles = {
-    blue: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    green: "bg-green-500/20 text-green-400 border-green-500/30",
-    red: "bg-red-500/20 text-red-400 border-red-500/30",
-    purple: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-    yellow: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-    gray: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+  const colorMap = {
+    blue: "var(--premium-sapphire)",
+    green: "var(--premium-emerald)",
+    red: "var(--premium-ruby)",
+    purple: "var(--premium-amethyst)",
+    yellow: "var(--premium-amber)",
+    gray: "rgba(255, 255, 255, 0.4)",
+  };
+
+  const bgColorMap = {
+    blue: "rgba(59, 130, 246, 0.15)",
+    green: "rgba(16, 185, 129, 0.15)",
+    red: "rgba(239, 68, 68, 0.15)",
+    purple: "rgba(168, 85, 247, 0.15)",
+    yellow: "rgba(245, 158, 11, 0.15)",
+    gray: "rgba(255, 255, 255, 0.05)",
   };
 
   return (
-    <div className={`p-4 rounded-xl border ${colorStyles[color]}`}>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-xs opacity-80 mt-1">{label}</div>
+    <div
+      className="status-card"
+      style={{
+        background: bgColorMap[color],
+        borderColor: `${colorMap[color]}33`,
+        color: colorMap[color],
+      }}
+    >
+      <div className="status-value" style={{ color: colorMap[color] }}>{value}</div>
+      <div className="status-label">{label}</div>
     </div>
   );
 }
