@@ -160,6 +160,48 @@ Actions: `NEXT_STEP`, `PREV_STEP`, `SET_ANSWER_Q1`, `TOGGLE_ANSWER_Q2`, `SET_EMA
 - **Limitation**: Simplified Pluto calculation (no precise ephemeris data)
 - **When to reconsider**: If adding asteroids (Chiron, Lilith) or pre-3000 BCE charts
 
+### ⚠️ CRITICAL: astronomia Library Unit Conventions (Bug Fixed Jan 2026)
+
+**DO NOT CHANGE the sidereal time calculations without understanding this!**
+
+We discovered and fixed a critical bug where Rising signs were 2+ zodiac signs off
+(e.g., showing Leo instead of Libra). The root cause: misunderstanding what units
+the `astronomia` library returns.
+
+**The Bug:**
+```typescript
+// WRONG - treats return value as radians
+const gmst = sidereal.mean(jd) * (180 / Math.PI);
+
+// CORRECT - sidereal.mean() returns SECONDS, not radians!
+const gmstSeconds = sidereal.mean(jd);
+const gmst = (gmstSeconds / 86400) * 360;  // Convert seconds to degrees
+```
+
+**Why This Matters:**
+- `sidereal.mean(jd)` returns Greenwich Mean Sidereal Time in **seconds** (~21,000 for a typical date)
+- Treating 21,000 as radians and multiplying by 57.3 gives 1,200,000° (completely wrong)
+- This shifted the Local Sidereal Time by ~270°, causing Rising signs to be way off
+
+**Files Fixed (Jan 7, 2026):**
+| File | Function | What Was Wrong |
+|------|----------|----------------|
+| `zodiac.ts` | `calculateRisingSign()` | GMST treated as radians |
+| `houses.ts` | `calculateLST()` | GMST treated as radians |
+| `transit-calculations.ts` | `dateToJulianDay()` | Used local time instead of UTC |
+
+**Verification:**
+All calculations now match astro.com within 0.5° (verified with May 5, 1988, 5:00 PM, Bratislava birth data).
+
+**Rules for Future Development:**
+1. **NEVER assume units** — always check astronomia docs or test against astro.com
+2. **Common astronomia return types:**
+   - `sidereal.mean(jd)` → returns **seconds**
+   - `nutation.meanObliquity(jd)` → returns **radians**
+   - Planet positions (VSOP87) → return **radians**
+3. **Always use UTC** for transit calculations (use `getUTCHours()`, not `getHours()`)
+4. **Test changes** against astro.com with known birth data before deploying
+
 ## Operational Notes
 - **Deploy**: `vercel --prod` or push to main
 - **Logs**: Vercel dashboard or `vercel logs`
