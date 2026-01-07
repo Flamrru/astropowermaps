@@ -105,10 +105,11 @@ Before going live, complete ALL of these steps:
 - [ ] Verify Stella chat works with real calculations
 - [ ] Verify map renders correctly
 
-**👥 Grandfathered Customers:**
-- [ ] Identify existing one-time purchase customers from `astro_leads`
-- [ ] Add them to `user_profiles` with `subscription_status = 'grandfathered'`
-- [ ] They get free access forever (no subscription needed)
+**👥 Grandfathered Customers (✅ DONE 2026-01-07):**
+- [x] Identified 35 existing one-time purchase customers from `astro_leads`
+- [x] Sent invite emails to all 35 customers
+- [x] When they click link and set password → `subscription_status = 'grandfathered'`
+- [x] They get free access forever (no subscription needed)
 
 **🚀 LAUNCH STEPS (in order):**
 1. [ ] Create PR: `Stella+Subscriptions` → `main`
