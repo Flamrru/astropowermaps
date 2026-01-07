@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-01-07
+### Stella+ Launch
+- **Subscription System** - Trial + monthly subscription model
+  - Mixed cart checkout: one-time trial fee ($2.99/$5.99/$9.99) + recurring ($19.99/mo)
+  - Stripe subscription mode with `trial_period_days`
+  - Customer reuse prevents duplicate Stripe customers on re-purchase
+  - Automatic subscription creation (no webhook dependency)
+- **Grandfathered Customers** - 35 early supporters get free lifetime access
+  - Invite emails sent with setup link
+  - `subscription_status = 'grandfathered'` on account creation
+- **Email Improvements**
+  - Changed sender from `noreply@` to `Stella <stella@astropowermap.com>`
+  - Added `replyTo: support@astropowermap.com`
+  - Fixed invisible buttons in Outlook (solid color fallback)
+  - Improved footer with support contact box
+- **Stripe Customer ID Fix**
+  - Added Stripe API fallback lookup when database doesn't have customer ID
+  - Ensures "Manage billing" portal always works
+- **Auth System** - Production mode enabled
+  - `BYPASS_AUTH = false` - real authentication required
+  - Setup page with password requirements (8+ chars, uppercase, lowercase, number)
+
 ## 2025-12-28
 ### Added
 - **Stripe Payment Integration** - $27 one-time payment for 2026 Power Map
