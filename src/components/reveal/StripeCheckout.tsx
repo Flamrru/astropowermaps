@@ -120,8 +120,11 @@ export default function StripeCheckout({
 
   // Handle checkout completion - show password form
   const handleComplete = useCallback(() => {
+    console.log("[StripeCheckout] handleComplete called - payment successful!");
+
     // Retrieve event ID for deduplication with CAPI (stored in fetchClientSecret)
     const metaEventId = localStorage.getItem("meta_purchase_event_id");
+    console.log("[StripeCheckout] metaEventId from localStorage:", metaEventId);
 
     // Track Purchase event client-side with eventID for deduplication
     trackMetaEvent("Purchase", {

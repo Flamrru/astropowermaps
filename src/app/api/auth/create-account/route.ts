@@ -1,5 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import Stripe from "stripe";
+import { getStripeSecretKey } from "@/lib/stripe-config";
+
+// Get Stripe customer by email (fallback when purchase record doesn't have it)
+async function getStripeCustomerByEmail(email: string): Promise<string | null> {
+  try {
+    const key = getStripeSecretKey();
+    if (!key) return null;
+
+    const stripe = new Stripe(key);
+    const customers = await stripe.customers.list({ email, limit: 1 });
+
+    if (customers.data.length > 0) {
+      console.log(`Found Stripe customer for ${email.substring(0, 3)}***: ${customers.data[0].id}`);
+      return customers.data[0].id;
+    }
+  } catch (err) {
+    console.error("Failed to look up Stripe customer:", err);
+  }
+  return null;
+}
 
 /**
  * Create Account API
@@ -61,7 +82,9 @@ export async function POST(request: NextRequest) {
       const subscriptionStatus = isGrandfathered ? "grandfathered" : "active";
 
       if (existingProfile) {
-        // Update existing profile
+        // Update existing profile - also ensure stripe_customer_id is set
+        const stripeCustomerId = await getStripeCustomerByEmail(email);
+
         const { error: profileError } = await supabaseAdmin
           .from("user_profiles")
           .update({
@@ -69,6 +92,8 @@ export async function POST(request: NextRequest) {
             account_status: "active",
             subscription_status: subscriptionStatus,
             setup_completed_at: new Date().toISOString(),
+            // Always update stripe_customer_id from Stripe lookup
+            ...(stripeCustomerId && { stripe_customer_id: stripeCustomerId }),
           })
           .eq("user_id", existingUser.id);
 
@@ -98,13 +123,16 @@ export async function POST(request: NextRequest) {
         const { data: lead } = await leadQuery.single();
 
         if (lead && lead.birth_date) {
-          // Try to get stripe_customer_id from purchase record
+          // Try to get stripe_customer_id from purchase record, fallback to Stripe API
           const { data: purchase } = await supabaseAdmin
             .from("astro_purchases")
             .select("stripe_customer_id")
             .eq("session_id", lead.session_id)
             .eq("status", "completed")
             .single();
+
+          // Fallback to Stripe API lookup if purchase doesn't have customer_id
+          const stripeCustomerId = purchase?.stripe_customer_id || await getStripeCustomerByEmail(email);
 
           const { error: insertError } = await supabaseAdmin.from("user_profiles").insert({
             user_id: existingUser.id,
@@ -119,7 +147,7 @@ export async function POST(request: NextRequest) {
             birth_lat: lead.birth_location_lat,
             birth_lng: lead.birth_location_lng,
             birth_timezone: lead.birth_location_timezone,
-            stripe_customer_id: purchase?.stripe_customer_id || null,
+            stripe_customer_id: stripeCustomerId,
           });
 
           if (insertError) {
@@ -181,13 +209,16 @@ export async function POST(request: NextRequest) {
       if (lead && lead.birth_date) {
         const subscriptionStatus = isGrandfathered ? "grandfathered" : "active";
 
-        // Try to get stripe_customer_id from purchase record
+        // Try to get stripe_customer_id from purchase record, fallback to Stripe API
         const { data: purchase } = await supabaseAdmin
           .from("astro_purchases")
           .select("stripe_customer_id")
           .eq("session_id", lead.session_id)
           .eq("status", "completed")
           .single();
+
+        // Fallback to Stripe API lookup if purchase doesn't have customer_id
+        const stripeCustomerId = purchase?.stripe_customer_id || await getStripeCustomerByEmail(email);
 
         // Create profile with birth data and display name
         const { error: insertError } = await supabaseAdmin.from("user_profiles").insert({
@@ -203,7 +234,7 @@ export async function POST(request: NextRequest) {
           birth_lat: lead.birth_location_lat,
           birth_lng: lead.birth_location_lng,
           birth_timezone: lead.birth_location_timezone,
-          stripe_customer_id: purchase?.stripe_customer_id || null,
+          stripe_customer_id: stripeCustomerId,
         });
 
         if (insertError) {

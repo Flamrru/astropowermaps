@@ -56,15 +56,22 @@ export function trackMetaEvent(
   eventName: string,
   params?: Record<string, unknown>
 ) {
+  console.log(`[Meta Pixel] Attempting to track: ${eventName}`, params);
+
   if (typeof window !== "undefined" && window.fbq) {
     // Extract eventID if present (for deduplication with server-side CAPI)
     const { eventID, ...eventParams } = params || {};
 
     if (eventID) {
       // Use 4-argument form for deduplication with CAPI
+      console.log(`[Meta Pixel] Firing ${eventName} with eventID: ${eventID}`);
       window.fbq("track", eventName, eventParams, { eventID: eventID as string });
     } else {
+      console.log(`[Meta Pixel] Firing ${eventName} (no eventID)`);
       window.fbq("track", eventName, eventParams);
     }
+    console.log(`[Meta Pixel] ✓ ${eventName} sent successfully`);
+  } else {
+    console.warn(`[Meta Pixel] ✗ fbq not available - event not tracked: ${eventName}`);
   }
 }

@@ -250,7 +250,9 @@ Race condition between webhook and `/api/auth/create-account`:
 The `/api/auth/create-account` route was inserting profiles without fetching `stripe_customer_id` from the purchase record.
 
 ### Solution
-Updated `create-account/route.ts` to fetch `stripe_customer_id` from `astro_purchases` when creating profiles:
+Updated `create-account/route.ts` to:
+1. Fetch `stripe_customer_id` from `astro_purchases` when creating profiles
+2. **Fallback to Stripe API lookup** if purchase record doesn't have it (common because webhook update often fails)
 
 ```typescript
 // Try to get stripe_customer_id from purchase record
@@ -261,11 +263,23 @@ const { data: purchase } = await supabaseAdmin
   .eq("status", "completed")
   .single();
 
+// Fallback to Stripe API lookup (purchase often doesn't have it)
+const stripeCustomerId = purchase?.stripe_customer_id || await getStripeCustomerByEmail(email);
+
 const { error: insertError } = await supabaseAdmin.from("user_profiles").insert({
   user_id: existingUser.id,
   // ... other fields
-  stripe_customer_id: purchase?.stripe_customer_id || null,
+  stripe_customer_id: stripeCustomerId,
 });
+```
+
+The `getStripeCustomerByEmail` helper function looks up the customer directly from Stripe:
+```typescript
+async function getStripeCustomerByEmail(email: string): Promise<string | null> {
+  const stripe = new Stripe(getStripeSecretKey());
+  const customers = await stripe.customers.list({ email, limit: 1 });
+  return customers.data[0]?.id || null;
+}
 ```
 
 ### Manual Fix for Existing Users
