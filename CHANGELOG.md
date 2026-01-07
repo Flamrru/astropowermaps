@@ -1,6 +1,16 @@
 # Changelog
 
 ## 2026-01-07
+### Critical Bug Fix: Astronomical Calculations
+- **Rising Sign Fix** - Was showing wrong sign (e.g., Leo instead of Libra)
+  - Root cause: `sidereal.mean()` returns seconds, code treated it as radians
+  - Fixed in `zodiac.ts` and `houses.ts`
+  - All calculations now verified against astro.com (within 0.5° accuracy)
+- **House Cusps Fix** - Same bug affected MC, IC, and all house positions
+- **Transit Timezone Fix** - Changed `dateToJulianDay()` to use UTC methods
+  - Ensures consistent power day calculations regardless of server timezone
+- **Documentation** - Added warning in ARCHITECTURE.md about astronomia library units
+
 ### Stella+ Launch
 - **Subscription System** - Trial + monthly subscription model
   - Mixed cart checkout: one-time trial fee ($2.99/$5.99/$9.99) + recurring ($19.99/mo)
