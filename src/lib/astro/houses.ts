@@ -88,9 +88,11 @@ function getObliquity(jd: number): number {
  * @returns LST in degrees (0-360)
  */
 function calculateLST(jd: number, longitude: number): number {
-  // Get Greenwich Mean Sidereal Time (returns radians)
-  const gmstRad = sidereal.mean(jd);
-  const gmstDeg = gmstRad * RAD_TO_DEG;
+  // Get Greenwich Mean Sidereal Time
+  // NOTE: sidereal.mean() returns GMST in seconds, not radians!
+  // Convert seconds to degrees: (seconds / 86400) * 360
+  const gmstSeconds = sidereal.mean(jd);
+  const gmstDeg = (gmstSeconds / 86400) * 360;
 
   // Local Sidereal Time = GMST + geographic longitude
   return normalizeAngle(gmstDeg + longitude);
