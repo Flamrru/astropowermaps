@@ -46,7 +46,7 @@ export default function CTABlock({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="flex items-center justify-center gap-4 mt-4 text-white/40 text-[12px]"
+          className="flex items-center justify-center gap-4 mt-4 text-white/70 text-[12px]"
         >
           <span className="flex items-center gap-1.5">
             <Shield className="w-3.5 h-3.5" />

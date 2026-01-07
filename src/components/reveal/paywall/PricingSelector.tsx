@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Sparkles, ShieldCheck } from "lucide-react";
 import { type PlanId } from "@/lib/subscription-plans";
 
 interface Plan {
@@ -192,7 +192,7 @@ export default function PricingSelector({
                   >
                     {plan.name}
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {plan.originalPrice && (
                       <span className="text-white/40 text-sm line-through decoration-red-400/60">
                         ${plan.originalPrice.toFixed(2)}
@@ -214,6 +214,18 @@ export default function PricingSelector({
                         SAVE 50%
                       </span>
                     )}
+                    {/* Trust Badge - appears on ALL cards */}
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded"
+                      style={{
+                        background: "rgba(56, 189, 248, 0.12)",
+                        color: "#7dd3fc",
+                        border: "1px solid rgba(56, 189, 248, 0.2)",
+                      }}
+                    >
+                      <ShieldCheck className="w-3 h-3" />
+                      Risk-Free, Cancel Anytime
+                    </span>
                   </div>
                 </div>
 
