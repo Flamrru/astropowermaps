@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { sendGrandfatheredInviteEmail } from "@/lib/resend";
+
+const COOKIE_NAME = "admin_session";
 
 /**
  * Provision Grandfathered User API
@@ -19,6 +22,13 @@ import { sendGrandfatheredInviteEmail } from "@/lib/resend";
  * The user creates their account when they click the link and set a password.
  */
 export async function POST(request: NextRequest) {
+  // Admin authentication check
+  const cookieStore = await cookies();
+  const session = cookieStore.get(COOKIE_NAME);
+  if (session?.value !== "authenticated") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { email, sendEmail = false, baseUrl: customBaseUrl } = await request.json();
 
@@ -99,6 +109,13 @@ export async function POST(request: NextRequest) {
  * GET endpoint to test/preview a single user's data
  */
 export async function GET(request: NextRequest) {
+  // Admin authentication check
+  const cookieStore = await cookies();
+  const session = cookieStore.get(COOKIE_NAME);
+  if (session?.value !== "authenticated") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const email = request.nextUrl.searchParams.get("email");
 
   if (!email) {
