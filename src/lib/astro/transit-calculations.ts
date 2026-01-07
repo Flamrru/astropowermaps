@@ -26,13 +26,17 @@ import {
 
 /**
  * Convert a Date object to Julian Day
+ *
+ * IMPORTANT: Uses UTC methods to ensure consistent results regardless of
+ * server timezone. Transit calculations should be timezone-agnostic since
+ * we're calculating planetary positions at a specific moment in time.
  */
 export function dateToJulianDay(date: Date): number {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const hour = date.getHours();
-  const minute = date.getMinutes();
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + 1;
+  const day = date.getUTCDate();
+  const hour = date.getUTCHours();
+  const minute = date.getUTCMinutes();
 
   const decimalDay = day + (hour + minute / 60) / 24;
   return julian.CalendarGregorianToJD(year, month, decimalDay);
