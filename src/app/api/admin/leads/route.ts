@@ -534,8 +534,6 @@ export async function GET(request: NextRequest) {
         user_id,
         account_status,
         subscription_status,
-        subscription_trial_end,
-        subscription_cancelled_at,
         stripe_customer_id
       `);
 
