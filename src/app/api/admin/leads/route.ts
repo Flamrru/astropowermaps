@@ -546,8 +546,6 @@ export async function GET(request: NextRequest) {
       user_id: string;
       account_status: string | null;
       subscription_status: string | null;
-      subscription_trial_end: string | null;
-      subscription_cancelled_at: string | null;
       stripe_customer_id: string | null;
     }>();
 
