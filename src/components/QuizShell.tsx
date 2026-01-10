@@ -208,6 +208,15 @@ export default function QuizShell({ children }: QuizShellProps) {
     }
   }, []);
 
+  // Capture paywall variant (?plan=single) on mount for A/B test
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const planVariant = urlParams.get("plan");
+    if (planVariant) {
+      localStorage.setItem("stella_paywall_variant", planVariant);
+    }
+  }, []);
+
   // Track funnel events when step changes
   const prevStepRef = useRef(state.stepIndex);
   useEffect(() => {

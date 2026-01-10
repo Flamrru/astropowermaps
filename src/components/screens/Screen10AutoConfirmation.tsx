@@ -151,8 +151,16 @@ export default function Screen10AutoConfirmation() {
   // Auto-advance to reveal after 2.5 seconds
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Navigate to reveal flow with session ID
-      window.location.href = `/reveal?sid=${state.session_id}`;
+      // Build reveal URL with session ID
+      let revealUrl = `/reveal?sid=${state.session_id}`;
+
+      // Preserve paywall variant for A/B test (e.g., ?plan=single)
+      const paywallVariant = localStorage.getItem("stella_paywall_variant");
+      if (paywallVariant) {
+        revealUrl += `&plan=${paywallVariant}`;
+      }
+
+      window.location.href = revealUrl;
     }, 2500);
 
     return () => clearTimeout(timer);
