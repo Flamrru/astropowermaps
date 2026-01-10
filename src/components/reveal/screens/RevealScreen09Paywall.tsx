@@ -90,8 +90,9 @@ export default function RevealScreen09Paywall() {
   const searchParams = useSearchParams();
   const [showCheckout, setShowCheckout] = useState(false);
 
-  // Determine paywall variant from URL param: ?plan=single → "single", otherwise "subscription"
-  const variant: PaywallVariant = searchParams.get("plan") === "single" ? "single" : "subscription";
+  // Determine paywall variant from URL param
+  // Default is "single" ($19.99 one-time). Use ?plan=subscription for trial flow.
+  const variant: PaywallVariant = searchParams.get("plan") === "subscription" ? "subscription" : "single";
 
   // Default plan depends on variant: one_time for single payment, trial_7day for subscription
   const defaultPlan: PlanId = variant === "single" ? "one_time" : "trial_7day";
