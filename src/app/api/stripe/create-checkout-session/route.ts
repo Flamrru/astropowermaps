@@ -31,13 +31,13 @@ interface CheckoutPayload {
 }
 
 /**
- * Create a Stripe Checkout Session for subscription with paid trial
+ * Create a Stripe Checkout Session
  *
- * Uses Stripe's "mixed cart" approach:
- * 1. One-time line item for trial fee (charged immediately on first invoice)
- * 2. Recurring line item for subscription (trial_period_days delays first charge)
- * 3. Stripe creates subscription automatically - NO webhook needed for subscription!
- * 4. After trial ends, customer is charged $19.99/month
+ * Supports two modes:
+ * 1. SUBSCRIPTION (default): Mixed cart with trial fee + recurring monthly
+ * 2. ONE-TIME (planId="one_time"): Single $19.99 payment, no subscription
+ *
+ * The mode is determined by the planId parameter.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -62,16 +62,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the monthly subscription price ID
-    const prices = getStripePrices();
-    const monthlyPriceId = prices.MONTHLY;
+    // Determine if this is a one-time payment or subscription
+    const isOneTimePayment = planId === "one_time";
+    const paymentVariant = isOneTimePayment ? "single" : "subscription";
 
-    if (!monthlyPriceId) {
-      console.error("Monthly price ID not configured");
-      return NextResponse.json(
-        { error: "Payment system not configured" },
-        { status: 500 }
-      );
+    // Get prices based on mode
+    const prices = getStripePrices();
+
+    if (isOneTimePayment) {
+      // One-time payment mode - need ONE_TIME price ID
+      const oneTimePriceId = prices.ONE_TIME;
+      if (!oneTimePriceId || oneTimePriceId.startsWith("price_TODO")) {
+        console.error("One-time price ID not configured");
+        return NextResponse.json(
+          { error: "One-time payment not configured yet" },
+          { status: 500 }
+        );
+      }
+    } else {
+      // Subscription mode - need MONTHLY price ID
+      const monthlyPriceId = prices.MONTHLY;
+      if (!monthlyPriceId) {
+        console.error("Monthly price ID not configured");
+        return NextResponse.json(
+          { error: "Payment system not configured" },
+          { status: 500 }
+        );
+      }
     }
 
     // Create idempotency key to prevent duplicate charges
@@ -80,12 +97,9 @@ export async function POST(request: NextRequest) {
     // Get the base URL for return URL
     const origin = request.headers.get("origin") || "http://localhost:3000";
 
-    // Create Stripe Checkout Session in SUBSCRIPTION mode with mixed cart
-    // Stripe handles subscription creation automatically!
     const stripe = getStripe();
 
     // Check if customer already exists to prevent duplicate Stripe customers
-    // This is important when users re-purchase after cancelling
     let existingCustomerId: string | undefined;
     try {
       const existingCustomers = await stripe.customers.list({
@@ -98,71 +112,117 @@ export async function POST(request: NextRequest) {
       }
     } catch (err) {
       console.error("Failed to check for existing customer:", err);
-      // Continue without existing customer - will create new one
     }
 
-    const checkoutSession = await stripe.checkout.sessions.create({
-      ui_mode: "embedded",
-      mode: "subscription",
-      // Use existing customer if found, otherwise let Stripe create new one
-      ...(existingCustomerId
-        ? { customer: existingCustomerId }
-        : { customer_email: body.email }),
+    // Common metadata for both modes
+    const commonMetadata = {
+      app_session_id: body.session_id,
+      email: body.email,
+      plan_id: planId,
+      payment_variant: paymentVariant, // Track A/B test variant
+      product_type: isOneTimePayment ? "stella_plus_one_time" : "stella_plus_subscription",
+      // Meta CAPI tracking data for deduplication
+      meta_event_id: body.metaEventId || "",
+      fbp: body.fbp || "",
+      fbc: body.fbc || "",
+    };
 
-      // Mixed cart: one-time trial fee + recurring subscription
-      line_items: [
-        // 1. One-time trial access fee (charged on first invoice)
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: `Stella+ ${plan.name}`,
-              description: `${plan.trialDays}-day trial access to Stella+`,
-            },
-            unit_amount: plan.trialPriceCents,
+    // Return URL after successful payment
+    const returnUrl = body.devMode
+      ? `${origin}/setup?sid=${body.session_id}&d=1`
+      : `${origin}/setup?sid=${body.session_id}`;
+
+    let checkoutSession: Stripe.Checkout.Session;
+
+    if (isOneTimePayment) {
+      // ==========================================
+      // ONE-TIME PAYMENT MODE ($19.99 single purchase)
+      // ==========================================
+      console.log(`Creating ONE-TIME checkout for ${body.email}, plan: ${planId}`);
+
+      checkoutSession = await stripe.checkout.sessions.create({
+        ui_mode: "embedded",
+        mode: "payment", // One-time payment mode
+        ...(existingCustomerId
+          ? { customer: existingCustomerId }
+          : {
+              customer_email: body.email,
+              customer_creation: "always",
+            }),
+
+        // Single one-time line item
+        line_items: [
+          {
+            price: prices.ONE_TIME,
+            quantity: 1,
           },
-          quantity: 1,
-        },
-        // 2. Monthly subscription (trial_period_days applies to this)
-        {
-          price: monthlyPriceId,
-          quantity: 1,
-        },
-      ],
+        ],
 
-      subscription_data: {
-        trial_period_days: plan.trialDays,
+        // No subscription_data for one-time payments
+
+        return_url: returnUrl,
         metadata: {
-          app_session_id: body.session_id,
-          plan_id: planId,
-          created_from: "checkout",
+          ...commonMetadata,
+          trial_days: "0", // No trial for one-time
         },
-      },
+      });
+    } else {
+      // ==========================================
+      // SUBSCRIPTION MODE (trial + recurring)
+      // ==========================================
+      console.log(`Creating SUBSCRIPTION checkout for ${body.email}, plan: ${planId}`);
 
-      // Return URL after successful payment
-      return_url: body.devMode
-        ? `${origin}/setup?sid=${body.session_id}&d=1`
-        : `${origin}/setup?sid=${body.session_id}`,
+      checkoutSession = await stripe.checkout.sessions.create({
+        ui_mode: "embedded",
+        mode: "subscription",
+        ...(existingCustomerId
+          ? { customer: existingCustomerId }
+          : { customer_email: body.email }),
 
-      metadata: {
-        app_session_id: body.session_id,
-        email: body.email,
-        plan_id: planId,
-        trial_days: plan.trialDays.toString(),
-        product_type: "stella_plus_subscription",
-        // Meta CAPI tracking data for deduplication
-        meta_event_id: body.metaEventId || "",
-        fbp: body.fbp || "",
-        fbc: body.fbc || "",
-      },
-    });
+        // Mixed cart: one-time trial fee + recurring subscription
+        line_items: [
+          // 1. One-time trial access fee (charged on first invoice)
+          {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: `Stella+ ${plan.name}`,
+                description: `${plan.trialDays}-day trial access to Stella+`,
+              },
+              unit_amount: plan.trialPriceCents,
+            },
+            quantity: 1,
+          },
+          // 2. Monthly subscription (trial_period_days applies to this)
+          {
+            price: prices.MONTHLY,
+            quantity: 1,
+          },
+        ],
+
+        subscription_data: {
+          trial_period_days: plan.trialDays,
+          metadata: {
+            app_session_id: body.session_id,
+            plan_id: planId,
+            created_from: "checkout",
+          },
+        },
+
+        return_url: returnUrl,
+        metadata: {
+          ...commonMetadata,
+          trial_days: plan.trialDays.toString(),
+        },
+      });
+    }
 
     // Store pending purchase record in Supabase
     const { error: dbError } = await supabaseAdmin.from("astro_purchases").insert({
       session_id: body.session_id,
       email: body.email,
-      stripe_payment_intent_id: checkoutSession.id, // Store checkout session ID
-      amount_cents: plan.trialPriceCents, // Initial trial charge
+      stripe_payment_intent_id: checkoutSession.id,
+      amount_cents: plan.trialPriceCents,
       currency: "usd",
       status: "pending",
       idempotency_key: idempotencyKey,
@@ -172,7 +232,8 @@ export async function POST(request: NextRequest) {
         plan_id: planId,
         trial_days: plan.trialDays,
         monthly_amount_cents: plan.monthlyPriceCents,
-        subscription_mode: true,
+        subscription_mode: !isOneTimePayment,
+        payment_variant: paymentVariant, // Track A/B test variant
       },
     });
 

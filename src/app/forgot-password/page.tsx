@@ -30,7 +30,9 @@ function ForgotPasswordContent() {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
         email,
         {
-          redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+          // Redirect directly to reset-password page (not through auth/callback)
+          // This allows the client-side to pick up the hash fragment with tokens
+          redirectTo: `${window.location.origin}/reset-password`,
         }
       );
 

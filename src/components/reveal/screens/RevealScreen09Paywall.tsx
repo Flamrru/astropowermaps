@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useReveal } from "@/lib/reveal-state";
 import StripeCheckout from "@/components/reveal/StripeCheckout";
 import { type PlanId } from "@/lib/subscription-plans";
+import { type PaywallVariant } from "../paywall/PricingSelector";
 
 // Existing components (kept)
 import BlurredReportPreview from "../paywall/BlurredReportPreview";
@@ -85,8 +87,15 @@ function CosmicStardust() {
 
 export default function RevealScreen09Paywall() {
   const { state } = useReveal();
+  const searchParams = useSearchParams();
   const [showCheckout, setShowCheckout] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<PlanId>("trial_7day");
+
+  // Determine paywall variant from URL param: ?plan=single → "single", otherwise "subscription"
+  const variant: PaywallVariant = searchParams.get("plan") === "single" ? "single" : "subscription";
+
+  // Default plan depends on variant: one_time for single payment, trial_7day for subscription
+  const defaultPlan: PlanId = variant === "single" ? "one_time" : "trial_7day";
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>(defaultPlan);
 
   // Scroll to pricing section (for CTAs throughout page)
   const scrollToPricing = () => {
@@ -125,6 +134,8 @@ export default function RevealScreen09Paywall() {
         <PricingSelector
           selectedPlan={selectedPlan}
           onSelectPlan={setSelectedPlan}
+          variant={variant}
+          onCheckout={variant === "single" ? handleCheckoutClick : undefined}
         />
       </section>
 
@@ -157,7 +168,7 @@ export default function RevealScreen09Paywall() {
       <CredibilityBlock />
 
       {/* ========== SECTION 6: Feature Lists ========== */}
-      <FeatureSection />
+      <FeatureSection variant={variant} />
 
       {/* ========== SECTION 6: CTA #2 → Scrolls to Pricing ========== */}
       <section className="px-5 pb-8">

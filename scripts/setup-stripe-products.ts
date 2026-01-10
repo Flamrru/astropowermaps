@@ -110,6 +110,7 @@ async function main() {
 
 // Subscription pricing configuration
 const MONTHLY_PRICE_CENTS = 1999; // $19.99/month after trial
+const ONE_TIME_PRICE_CENTS = 1999; // $19.99 one-time (A/B test variant B)
 
 const PLANS = [
   {
@@ -224,6 +225,31 @@ async function setupStripeProducts() {
       }
     }
 
+    // Step 4: Create one-time payment price (A/B test variant B)
+    console.log("\n4️⃣  Creating one-time payment price ($19.99)...");
+
+    let oneTimePrice = existingPrices.data.find(
+      (p) => p.metadata?.nickname === "stella_one_time" && !p.recurring
+    );
+
+    if (oneTimePrice) {
+      console.log(`   ✓ Found existing one-time price: ${oneTimePrice.id}`);
+      priceIds.one_time = oneTimePrice.id;
+    } else {
+      oneTimePrice = await stripe.prices.create({
+        product: product.id,
+        unit_amount: ONE_TIME_PRICE_CENTS,
+        currency: "usd",
+        metadata: {
+          nickname: "stella_one_time",
+          payment_type: "one_time",
+          description: "One-time full access - A/B test variant B",
+        },
+      });
+      console.log(`   ✓ Created one-time price: ${oneTimePrice.id} ($${(ONE_TIME_PRICE_CENTS / 100).toFixed(2)})`);
+      priceIds.one_time = oneTimePrice.id;
+    }
+
     // Output results
     console.log("\n" + "=".repeat(60));
     console.log(`✅ SETUP COMPLETE! (${keyMode.toUpperCase()} MODE)`);
@@ -238,6 +264,8 @@ async function setupStripeProducts() {
     console.log(`  TRIAL_3DAY: "${priceIds.stella_3day}",`);
     console.log(`  TRIAL_7DAY: "${priceIds.stella_7day}",`);
     console.log(`  TRIAL_14DAY: "${priceIds.stella_14day}",`);
+    console.log(`  // One-time payment for A/B test variant B ($19.99)`);
+    console.log(`  ONE_TIME: "${priceIds.one_time}",`);
     console.log(`} as const;`);
     console.log("\n");
 

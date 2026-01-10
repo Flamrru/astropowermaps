@@ -16,13 +16,15 @@ export const STRIPE_PRICES = getStripePrices();
 export const CURRENT_STRIPE_MODE = getStripeMode();
 
 // Plan IDs match the UI component (PricingSelector)
-export type PlanId = "trial_3day" | "trial_7day" | "trial_14day";
+// "one_time" is for A/B test variant B (single $19.99 payment)
+export type PlanId = "trial_3day" | "trial_7day" | "trial_14day" | "one_time";
 
 // Map plan IDs to Stripe price keys
 const PLAN_TO_PRICE_KEY: Record<PlanId, keyof typeof STRIPE_PRICES> = {
   trial_3day: "TRIAL_3DAY",
   trial_7day: "TRIAL_7DAY",
   trial_14day: "TRIAL_14DAY",
+  one_time: "ONE_TIME",
 };
 
 // Plan details for UI and checkout
@@ -75,6 +77,18 @@ export const SUBSCRIPTION_PLANS: Record<
     stripePriceKey: "TRIAL_14DAY",
     description: "Try Stella+ for 14 days",
   },
+  // A/B test variant B: One-time payment (no subscription)
+  one_time: {
+    id: "one_time",
+    name: "Full Access",
+    trialPriceCents: 1999, // $19.99 one-time
+    trialPriceDisplay: "$19.99",
+    trialDays: 0, // No trial - immediate full access
+    monthlyPriceCents: 0, // No recurring charge
+    monthlyPriceDisplay: "$0",
+    stripePriceKey: "ONE_TIME",
+    description: "One-time purchase, lifetime access",
+  },
 };
 
 /**
@@ -110,6 +124,7 @@ export function isStripeConfigured(): boolean {
       STRIPE_PRICES.MONTHLY &&
       STRIPE_PRICES.TRIAL_3DAY &&
       STRIPE_PRICES.TRIAL_7DAY &&
-      STRIPE_PRICES.TRIAL_14DAY
+      STRIPE_PRICES.TRIAL_14DAY &&
+      STRIPE_PRICES.ONE_TIME
   );
 }

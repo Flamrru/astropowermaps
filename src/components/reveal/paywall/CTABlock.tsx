@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Lock, Shield, Zap, CreditCard } from "lucide-react";
+import { Lock, Shield, Zap } from "lucide-react";
 
 interface CTABlockProps {
   onCtaClick: () => void;
@@ -55,10 +55,6 @@ export default function CTABlock({
           <span className="flex items-center gap-1.5">
             <Zap className="w-3.5 h-3.5" />
             Instant access
-          </span>
-          <span className="flex items-center gap-1.5">
-            <CreditCard className="w-3.5 h-3.5" />
-            Cancel anytime
           </span>
         </motion.div>
       )}
