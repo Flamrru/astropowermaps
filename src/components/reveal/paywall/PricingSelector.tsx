@@ -4,6 +4,9 @@ import { motion } from "framer-motion";
 import { Check, Sparkles, ShieldCheck } from "lucide-react";
 import { type PlanId } from "@/lib/subscription-plans";
 
+// Variant type for A/B testing
+export type PaywallVariant = "subscription" | "single";
+
 interface Plan {
   id: PlanId;
   name: string;
@@ -14,7 +17,8 @@ interface Plan {
   highlight?: boolean;
 }
 
-const PLANS: Plan[] = [
+// Subscription variant plans (current default)
+const SUBSCRIPTION_PLANS: Plan[] = [
   {
     id: "trial_3day",
     name: "3-Day Trial",
@@ -38,15 +42,247 @@ const PLANS: Plan[] = [
   },
 ];
 
+// Single payment variant plan (A/B test variant B)
+const SINGLE_PAYMENT_PLAN: Plan = {
+  id: "one_time",
+  name: "Full Access",
+  duration: "one-time payment",
+  price: 19.99,
+  originalPrice: 49.0,
+  badge: "Save 60%",
+  highlight: true,
+};
+
 interface PricingSelectorProps {
   selectedPlan: PlanId;
   onSelectPlan: (planId: PlanId) => void;
+  variant?: PaywallVariant; // "subscription" (default) or "single"
+  onCheckout?: () => void; // For single payment: triggers checkout directly
+}
+
+// Premium Single Payment Card Component
+function SinglePaymentCard({ onSelect, onCheckout }: { onSelect: () => void; onCheckout?: () => void }) {
+  const plan = SINGLE_PAYMENT_PLAN;
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+      whileTap={{ scale: 0.98 }}
+      whileHover={{ scale: 1.02 }}
+      onClick={() => {
+        onSelect();
+        if (onCheckout) onCheckout();
+      }}
+      className="w-full relative rounded-3xl overflow-hidden cursor-pointer"
+      style={{
+        background: "linear-gradient(145deg, rgba(20, 15, 35, 0.95) 0%, rgba(10, 8, 20, 0.98) 100%)",
+        border: "2px solid rgba(232, 197, 71, 0.4)",
+        boxShadow: `
+          0 0 0 1px rgba(232, 197, 71, 0.1),
+          0 4px 30px rgba(201, 162, 39, 0.2),
+          0 20px 60px rgba(0, 0, 0, 0.5),
+          inset 0 1px 0 rgba(255, 255, 255, 0.05)
+        `,
+      }}
+    >
+      {/* Animated gradient border effect */}
+      <div
+        className="absolute inset-0 rounded-3xl opacity-60 pointer-events-none"
+        style={{
+          background: "linear-gradient(135deg, rgba(232, 197, 71, 0.1) 0%, transparent 50%, rgba(232, 197, 71, 0.05) 100%)",
+        }}
+      />
+
+      {/* Shimmer effect */}
+      <div
+        className="absolute inset-0 opacity-20 pointer-events-none"
+        style={{
+          background: "linear-gradient(90deg, transparent 0%, rgba(232, 197, 71, 0.15) 50%, transparent 100%)",
+          animation: "shimmer 3s ease-in-out infinite",
+        }}
+      />
+
+      {/* Content */}
+      <div className="relative z-10 px-6 py-8">
+        {/* Top Badge */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="flex justify-center mb-6"
+        >
+          <div
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold uppercase tracking-wider"
+            style={{
+              background: "linear-gradient(135deg, #E8C547 0%, #C9A227 50%, #B8960F 100%)",
+              color: "#1a1400",
+              boxShadow: "0 4px 15px rgba(201, 162, 39, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)",
+            }}
+          >
+            <Sparkles className="w-4 h-4" />
+            SAVE 60%
+          </div>
+        </motion.div>
+
+        {/* Price Section - The Hero */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
+          className="flex flex-col items-center justify-center"
+        >
+          {/* Original Price - Crossed Out */}
+          <div className="relative mb-2">
+            <span
+              className="text-4xl font-bold text-white/35"
+              style={{
+                textDecoration: "line-through",
+                textDecorationColor: "rgba(239, 68, 68, 0.8)",
+                textDecorationThickness: "3px",
+              }}
+            >
+              $49.00
+            </span>
+          </div>
+
+          {/* New Price - Glowing */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.7, type: "spring", stiffness: 200 }}
+            className="relative"
+          >
+            {/* Glow effect behind price */}
+            <div
+              className="absolute inset-0 blur-2xl opacity-50"
+              style={{
+                background: "radial-gradient(circle, rgba(232, 197, 71, 0.5) 0%, transparent 70%)",
+                transform: "scale(2)",
+              }}
+            />
+            <span
+              className="relative text-5xl font-bold"
+              style={{
+                background: "linear-gradient(135deg, #F5E6A3 0%, #E8C547 30%, #C9A227 70%, #E8C547 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                filter: "drop-shadow(0 0 15px rgba(232, 197, 71, 0.4))",
+              }}
+            >
+              $19.99
+            </span>
+          </motion.div>
+
+          {/* Subtitle */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="mt-3 text-sm font-semibold tracking-widest uppercase"
+            style={{
+              background: "linear-gradient(90deg, rgba(232, 197, 71, 0.7), rgba(232, 197, 71, 1), rgba(232, 197, 71, 0.7))",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            One-Time Payment
+          </motion.p>
+        </motion.div>
+
+        {/* Bottom Accent Line */}
+        <div
+          className="absolute bottom-0 left-0 right-0 h-[3px]"
+          style={{
+            background: "linear-gradient(90deg, transparent 0%, #E8C547 50%, transparent 100%)",
+            boxShadow: "0 0 20px 2px rgba(232, 197, 71, 0.4)",
+          }}
+        />
+      </div>
+    </motion.button>
+  );
 }
 
 export default function PricingSelector({
   selectedPlan,
   onSelectPlan,
+  variant = "subscription",
+  onCheckout,
 }: PricingSelectorProps) {
+  // Determine which plans to show based on variant
+  const isSinglePayment = variant === "single";
+  const plans = isSinglePayment ? [SINGLE_PAYMENT_PLAN] : SUBSCRIPTION_PLANS;
+
+  // Auto-select one_time plan when in single payment variant
+  if (isSinglePayment && selectedPlan !== "one_time") {
+    setTimeout(() => onSelectPlan("one_time"), 0);
+  }
+
+  // Render premium single payment card
+  if (isSinglePayment) {
+    return (
+      <div className="w-full">
+        {/* Section Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-6"
+        >
+          <h3
+            className="text-white text-xl font-bold leading-snug"
+            style={{
+              textShadow: "0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 255, 255, 0.3)",
+            }}
+          >
+            Your{" "}
+            <span className="text-gold" style={{ textShadow: "0 0 10px rgba(232, 197, 71, 0.5)" }}>
+              2026 Forecast
+            </span>{" "}
+            +{" "}
+            <span style={{ color: "#60A5FA", textShadow: "0 0 10px rgba(96, 165, 250, 0.5)" }}>
+              Complete Birth Chart
+            </span>
+            <br />
+            <span className="text-white/90">— Yours Forever.</span>
+          </h3>
+        </motion.div>
+
+        {/* Premium Single Payment Card */}
+        <SinglePaymentCard onSelect={() => onSelectPlan("one_time")} onCheckout={onCheckout} />
+
+        {/* Bottom Note */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.4 }}
+          className="text-center text-white/80 text-[14px] mt-5 font-medium"
+        >
+          Instant access. No recurring charges. Yours forever.
+        </motion.p>
+
+        {/* CSS for shimmer animation */}
+        <style jsx>{`
+          @keyframes shimmer {
+            0% {
+              transform: translateX(-100%);
+            }
+            50% {
+              transform: translateX(100%);
+            }
+            100% {
+              transform: translateX(-100%);
+            }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Original subscription variant
   return (
     <div className="w-full">
       {/* Section Header */}
@@ -66,7 +302,7 @@ export default function PricingSelector({
         </h3>
       </motion.div>
 
-      {/* Pricing Cards Container - with subtle background */}
+      {/* Pricing Cards Container */}
       <div
         className="rounded-3xl p-4 space-y-3"
         style={{
@@ -76,7 +312,7 @@ export default function PricingSelector({
           boxShadow: "0 4px 24px rgba(0,0,0,0.2)",
         }}
       >
-        {PLANS.map((plan, index) => {
+        {plans.map((plan, index) => {
           const isSelected = selectedPlan === plan.id;
           const isHighlight = plan.highlight;
 
@@ -92,19 +328,16 @@ export default function PricingSelector({
               onClick={() => onSelectPlan(plan.id)}
               className="w-full relative rounded-2xl overflow-hidden transition-all duration-300 group"
               style={{
-                // Layered background for depth
                 background: isSelected
                   ? "linear-gradient(135deg, rgba(201, 162, 39, 0.2) 0%, rgba(201, 162, 39, 0.1) 50%, rgba(201, 162, 39, 0.15) 100%)"
                   : isHighlight
                   ? "linear-gradient(135deg, rgba(201, 162, 39, 0.12) 0%, rgba(201, 162, 39, 0.06) 50%, rgba(201, 162, 39, 0.08) 100%)"
                   : "linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%)",
-                // Strong borders for definition
                 border: isSelected
                   ? "2px solid rgba(232, 197, 71, 0.6)"
                   : isHighlight
                   ? "2px solid rgba(201, 162, 39, 0.35)"
                   : "2px solid rgba(255, 255, 255, 0.1)",
-                // Dramatic shadows for floating effect
                 boxShadow: isSelected
                   ? `
                     0 0 0 1px rgba(232, 197, 71, 0.2),
@@ -125,7 +358,7 @@ export default function PricingSelector({
                   `,
               }}
             >
-              {/* Animated shimmer effect for highlighted card */}
+              {/* Shimmer effect */}
               {isHighlight && (
                 <div
                   className="absolute inset-0 opacity-30 pointer-events-none"
@@ -214,7 +447,6 @@ export default function PricingSelector({
                         SAVE 50%
                       </span>
                     )}
-                    {/* Trust Badge - appears on ALL cards */}
                     <span
                       className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded"
                       style={{
@@ -288,7 +520,7 @@ export default function PricingSelector({
         })}
       </div>
 
-      {/* Subscription Note */}
+      {/* Bottom Note */}
       <motion.p
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}

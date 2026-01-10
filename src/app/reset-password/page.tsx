@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
@@ -33,6 +33,10 @@ function validatePassword(password: string): { valid: boolean; errors: string[] 
 
 function ResetPasswordContent() {
   const router = useRouter();
+  // Use ref to maintain single Supabase client instance across renders
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
+  const hasCheckedRef = useRef(false);
+
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -48,33 +52,81 @@ function ResetPasswordContent() {
   const canSubmit = passwordValidation.valid && passwordsMatch && confirmPassword.length > 0;
 
   // Listen for PASSWORD_RECOVERY event when user lands from email link
+  // Fixed: Explicitly parse hash fragment since @supabase/ssr may not auto-detect it
   useEffect(() => {
-    const supabase = createClient();
+    // Prevent double execution in StrictMode
+    if (hasCheckedRef.current) return;
+    hasCheckedRef.current = true;
 
-    // Check if user already has a valid session (from the email link)
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setCanReset(true);
+    // Create client once and store in ref
+    if (!supabaseRef.current) {
+      supabaseRef.current = createClient();
+    }
+    const supabase = supabaseRef.current;
+
+    // EXPLICIT HASH PARSING: @supabase/ssr doesn't auto-detect hash fragments
+    // We need to manually extract tokens from the URL hash and set the session
+    const processHashFragment = async () => {
+      const hash = window.location.hash;
+      console.log("[ResetPassword] Hash fragment:", hash ? "present" : "none");
+
+      if (hash && hash.length > 1) {
+        // Parse hash parameters (remove the leading #)
+        const hashParams = new URLSearchParams(hash.substring(1));
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+        const type = hashParams.get("type");
+
+        console.log("[ResetPassword] Parsed hash - type:", type, "hasTokens:", !!(accessToken && refreshToken));
+
+        if (accessToken && refreshToken) {
+          // Manually set the session with tokens from hash
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          console.log("[ResetPassword] setSession result:", error ? error.message : "success");
+
+          if (!error && data.session) {
+            setCanReset(true);
+            setIsCheckingSession(false);
+            // Clear the hash from URL for cleaner look (optional)
+            window.history.replaceState(null, "", window.location.pathname);
+            return true;
+          }
+        }
       }
-      setIsCheckingSession(false);
+      return false;
     };
 
-    // Listen for auth state changes
+    // Also subscribe to auth state changes as backup
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("[ResetPassword] Auth event:", event, "Session:", !!session);
+
         if (event === "PASSWORD_RECOVERY") {
           setCanReset(true);
           setIsCheckingSession(false);
         } else if (event === "SIGNED_IN" && session) {
-          // User might have a session from the reset link
           setCanReset(true);
           setIsCheckingSession(false);
         }
       }
     );
 
-    checkSession();
+    // Process hash first, then fallback to session check
+    processHashFragment().then(async (hashProcessed) => {
+      if (!hashProcessed) {
+        // No hash or hash processing failed - check for existing session
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log("[ResetPassword] Existing session check:", !!session);
+        if (session) {
+          setCanReset(true);
+        }
+        setIsCheckingSession(false);
+      }
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -98,7 +150,8 @@ function ResetPasswordContent() {
     setIsLoading(true);
 
     try {
-      const supabase = createClient();
+      // Use the existing client from ref (same session)
+      const supabase = supabaseRef.current || createClient();
 
       const { error: updateError } = await supabase.auth.updateUser({
         password,

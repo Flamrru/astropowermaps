@@ -15,14 +15,22 @@ export async function GET(request: Request) {
   const type = searchParams.get("type");
   const next = searchParams.get("next") ?? "/home";
 
-  // Handle password recovery redirect
-  if (type === "recovery") {
+  // Fallback: If recovery type but no code, redirect to reset-password
+  // This can happen with implicit flow where tokens are in hash fragment
+  // (hash fragments are not visible to server-side code)
+  if (type === "recovery" && !code) {
     return NextResponse.redirect(`${origin}/reset-password`);
   }
 
+  // Exchange code for session FIRST (before any redirects)
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+    // After successful code exchange, handle recovery redirect
+    if (!error && type === "recovery") {
+      return NextResponse.redirect(`${origin}/reset-password`);
+    }
 
     if (!error) {
       const {

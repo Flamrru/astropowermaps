@@ -5,6 +5,9 @@ import { Check, Calendar, Map, Compass, Stars } from "lucide-react";
 import ProductPreviewCarousel from "./ProductPreviewCarousel";
 import { LucideIcon } from "lucide-react";
 
+// Import variant type for consistency
+import { type PaywallVariant } from "./PricingSelector";
+
 interface Feature {
   text: string;
   sub: string;
@@ -18,6 +21,10 @@ interface FeatureGroup {
   badge: string;
   badgeVariant: "primary" | "secondary" | "bonus";
   features: Feature[];
+}
+
+interface FeatureSectionProps {
+  variant?: PaywallVariant;
 }
 
 const FEATURE_GROUPS: FeatureGroup[] = [
@@ -145,7 +152,21 @@ function getBadgeStyle(variant: FeatureGroup["badgeVariant"]) {
   }
 }
 
-export default function FeatureSection() {
+export default function FeatureSection({ variant = "subscription" }: FeatureSectionProps) {
+  const isSinglePayment = variant === "single";
+
+  // Function to get badge text based on variant
+  // For single payment variant: "ALSO INCLUDED" and "BONUS" become "BONUS FOR A LIMITED TIME"
+  const getBadgeText = (originalBadge: string): string => {
+    if (!isSinglePayment) return originalBadge;
+
+    // For single payment variant, change these badges
+    if (originalBadge === "ALSO INCLUDED" || originalBadge === "BONUS") {
+      return "BONUS FOR A LIMITED TIME";
+    }
+    return originalBadge;
+  };
+
   return (
     <section className="px-5 py-6">
       {/* Section Header */}
@@ -202,12 +223,12 @@ export default function FeatureSection() {
               border: "1px solid rgba(255, 255, 255, 0.08)",
             }}
           >
-            {/* Badge */}
+            {/* Badge - uses getBadgeText for variant-specific text */}
             <div
-              className="absolute -top-2 right-4 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
+              className="absolute -top-2 right-4 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider whitespace-nowrap"
               style={getBadgeStyle(group.badgeVariant)}
             >
-              {group.badge}
+              {getBadgeText(group.badge)}
             </div>
 
             {/* Section Title */}

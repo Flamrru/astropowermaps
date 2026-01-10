@@ -128,6 +128,8 @@ export const SANDBOX_PRICES = {
   TRIAL_3DAY: "price_1SmTR51yURwpWT9LlMpZuAeb",
   TRIAL_7DAY: "price_1SmTR51yURwpWT9LPgwiQfeg",
   TRIAL_14DAY: "price_1SmTR51yURwpWT9Ltlu1jKs0",
+  // One-time payment for A/B test variant B ($19.99)
+  ONE_TIME: "price_1SnR0I1yURwpWT9LmAc37tl9",
 } as const;
 
 /**
@@ -140,6 +142,8 @@ export const LIVE_PRICES = {
   TRIAL_3DAY: "price_1SmUSo24zElYF83GjfNr9sm6",
   TRIAL_7DAY: "price_1SmUSp24zElYF83GVaK13YFO",
   TRIAL_14DAY: "price_1SmUSp24zElYF83GmsTPZYdc",
+  // One-time payment for A/B test variant B ($19.99)
+  ONE_TIME: "price_1So5w024zElYF83Ge1cbG80R",
 } as const;
 
 // ============================================
@@ -165,6 +169,7 @@ export function validateStripePrices(): { valid: boolean; missing: string[] } {
   if (!prices.TRIAL_3DAY) missing.push("TRIAL_3DAY");
   if (!prices.TRIAL_7DAY) missing.push("TRIAL_7DAY");
   if (!prices.TRIAL_14DAY) missing.push("TRIAL_14DAY");
+  if (!prices.ONE_TIME) missing.push("ONE_TIME");
 
   return {
     valid: missing.length === 0,

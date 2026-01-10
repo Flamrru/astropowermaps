@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { subDays } from "date-fns";
+import { subDays, differenceInDays, differenceInMonths } from "date-fns";
 import DateRangeSelector from "@/components/admin/DateRangeSelector";
 import TrendChart from "@/components/admin/TrendChart";
 import "./premium-dashboard.css";
@@ -1310,10 +1310,10 @@ export default function AdminDashboardPage() {
                       Email
                     </th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden sm:table-cell">
-                      Status
+                      Payment
                     </th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden md:table-cell">
-                      Subscription
+                      Status
                     </th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden lg:table-cell">
                       Q1 Answer
@@ -1362,13 +1362,16 @@ export default function AdminDashboardPage() {
                             Paid
                           </span>
                         ) : (
-                          <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-white/5 text-[var(--text-muted)] border border-white/10">
-                            Lead
-                          </span>
+                          <span className="text-xs text-[var(--text-faint)]">—</span>
                         )}
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden md:table-cell">
-                        <SubscriptionBadge status={lead.profile?.subscription_status || null} />
+                        <SubscriptionBadge
+                          status={lead.profile?.subscription_status || null}
+                          trialEnd={lead.profile?.subscription_trial_end}
+                          cancelledAt={lead.profile?.subscription_cancelled_at}
+                          purchaseDate={lead.purchase_date}
+                        />
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden lg:table-cell">
                         {lead.quiz_q1 ? (
@@ -1641,7 +1644,12 @@ function LeadDetailModal({ lead, onClose }: { lead: Lead; onClose: () => void })
               <div className="glass-card rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm text-[var(--text-muted)]">Status</span>
-                  <SubscriptionBadge status={lead.profile.subscription_status} />
+                  <SubscriptionBadge
+                    status={lead.profile.subscription_status}
+                    trialEnd={lead.profile.subscription_trial_end}
+                    cancelledAt={lead.profile.subscription_cancelled_at}
+                    purchaseDate={lead.purchase_date}
+                  />
                 </div>
                 {lead.profile.subscription_trial_end && (
                   <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/10">
@@ -2097,7 +2105,17 @@ function SubscriptionStatCard({
 }
 
 // Subscription badge component for table
-function SubscriptionBadge({ status }: { status: string | null }) {
+function SubscriptionBadge({
+  status,
+  trialEnd,
+  cancelledAt,
+  purchaseDate,
+}: {
+  status: string | null;
+  trialEnd?: string | null;
+  cancelledAt?: string | null;
+  purchaseDate?: string | null;
+}) {
   if (!status || status === "none") {
     return <span className="text-xs text-gray-500">—</span>;
   }
@@ -2111,9 +2129,43 @@ function SubscriptionBadge({ status }: { status: string | null }) {
     paused: "bg-orange-500/20 text-orange-400 border-orange-500/30",
   };
 
+  // Calculate helper text based on status
+  let helperText: string | null = null;
+
+  if (status === "trialing" && trialEnd) {
+    const trialEndDate = new Date(trialEnd);
+    const daysLeft = differenceInDays(trialEndDate, new Date());
+    if (daysLeft > 0) {
+      helperText = `${daysLeft}d left`;
+    } else if (daysLeft === 0) {
+      helperText = "Ends today";
+    } else {
+      helperText = "Ended";
+    }
+  } else if (status === "active" && purchaseDate) {
+    const months = differenceInMonths(new Date(), new Date(purchaseDate));
+    if (months >= 1) {
+      helperText = `${months}mo`;
+    }
+  } else if (status === "cancelled" && cancelledAt) {
+    const daysAgo = differenceInDays(new Date(), new Date(cancelledAt));
+    if (daysAgo === 0) {
+      helperText = "Today";
+    } else if (daysAgo === 1) {
+      helperText = "1d ago";
+    } else {
+      helperText = `${daysAgo}d ago`;
+    }
+  }
+
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs border ${styles[status] || styles.paused}`}>
-      {status.replace("_", " ")}
-    </span>
+    <div className="flex flex-col items-start gap-0.5">
+      <span className={`px-2 py-0.5 rounded-full text-xs border ${styles[status] || styles.paused}`}>
+        {status.replace("_", " ")}
+      </span>
+      {helperText && (
+        <span className="text-[10px] text-[var(--text-faint)] ml-1">{helperText}</span>
+      )}
+    </div>
   );
 }

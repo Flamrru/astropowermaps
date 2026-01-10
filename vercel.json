@@ -1,0 +1,10 @@
+{
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "astropowermap.com" }],
+      "destination": "https://www.astropowermap.com/:path*",
+      "permanent": true
+    }
+  ]
+}
