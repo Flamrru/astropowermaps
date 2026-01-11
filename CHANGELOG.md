@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-01-11
+### Admin Dashboard - Payment Type Distinction
+- **Database** - Added `payment_type` column to `user_profiles` table
+  - Values: `none`, `one_time`, `subscription`, `grandfathered`
+  - Backfill migration automatically categorizes existing users
+- **Webhook Update** - Sets `payment_type` when creating user profiles
+  - One-time purchases → `payment_type = "one_time"`
+  - Subscriptions → `payment_type = "subscription"`
+- **Dashboard Redesign** - Clear distinction between payment types
+  - Renamed "Subscription Status" → "Customers" section
+  - New stat cards: Lifetime (one-time), Subscribers, Cancelled, Past Due, Free Access, Leads Only
+  - Added `PaymentTypeBadge` component with icons: ⚡ Lifetime, 🔄 Subscriber, ⏱ Trial, ✕ Cancelled, 🎁 Free
+  - Milestones simplified: Quiz → Leads → Paid (combines one-time + subscription)
+  - Lead table "Status" column replaced with "Type" showing access type badges
+  - Lead detail modal shows "Payment & Access" section with amount paid and access type
+
 ## 2026-01-07
 ### Critical Bug Fix: Astronomical Calculations
 - **Rising Sign Fix** - Was showing wrong sign (e.g., Leo instead of Libra)

@@ -660,6 +660,39 @@
 }
 
 /* ============================================
+   CUSTOMER STAT CARDS - Enhanced payment type display
+   ============================================ */
+.premium-dashboard .customer-stat-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.premium-dashboard .customer-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+.premium-dashboard .customer-stat-card:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Payment type badge animations */
+.premium-dashboard .payment-badge {
+  transition: all 0.2s ease;
+}
+
+.premium-dashboard .payment-badge:hover {
+  transform: scale(1.05);
+}
+
+/* ============================================
    RESPONSIVE
    ============================================ */
 @media (max-width: 768px) {

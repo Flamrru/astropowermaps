@@ -534,6 +534,10 @@ export async function GET(request: NextRequest) {
         user_id,
         account_status,
         subscription_status,
+        subscription_id,
+        subscription_trial_end,
+        subscription_cancelled_at,
+        payment_type,
         stripe_customer_id
       `);
 
@@ -546,6 +550,10 @@ export async function GET(request: NextRequest) {
       user_id: string;
       account_status: string | null;
       subscription_status: string | null;
+      subscription_id: string | null;
+      subscription_trial_end: string | null;
+      subscription_cancelled_at: string | null;
+      payment_type: string | null;
       stripe_customer_id: string | null;
     }>();
 
@@ -570,6 +578,14 @@ export async function GET(request: NextRequest) {
       grandfathered: profiles?.filter(p => p.subscription_status === "grandfathered").length || 0,
       past_due: profiles?.filter(p => p.subscription_status === "past_due").length || 0,
       noAccount: leadsWithPurchaseStatus.length - emailToProfile.size,
+    };
+
+    // Calculate payment type stats (distinguishes one-time vs subscription)
+    const paymentTypeStats = {
+      one_time: profiles?.filter(p => p.payment_type === "one_time").length || 0,
+      subscription: profiles?.filter(p => p.payment_type === "subscription").length || 0,
+      grandfathered: profiles?.filter(p => p.payment_type === "grandfathered").length || 0,
+      none: profiles?.filter(p => !p.payment_type || p.payment_type === "none").length || 0,
     };
 
     // ========== NEW: Trend data for charts ==========
@@ -803,6 +819,7 @@ export async function GET(request: NextRequest) {
       },
       analytics,
       subscriptionStats,
+      paymentTypeStats,
       trends: {
         leads: leadsTrendData,
         revenue: revenueTrendData,

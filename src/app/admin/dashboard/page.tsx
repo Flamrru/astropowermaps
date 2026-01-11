@@ -11,8 +11,10 @@ interface UserProfile {
   user_id: string;
   account_status: "pending_setup" | "active" | null;
   subscription_status: "none" | "trialing" | "active" | "past_due" | "cancelled" | "paused" | "grandfathered" | null;
+  subscription_id: string | null;
   subscription_trial_end: string | null;
   subscription_cancelled_at: string | null;
+  payment_type: "none" | "one_time" | "subscription" | "grandfathered" | null;
   stripe_customer_id: string | null;
 }
 
@@ -195,6 +197,13 @@ interface SubscriptionStats {
   noAccount: number;
 }
 
+interface PaymentTypeStats {
+  one_time: number;
+  subscription: number;
+  grandfathered: number;
+  none: number;
+}
+
 // Legacy stats (pre-subscription launch)
 interface LegacyStats {
   quizStart: number;
@@ -252,6 +261,12 @@ export default function AdminDashboardPage() {
     grandfathered: 0,
     past_due: 0,
     noAccount: 0,
+  });
+  const [paymentTypeStats, setPaymentTypeStats] = useState<PaymentTypeStats>({
+    one_time: 0,
+    subscription: 0,
+    grandfathered: 0,
+    none: 0,
   });
   const [period, setPeriod] = useState<Period>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -363,6 +378,12 @@ export default function AdminDashboardPage() {
         grandfathered: 0,
         past_due: 0,
         noAccount: 0,
+      });
+      setPaymentTypeStats(data.paymentTypeStats || {
+        one_time: 0,
+        subscription: 0,
+        grandfathered: 0,
+        none: 0,
       });
 
       // Set new data from API
@@ -756,7 +777,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Key Milestones - Conversion Flow */}
+        {/* Key Milestones - Conversion Flow: Quiz → Leads → Paid */}
         {milestones.quizStart > 0 && (
           <div className="mb-8 animate-in stagger-3">
             <div className="section-header">
@@ -766,9 +787,10 @@ export default function AdminDashboardPage() {
                 </svg>
               </div>
               <h2>Key Milestones</h2>
+              <span className="text-xs text-white/40 ml-2">Quiz → Leads → Paid</span>
             </div>
             <div className="premium-card glow-gold">
-              {/* Milestone Flow Visualization - Simplified: Quiz → Leads → Subscribers */}
+              {/* Milestone Flow Visualization - Simplified: Quiz → Leads → Paid */}
               <div className="milestone-flow">
                 {/* Quiz Start */}
                 <div className="milestone-node">
@@ -789,24 +811,40 @@ export default function AdminDashboardPage() {
                   <div className="node-label">Leads</div>
                 </div>
 
-                {/* Arrow with conversion rate (lead to subscriber = trial + active) */}
+                {/* Arrow with conversion rate (lead to paid = one_time + subscription) */}
                 <div className="milestone-connector" style={{ color: 'var(--premium-emerald)' }}>
                   <div className="connector-line" />
-                  <div className="connector-rate">{milestones.lead > 0 ? (((milestones.trial + milestones.paid) / milestones.lead) * 100).toFixed(1) : '0.0'}%</div>
+                  <div className="connector-rate">
+                    {milestones.lead > 0
+                      ? (((paymentTypeStats.one_time + paymentTypeStats.subscription) / milestones.lead) * 100).toFixed(1)
+                      : '0.0'}%
+                  </div>
                   <div className="connector-line" style={{ background: 'linear-gradient(90deg, transparent 0%, currentColor 100%)' }} />
                 </div>
 
-                {/* Subscribers (trial + active combined - since trials are paid upfront) */}
+                {/* Paid (one_time + subscription combined) */}
                 <div className="milestone-node">
-                  <div className="node-value" style={{ color: 'var(--premium-emerald-bright)' }}>{(milestones.trial + milestones.paid).toLocaleString()}</div>
-                  <div className="node-label">Subscribers</div>
+                  <div className="node-value" style={{ color: 'var(--premium-emerald-bright)' }}>
+                    {(paymentTypeStats.one_time + paymentTypeStats.subscription).toLocaleString()}
+                  </div>
+                  <div className="node-label">Paid</div>
+                  {/* Breakdown tooltip */}
+                  <div className="text-[10px] text-white/40 mt-1">
+                    {paymentTypeStats.one_time > 0 && <span>{paymentTypeStats.one_time} lifetime</span>}
+                    {paymentTypeStats.one_time > 0 && paymentTypeStats.subscription > 0 && <span> · </span>}
+                    {paymentTypeStats.subscription > 0 && <span>{paymentTypeStats.subscription} sub</span>}
+                  </div>
                 </div>
               </div>
 
               {/* Overall conversion */}
               <div className="mt-4 pt-3 border-t border-white/10 text-center">
-                <span className="text-sm text-white/50">Overall conversion (Quiz → Subscriber): </span>
-                <span className="text-sm font-semibold" style={{ color: 'var(--premium-emerald-bright)' }}>{milestones.quizStart > 0 ? (((milestones.trial + milestones.paid) / milestones.quizStart) * 100).toFixed(2) : '0.00'}%</span>
+                <span className="text-sm text-white/50">Overall conversion (Quiz → Paid): </span>
+                <span className="text-sm font-semibold" style={{ color: 'var(--premium-emerald-bright)' }}>
+                  {milestones.quizStart > 0
+                    ? (((paymentTypeStats.one_time + paymentTypeStats.subscription) / milestones.quizStart) * 100).toFixed(2)
+                    : '0.00'}%
+                </span>
               </div>
             </div>
           </div>
@@ -898,46 +936,71 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* Subscription Status - Simplified view */}
+        {/* Customer Status - Payment type breakdown */}
         <div className="mb-8 animate-in stagger-4">
           <div className="section-header">
-            <div className="section-icon" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--premium-sapphire)' }}>
+            <div className="section-icon" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--premium-emerald)' }}>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <h2>Subscription Status</h2>
+            <h2>Customers</h2>
+            <span className="text-xs text-white/40 ml-2">
+              {paymentTypeStats.one_time + paymentTypeStats.subscription + paymentTypeStats.grandfathered} total paid
+            </span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-            {/* Subscribers = Trialing + Active (combined since trials are paid) */}
-            <SubscriptionStatCard
-              label="Subscribers"
-              value={subscriptionStats.trialing + subscriptionStats.active}
-              color="green"
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {/* Lifetime Access - One-time purchasers */}
+            <CustomerStatCard
+              label="Lifetime"
+              sublabel="One-time"
+              value={paymentTypeStats.one_time}
+              color="emerald"
+              icon="⚡"
             />
-            <SubscriptionStatCard
+            {/* Active Subscribers - Trialing + Active with subscription */}
+            <CustomerStatCard
+              label="Subscribers"
+              sublabel={subscriptionStats.trialing > 0 ? `${subscriptionStats.trialing} trialing` : "Active"}
+              value={subscriptionStats.trialing + subscriptionStats.active}
+              color="blue"
+              icon="🔄"
+            />
+            {/* Cancelled subscribers */}
+            <CustomerStatCard
               label="Cancelled"
+              sublabel="Former sub"
               value={subscriptionStats.cancelled}
               color="red"
+              icon="✕"
             />
+            {/* Past Due - only show if exists */}
             {subscriptionStats.past_due > 0 && (
-              <SubscriptionStatCard
+              <CustomerStatCard
                 label="Past Due"
+                sublabel="Payment failed"
                 value={subscriptionStats.past_due}
-                color="yellow"
+                color="amber"
+                icon="⚠"
               />
             )}
-            {subscriptionStats.grandfathered > 0 && (
-              <SubscriptionStatCard
+            {/* Grandfathered - Free Access */}
+            {paymentTypeStats.grandfathered > 0 && (
+              <CustomerStatCard
                 label="Free Access"
-                value={subscriptionStats.grandfathered}
+                sublabel="Grandfathered"
+                value={paymentTypeStats.grandfathered}
                 color="purple"
+                icon="🎁"
               />
             )}
-            <SubscriptionStatCard
+            {/* Leads Only */}
+            <CustomerStatCard
               label="Leads Only"
+              sublabel="No purchase"
               value={subscriptionStats.noAccount}
               color="gray"
+              icon="👤"
             />
           </div>
         </div>
@@ -1313,7 +1376,7 @@ export default function AdminDashboardPage() {
                       Payment
                     </th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden md:table-cell">
-                      Status
+                      Type
                     </th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden lg:table-cell">
                       Q1 Answer
@@ -1366,11 +1429,10 @@ export default function AdminDashboardPage() {
                         )}
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden md:table-cell">
-                        <SubscriptionBadge
-                          status={lead.profile?.subscription_status || null}
-                          trialEnd={lead.profile?.subscription_trial_end}
-                          cancelledAt={lead.profile?.subscription_cancelled_at}
-                          purchaseDate={lead.purchase_date}
+                        <PaymentTypeBadge
+                          paymentType={lead.profile?.payment_type || null}
+                          subscriptionStatus={lead.profile?.subscription_status || null}
+                          hasPurchased={lead.has_purchased}
                         />
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden lg:table-cell">
@@ -1635,40 +1697,71 @@ function LeadDetailModal({ lead, onClose }: { lead: Lead; onClose: () => void })
             </div>
           </div>
 
-          {/* Subscription Status */}
-          {lead.profile && (
+          {/* Payment & Access */}
+          {(lead.has_purchased || lead.profile) && (
             <div>
               <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3 flex items-center gap-2">
-                <span>🎫</span> Subscription
+                <span>💳</span> Payment & Access
               </h3>
-              <div className="glass-card rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm text-[var(--text-muted)]">Status</span>
-                  <SubscriptionBadge
-                    status={lead.profile.subscription_status}
-                    trialEnd={lead.profile.subscription_trial_end}
-                    cancelledAt={lead.profile.subscription_cancelled_at}
-                    purchaseDate={lead.purchase_date}
+              <div className="glass-card rounded-xl p-4 space-y-3">
+                {/* Access Type */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-[var(--text-muted)]">Access Type</span>
+                  <PaymentTypeBadge
+                    paymentType={lead.profile?.payment_type || null}
+                    subscriptionStatus={lead.profile?.subscription_status || null}
+                    hasPurchased={lead.has_purchased}
                   />
                 </div>
-                {lead.profile.subscription_trial_end && (
-                  <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/10">
-                    <span className="text-sm text-[var(--text-muted)]">Trial Ends</span>
-                    <span className="text-sm text-white">{formatDate(lead.profile.subscription_trial_end)}</span>
+
+                {/* Amount Paid */}
+                {lead.purchase_amount && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-[var(--text-muted)]">Amount Paid</span>
+                    <span className="text-sm font-medium text-emerald-400">
+                      ${(lead.purchase_amount / 100).toFixed(2)}
+                    </span>
                   </div>
                 )}
-                {lead.profile.subscription_cancelled_at && (
-                  <div className="flex items-center justify-between mb-3 pb-3 border-b border-white/10">
-                    <span className="text-sm text-red-400">Cancelled</span>
-                    <span className="text-sm text-white">{formatDate(lead.profile.subscription_cancelled_at)}</span>
+
+                {/* Subscription details - only for subscribers */}
+                {lead.profile?.payment_type === "subscription" && (
+                  <>
+                    <div className="border-t border-white/10 pt-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-[var(--text-muted)]">Subscription Status</span>
+                        <SubscriptionBadge
+                          status={lead.profile.subscription_status}
+                          trialEnd={lead.profile.subscription_trial_end}
+                          cancelledAt={lead.profile.subscription_cancelled_at}
+                          purchaseDate={lead.purchase_date}
+                        />
+                      </div>
+                      {lead.profile.subscription_trial_end && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-[var(--text-muted)]">Trial Ends</span>
+                          <span className="text-sm text-white">{formatDate(lead.profile.subscription_trial_end)}</span>
+                        </div>
+                      )}
+                      {lead.profile.subscription_cancelled_at && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-red-400">Cancelled On</span>
+                          <span className="text-sm text-white">{formatDate(lead.profile.subscription_cancelled_at)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Account status */}
+                {lead.profile && (
+                  <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                    <span className="text-sm text-[var(--text-muted)]">Account</span>
+                    <span className={`text-sm ${lead.profile.account_status === "active" ? "text-emerald-400" : "text-amber-400"}`}>
+                      {lead.profile.account_status === "active" ? "Active" : "Pending Setup"}
+                    </span>
                   </div>
                 )}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--text-muted)]">Account</span>
-                  <span className={`text-sm ${lead.profile.account_status === "active" ? "text-green-400" : "text-yellow-400"}`}>
-                    {lead.profile.account_status === "active" ? "Active" : "Pending Setup"}
-                  </span>
-                </div>
               </div>
             </div>
           )}
@@ -2101,6 +2194,132 @@ function SubscriptionStatCard({
       <div className="status-value" style={{ color: colorMap[color] }}>{value}</div>
       <div className="status-label">{label}</div>
     </div>
+  );
+}
+
+// Customer stat card component - Enhanced with icon and sublabel
+function CustomerStatCard({
+  label,
+  sublabel,
+  value,
+  color,
+  icon,
+}: {
+  label: string;
+  sublabel?: string;
+  value: number;
+  color: "emerald" | "blue" | "red" | "amber" | "purple" | "gray";
+  icon?: string;
+}) {
+  const colorMap = {
+    emerald: "var(--premium-emerald)",
+    blue: "var(--premium-sapphire)",
+    red: "var(--premium-ruby)",
+    amber: "var(--premium-amber)",
+    purple: "var(--premium-amethyst)",
+    gray: "rgba(255, 255, 255, 0.4)",
+  };
+
+  const bgColorMap = {
+    emerald: "rgba(16, 185, 129, 0.12)",
+    blue: "rgba(59, 130, 246, 0.12)",
+    red: "rgba(239, 68, 68, 0.12)",
+    amber: "rgba(245, 158, 11, 0.12)",
+    purple: "rgba(168, 85, 247, 0.12)",
+    gray: "rgba(255, 255, 255, 0.04)",
+  };
+
+  const borderColorMap = {
+    emerald: "rgba(16, 185, 129, 0.25)",
+    blue: "rgba(59, 130, 246, 0.25)",
+    red: "rgba(239, 68, 68, 0.25)",
+    amber: "rgba(245, 158, 11, 0.25)",
+    purple: "rgba(168, 85, 247, 0.25)",
+    gray: "rgba(255, 255, 255, 0.08)",
+  };
+
+  return (
+    <div
+      className="relative rounded-xl p-4 transition-all duration-300 hover:scale-[1.02]"
+      style={{
+        background: bgColorMap[color],
+        border: `1px solid ${borderColorMap[color]}`,
+      }}
+    >
+      {/* Icon */}
+      {icon && (
+        <span className="absolute top-3 right-3 text-sm opacity-60">{icon}</span>
+      )}
+      {/* Value */}
+      <div
+        className="text-2xl font-bold tracking-tight"
+        style={{ color: colorMap[color] }}
+      >
+        {value.toLocaleString()}
+      </div>
+      {/* Label */}
+      <div className="text-xs font-semibold uppercase tracking-wider mt-1" style={{ color: colorMap[color], opacity: 0.9 }}>
+        {label}
+      </div>
+      {/* Sublabel */}
+      {sublabel && (
+        <div className="text-[10px] text-white/40 mt-0.5">{sublabel}</div>
+      )}
+    </div>
+  );
+}
+
+// Payment type badge component - Shows customer access type
+function PaymentTypeBadge({
+  paymentType,
+  subscriptionStatus,
+  hasPurchased,
+}: {
+  paymentType: string | null;
+  subscriptionStatus: string | null;
+  hasPurchased: boolean;
+}) {
+  // Determine display type based on payment_type and subscription_status
+  let label = "Lead";
+  let style = "bg-white/5 text-white/40 border-white/10";
+  let icon = "";
+
+  if (paymentType === "one_time") {
+    label = "Lifetime";
+    style = "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+    icon = "⚡";
+  } else if (paymentType === "grandfathered") {
+    label = "Free";
+    style = "bg-purple-500/20 text-purple-400 border-purple-500/30";
+    icon = "🎁";
+  } else if (paymentType === "subscription") {
+    if (subscriptionStatus === "trialing") {
+      label = "Trial";
+      style = "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      icon = "⏱";
+    } else if (subscriptionStatus === "active") {
+      label = "Subscriber";
+      style = "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      icon = "🔄";
+    } else if (subscriptionStatus === "cancelled") {
+      label = "Cancelled";
+      style = "bg-red-500/20 text-red-400 border-red-500/30";
+      icon = "✕";
+    } else if (subscriptionStatus === "past_due") {
+      label = "Past Due";
+      style = "bg-amber-500/20 text-amber-400 border-amber-500/30";
+      icon = "⚠";
+    }
+  } else if (!hasPurchased) {
+    // No purchase, just a lead
+    return <span className="text-xs text-white/30">—</span>;
+  }
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${style}`}>
+      {icon && <span className="text-[10px]">{icon}</span>}
+      {label}
+    </span>
   );
 }
 

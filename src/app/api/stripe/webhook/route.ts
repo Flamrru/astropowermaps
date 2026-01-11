@@ -336,6 +336,8 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
             subscription_id: subscriptionId || null,
             subscription_trial_end: trialEndDate,
             stripe_customer_id: session.customer as string,
+            // Payment type: subscription if has subscriptionId, otherwise one_time
+            payment_type: subscriptionId ? "subscription" : "one_time",
           },
           { onConflict: "user_id" }
         );
