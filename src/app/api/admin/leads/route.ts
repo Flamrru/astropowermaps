@@ -274,7 +274,7 @@ export async function GET(request: NextRequest) {
     // Filter out test purchases (test@example.com and amounts under $1)
     let purchasesQuery = supabaseAdmin
       .from("astro_purchases")
-      .select("id, email, amount_cents, lead_id, status, completed_at")
+      .select("id, email, amount_cents, lead_id, status, completed_at, metadata")
       .neq("email", "test@example.com")
       .gte("amount_cents", 100); // Exclude test amounts under $1
 
@@ -292,7 +292,7 @@ export async function GET(request: NextRequest) {
     if (comparisonFrom && comparisonTo) {
       const { data: compPurchases } = await supabaseAdmin
         .from("astro_purchases")
-        .select("id, email, amount_cents, lead_id, status, completed_at")
+        .select("id, email, amount_cents, lead_id, status, completed_at, metadata")
         .neq("email", "test@example.com")
         .gte("amount_cents", 100)
         .gte("completed_at", comparisonFrom.toISOString())
@@ -578,11 +578,26 @@ export async function GET(request: NextRequest) {
     };
 
     // Calculate payment type stats (distinguishes one-time vs subscription)
+    // NOTE: This counts ALL profiles, not filtered by date range
     const paymentTypeStats = {
       one_time: profiles?.filter(p => p.payment_type === "one_time").length || 0,
       subscription: profiles?.filter(p => p.payment_type === "subscription").length || 0,
       grandfathered: profiles?.filter(p => p.payment_type === "grandfathered").length || 0,
       none: profiles?.filter(p => !p.payment_type || p.payment_type === "none").length || 0,
+    };
+
+    // Calculate purchase stats from completedPurchases (DATE FILTERED!)
+    // This is the accurate count for the selected date range
+    const purchaseStats = {
+      total: completedPurchases.length,
+      one_time: completedPurchases.filter(p => {
+        const meta = p.metadata as { subscription_mode?: boolean } | null;
+        return !meta?.subscription_mode;
+      }).length,
+      subscription: completedPurchases.filter(p => {
+        const meta = p.metadata as { subscription_mode?: boolean } | null;
+        return meta?.subscription_mode === true;
+      }).length,
     };
 
     // ========== NEW: Trend data for charts ==========
@@ -817,6 +832,7 @@ export async function GET(request: NextRequest) {
       analytics,
       subscriptionStats,
       paymentTypeStats,
+      purchaseStats,
       trends: {
         leads: leadsTrendData,
         revenue: revenueTrendData,

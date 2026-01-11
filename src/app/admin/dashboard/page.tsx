@@ -202,6 +202,13 @@ interface PaymentTypeStats {
   none: number;
 }
 
+// Purchase stats (date-filtered, derived from purchases table)
+interface PurchaseStats {
+  total: number;
+  one_time: number;
+  subscription: number;
+}
+
 // Legacy stats (pre-subscription launch)
 interface LegacyStats {
   quizStart: number;
@@ -265,6 +272,11 @@ export default function AdminDashboardPage() {
     subscription: 0,
     grandfathered: 0,
     none: 0,
+  });
+  const [purchaseStats, setPurchaseStats] = useState<PurchaseStats>({
+    total: 0,
+    one_time: 0,
+    subscription: 0,
   });
   const [period, setPeriod] = useState<Period>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -382,6 +394,11 @@ export default function AdminDashboardPage() {
         subscription: 0,
         grandfathered: 0,
         none: 0,
+      });
+      setPurchaseStats(data.purchaseStats || {
+        total: 0,
+        one_time: 0,
+        subscription: 0,
       });
 
       // Set new data from API
@@ -809,28 +826,28 @@ export default function AdminDashboardPage() {
                   <div className="node-label">Leads</div>
                 </div>
 
-                {/* Arrow with conversion rate (lead to paid = one_time + subscription) */}
+                {/* Arrow with conversion rate (lead to paid - uses date-filtered purchaseStats) */}
                 <div className="milestone-connector" style={{ color: 'var(--premium-emerald)' }}>
                   <div className="connector-line" />
                   <div className="connector-rate">
                     {milestones.lead > 0
-                      ? (((paymentTypeStats.one_time + paymentTypeStats.subscription) / milestones.lead) * 100).toFixed(1)
+                      ? ((purchaseStats.total / milestones.lead) * 100).toFixed(1)
                       : '0.0'}%
                   </div>
                   <div className="connector-line" style={{ background: 'linear-gradient(90deg, transparent 0%, currentColor 100%)' }} />
                 </div>
 
-                {/* Paid (one_time + subscription combined) */}
+                {/* Paid (date-filtered from purchaseStats) */}
                 <div className="milestone-node">
                   <div className="node-value" style={{ color: 'var(--premium-emerald-bright)' }}>
-                    {(paymentTypeStats.one_time + paymentTypeStats.subscription).toLocaleString()}
+                    {purchaseStats.total.toLocaleString()}
                   </div>
                   <div className="node-label">Paid</div>
                   {/* Breakdown tooltip */}
                   <div className="text-[10px] text-white/40 mt-1">
-                    {paymentTypeStats.one_time > 0 && <span>{paymentTypeStats.one_time} lifetime</span>}
-                    {paymentTypeStats.one_time > 0 && paymentTypeStats.subscription > 0 && <span> · </span>}
-                    {paymentTypeStats.subscription > 0 && <span>{paymentTypeStats.subscription} sub</span>}
+                    {purchaseStats.one_time > 0 && <span>{purchaseStats.one_time} one-time</span>}
+                    {purchaseStats.one_time > 0 && purchaseStats.subscription > 0 && <span> · </span>}
+                    {purchaseStats.subscription > 0 && <span>{purchaseStats.subscription} sub</span>}
                   </div>
                 </div>
               </div>
@@ -840,7 +857,7 @@ export default function AdminDashboardPage() {
                 <span className="text-sm text-white/50">Overall conversion (Quiz → Paid): </span>
                 <span className="text-sm font-semibold" style={{ color: 'var(--premium-emerald-bright)' }}>
                   {milestones.quizStart > 0
-                    ? (((paymentTypeStats.one_time + paymentTypeStats.subscription) / milestones.quizStart) * 100).toFixed(2)
+                    ? ((purchaseStats.total / milestones.quizStart) * 100).toFixed(2)
                     : '0.00'}%
                 </span>
               </div>
@@ -948,10 +965,10 @@ export default function AdminDashboardPage() {
             </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {/* Lifetime Access - One-time purchasers */}
+            {/* One-Time Access - Single purchase customers */}
             <CustomerStatCard
-              label="Lifetime"
-              sublabel="One-time"
+              label="One-Time"
+              sublabel="Paid once"
               value={paymentTypeStats.one_time}
               color="emerald"
               icon="⚡"
@@ -1371,16 +1388,13 @@ export default function AdminDashboardPage() {
                       Email
                     </th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden sm:table-cell">
-                      Payment
+                      Status
                     </th>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden md:table-cell">
-                      Type
+                    <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden md:table-cell">
+                      Amount
                     </th>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden lg:table-cell">
-                      Q1 Answer
-                    </th>
-                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden lg:table-cell">
-                      Q2 Answer
+                    <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden lg:table-cell">
+                      LTV
                     </th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden sm:table-cell">
                       Source
@@ -1415,55 +1429,29 @@ export default function AdminDashboardPage() {
                         </div>
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden sm:table-cell">
-                        {lead.has_purchased ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                            Paid
-                          </span>
-                        ) : (
-                          <span className="text-xs text-[var(--text-faint)]">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 hidden md:table-cell">
                         <PaymentTypeBadge
                           paymentType={lead.profile?.payment_type || null}
                           subscriptionStatus={lead.profile?.subscription_status || null}
                           hasPurchased={lead.has_purchased}
                         />
                       </td>
-                      <td className="px-4 sm:px-6 py-4 hidden lg:table-cell">
-                        {lead.quiz_q1 ? (
-                          <span className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-white/5 text-[var(--text-soft)] border border-white/10">
-                            {lead.quiz_q1}
+                      <td className="px-4 sm:px-6 py-4 hidden md:table-cell text-right">
+                        {lead.purchase_amount ? (
+                          <span className="text-sm text-emerald-400 font-medium">
+                            ${(lead.purchase_amount / 100).toFixed(2)}
                           </span>
                         ) : (
-                          <span className="text-[var(--text-faint)]">-</span>
+                          <span className="text-xs text-[var(--text-faint)]">—</span>
                         )}
                       </td>
-                      <td className="px-4 sm:px-6 py-4 hidden lg:table-cell">
-                        <div className="flex flex-wrap gap-1.5 max-w-[280px]">
-                          {(() => {
-                            if (!lead.quiz_q2) return <span className="text-[var(--text-faint)]">-</span>;
-                            try {
-                              const arr = JSON.parse(lead.quiz_q2);
-                              if (!Array.isArray(arr) || arr.length === 0) {
-                                return <span className="text-[var(--text-faint)]">-</span>;
-                              }
-                              return arr.map((answer: string, i: number) => (
-                                <span
-                                  key={i}
-                                  className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-[var(--gold-main)]/10 text-[var(--gold-bright)] border border-[var(--gold-main)]/20"
-                                >
-                                  {answer.split(" / ")[0]}
-                                </span>
-                              ));
-                            } catch {
-                              return <span className="text-[var(--text-faint)]">-</span>;
-                            }
-                          })()}
-                        </div>
+                      <td className="px-4 sm:px-6 py-4 hidden lg:table-cell text-right">
+                        {lead.purchase_amount ? (
+                          <span className="text-sm text-white font-medium">
+                            ${(lead.purchase_amount / 100).toFixed(2)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-[var(--text-faint)]">—</span>
+                        )}
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden sm:table-cell">
                         {lead.utm_source ? (
@@ -2263,41 +2251,39 @@ function PaymentTypeBadge({
   subscriptionStatus: string | null;
   hasPurchased: boolean;
 }) {
-  // Determine display type based on payment_type and subscription_status
-  let label = "Lead";
-  let style = "bg-white/5 text-white/40 border-white/10";
-  let icon = "";
+  // No purchase = just a lead
+  if (!hasPurchased) {
+    return <span className="text-xs text-white/30">—</span>;
+  }
 
-  if (paymentType === "one_time") {
-    label = "Lifetime";
-    style = "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
-    icon = "⚡";
-  } else if (paymentType === "grandfathered") {
+  // Determine display type based on payment_type and subscription_status
+  let label = "One-Time";
+  let style = "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+  let icon = "⚡";
+
+  // Check subscription status first (from profile if available)
+  if (subscriptionStatus === "trialing") {
+    label = "Trialing";
+    style = "bg-blue-500/20 text-blue-400 border-blue-500/30";
+    icon = "⏱";
+  } else if (subscriptionStatus === "active" && paymentType === "subscription") {
+    label = "Subscribed";
+    style = "bg-blue-500/20 text-blue-400 border-blue-500/30";
+    icon = "🔄";
+  } else if (subscriptionStatus === "cancelled") {
+    label = "Cancelled";
+    style = "bg-red-500/20 text-red-400 border-red-500/30";
+    icon = "✕";
+  } else if (subscriptionStatus === "past_due") {
+    label = "Past Due";
+    style = "bg-amber-500/20 text-amber-400 border-amber-500/30";
+    icon = "⚠";
+  } else if (subscriptionStatus === "grandfathered" || paymentType === "grandfathered") {
     label = "Free";
     style = "bg-purple-500/20 text-purple-400 border-purple-500/30";
     icon = "🎁";
-  } else if (paymentType === "subscription") {
-    if (subscriptionStatus === "trialing") {
-      label = "Trial";
-      style = "bg-blue-500/20 text-blue-400 border-blue-500/30";
-      icon = "⏱";
-    } else if (subscriptionStatus === "active") {
-      label = "Subscriber";
-      style = "bg-blue-500/20 text-blue-400 border-blue-500/30";
-      icon = "🔄";
-    } else if (subscriptionStatus === "cancelled") {
-      label = "Cancelled";
-      style = "bg-red-500/20 text-red-400 border-red-500/30";
-      icon = "✕";
-    } else if (subscriptionStatus === "past_due") {
-      label = "Past Due";
-      style = "bg-amber-500/20 text-amber-400 border-amber-500/30";
-      icon = "⚠";
-    }
-  } else if (!hasPurchased) {
-    // No purchase, just a lead
-    return <span className="text-xs text-white/30">—</span>;
   }
+  // Default: One-Time (already set above)
 
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${style}`}>
