@@ -8,6 +8,7 @@ import type { BigThree } from "@/lib/dashboard-types";
 // Note: calculateBigThree moved to server-side API (/api/user/birth-data)
 import BottomNav from "@/components/dashboard/BottomNav";
 import StellaFloatingButton from "@/components/dashboard/StellaFloatingButton";
+import { usePageView } from "@/lib/hooks/useTrack";
 
 // ============================================
 // Profile State Types
@@ -132,6 +133,9 @@ export default function ProfileShell({ children }: ProfileShellProps) {
     bigThree: null,
     userEmail: null,
   });
+
+  // Track page view
+  usePageView("profile");
 
   useEffect(() => {
     loadProfile();

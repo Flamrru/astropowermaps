@@ -102,6 +102,7 @@ export async function POST(request: NextRequest) {
     const displayMessage = (body.displayMessage || body.message)?.trim();
     const hiddenContext = body.hiddenContext?.trim(); // Only for AI, NOT stored in DB
     const viewContext = body.viewContext || "dashboard"; // Which page the user is viewing
+    const mapLineSummary = body.mapLineSummary?.trim(); // Astrocartography data when on map
 
     if (!displayMessage) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
@@ -195,7 +196,8 @@ export async function POST(request: NextRequest) {
       transits,
       todayScore?.content,
       viewContext,
-      lifeTransitsReport
+      lifeTransitsReport,
+      mapLineSummary
     );
 
     // 9. Build messages array for OpenAI (use aiMessage which includes hidden context)
@@ -315,7 +317,8 @@ function buildStellaSystemPrompt(
   transits: ReturnType<typeof getCurrentTransits>,
   todayScore?: { message?: string; score?: number },
   viewContext?: string,
-  lifeTransitsReport?: LifetimeTransitReport | null
+  lifeTransitsReport?: LifetimeTransitReport | null,
+  mapLineSummary?: string
 ): string {
   const name = profile.display_name || "dear one";
   const bigThree = chart.bigThree;
@@ -327,9 +330,33 @@ function buildStellaSystemPrompt(
     "life-transits": "The user is viewing their LIFE TRANSITS timeline showing Saturn Returns, Jupiter Returns, and other major life transits. Help them understand their cosmic journey and what these major transits mean for them.",
     "2026-report": "The user is viewing their 2026 YEARLY FORECAST report. This shows their key themes, opportunities, and challenges for the year based on major transits affecting their chart. Help them understand what 2026 holds for them - career, love, personal growth, and important timing windows.",
     profile: "The user is on their PROFILE page viewing their birth data. Help them understand their chart placements and what their Big Three means.",
-    map: "The user is viewing their ASTROCARTOGRAPHY MAP. Help them understand power lines and how different locations affect their chart.",
+    map: "The user is viewing their ASTROCARTOGRAPHY MAP. You have FULL ACCESS to their planetary lines below. Help them understand which lines affect specific locations and what living/visiting there would mean for them.",
   };
   const currentViewContext = viewContextHints[viewContext || "dashboard"] || viewContextHints.dashboard;
+
+  // Build astrocartography section if on map
+  let astrocartographySection = "";
+  if (viewContext === "map" && mapLineSummary) {
+    astrocartographySection = `
+
+🗺️ ASTROCARTOGRAPHY DATA (You have this user's complete line data!):
+${mapLineSummary}
+
+ASTROCARTOGRAPHY GUIDANCE:
+- Each planet creates 4 lines around the globe (AC, DC, MC, IC)
+- Lines are EXACT - where a line passes, that planet's energy is strongest
+- Within ~300-500 miles of a line, you still feel its influence
+- You CAN tell them which lines pass through/near ANY location they ask about
+- For specific cities, explain what living/working/loving there would feel like based on the nearest lines
+- DO NOT ask users to upload images or screenshots - you already have all their line data
+- DO NOT ask them to tell you which lines they see - YOU can tell THEM`;
+  } else if (viewContext === "map") {
+    // Map view but no line data (shouldn't happen, but fallback)
+    astrocartographySection = `
+
+🗺️ ASTROCARTOGRAPHY:
+The user is on the map but line data isn't available. Help them understand astrocartography concepts in general, and suggest they explore the map visually.`;
+  }
 
   // Get brief sign descriptions
   const sunMeaning = getSignBriefMeaning(bigThree.sun.sign, "sun");
@@ -462,7 +489,7 @@ ${planetaryPositions}
 ☊ LUNAR NODES (Soul Purpose):
 - North Node in ${chart.nodes.northNode.formatted}: ${chart.nodeThemes.northTheme}
 - South Node in ${chart.nodes.southNode.formatted}: ${chart.nodeThemes.southTheme}
-${housesSection}${aspectsSection}${lifeTransitsSection}
+${housesSection}${aspectsSection}${lifeTransitsSection}${astrocartographySection}
 
 🌙 CURRENT COSMIC WEATHER:
 ${formatTransitsForPrompt(transits)}
@@ -497,6 +524,7 @@ CONTEXT-AWARE RESPONSES:
 - Dashboard/Calendar: Focus on DAILY/WEEKLY energy, current transits, moon phases. Do NOT randomly bring up Saturn Returns or Jupiter Returns unless asked.
 - Life Transits view: The user came here to learn about their major life transits. Proactively mention their upcoming Saturn Return, Jupiter Return, etc. Use the exact dates you have.
 - 2026 Report view: The user wants to know about their YEAR AHEAD. Focus on yearly themes, big opportunities, challenges, and key timing windows in 2026. Talk about what months will be powerful for them, any major transits hitting their chart this year, and how to make the most of 2026.
+- Map/Astrocartography view: The user wants to know about LOCATIONS. You have their full line data - tell them which planetary lines affect specific places they ask about. Explain what living/working/loving in a location would feel like. NEVER ask them to upload screenshots or tell you what lines they see - YOU have their data and YOU tell THEM.
 - When user asks about "Saturn Return" or "Jupiter Return": Give them the EXACT date from your data, not vague estimates.
 
 Make them feel seen with precision, not volume.

@@ -24,6 +24,7 @@ import BottomNav from "./BottomNav";
 import CosmicLoader from "./CosmicLoader";
 import { BYPASS_AUTH, USE_MOCK_DATA, TEST_USER_ID } from "@/lib/auth-bypass";
 import { OnboardingProvider } from "@/components/onboarding";
+import { usePageView } from "@/lib/hooks/useTrack";
 
 // ============================================
 // Initial State
@@ -137,6 +138,9 @@ export default function DashboardShell({
     USE_MOCK_DATA ||
     searchParams.get("dev") === "true" ||
     searchParams.get("d") === "dashboard";
+
+  // Track page view based on variant
+  usePageView(variant === "map" ? "map" : "home");
 
   // Initialize on mount - check auth or load dev data
   useEffect(() => {

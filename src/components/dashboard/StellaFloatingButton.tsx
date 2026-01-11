@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { X } from "lucide-react";
 import StellaChatDrawer from "./stella/StellaChatDrawer";
+import { useTrack } from "@/lib/hooks/useTrack";
+import type { AstrocartographyResult } from "@/lib/astro/types";
 
 interface StellaContext {
   displayMessage: string;
@@ -18,6 +20,8 @@ interface StellaFloatingButtonProps {
   onContextConsumed?: () => void;
   /** Override view context (e.g., "life-transits" when on Life Transits tab) */
   viewHint?: string;
+  /** Astrocartography data when on map page */
+  mapData?: AstrocartographyResult | null;
 }
 
 /**
@@ -32,11 +36,14 @@ export default function StellaFloatingButton({
   externalContext,
   onContextConsumed,
   viewHint,
+  mapData,
 }: StellaFloatingButtonProps = {}) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [chatKey, setChatKey] = useState(0);
   const [pendingContext, setPendingContext] = useState<StellaContext | null>(null);
+  const track = useTrack();
+  const hasTrackedOpen = useRef(false);
 
   const handleNewChat = async () => {
     // Clear history from database
@@ -54,10 +61,12 @@ export default function StellaFloatingButton({
     if (externalContext) {
       setPendingContext(externalContext);
       setIsChatOpen(true);
+      // Track this as a context-triggered open
+      track("stella_chat_open", { source: "ask_stella_button", viewHint }, "engagement");
       // Clear the external context so it doesn't re-trigger
       onContextConsumed?.();
     }
-  }, [externalContext, onContextConsumed]);
+  }, [externalContext, onContextConsumed, track, viewHint]);
 
   // Lock body scroll when chat is open
   useEffect(() => {
@@ -72,7 +81,18 @@ export default function StellaFloatingButton({
   }, [isChatOpen]);
 
   const toggleChat = () => {
-    setIsChatOpen((prev) => !prev);
+    setIsChatOpen((prev) => {
+      const newState = !prev;
+      // Track when chat opens (not closes)
+      if (newState && !hasTrackedOpen.current) {
+        track("stella_chat_open", { source: "floating_button", viewHint }, "engagement");
+      }
+      // Reset tracking flag when closed so we track next open
+      if (!newState) {
+        hasTrackedOpen.current = false;
+      }
+      return newState;
+    });
   };
 
   return (
@@ -274,6 +294,7 @@ export default function StellaFloatingButton({
                 prefillContext={pendingContext}
                 onPrefillConsumed={() => setPendingContext(null)}
                 viewHint={viewHint}
+                mapData={mapData}
               />
             </motion.div>
           </>

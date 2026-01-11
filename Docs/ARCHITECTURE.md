@@ -202,6 +202,86 @@ All calculations now match astro.com within 0.5° (verified with May 5, 1988, 5:
 3. **Always use UTC** for transit calculations (use `getUTCHours()`, not `getHours()`)
 4. **Test changes** against astro.com with known birth data before deploying
 
+## Stella AI Integration
+
+### Chat Context System
+Stella receives contextual data based on which page the user is viewing:
+- **Dashboard**: Daily score, current transits, moon phase
+- **Calendar**: Calendar-specific quick replies, day context
+- **Life Transits**: Full lifetime transit report (Saturn Returns, Jupiter Returns)
+- **Map**: Full astrocartography data with city distances
+
+### Astrocartography Data Flow
+When on `/map`, Stella receives pre-computed distances to all 350 cities:
+
+```
+Map Page → StellaFloatingButton → StellaChatDrawer → API
+           (mapData prop)         (summarizeMapLines)  (mapLineSummary)
+```
+
+**Key Files:**
+- `src/components/dashboard/stella/StellaChatDrawer.tsx` - Contains `summarizeMapLines()` function
+- `src/app/api/stella/chat/route.ts` - Accepts `mapLineSummary` and includes in system prompt
+- `src/lib/astro/cities.ts` - 350-city database with coordinates
+
+**Data Format Sent to AI:**
+```
+EUROPE:
+Zurich, Switzerland: Venus MC (127km), Jupiter AC (342km)
+Geneva, Switzerland: Venus MC (89km), Moon IC (456km)
+...
+DISTANCE GUIDE: <100km=very strong, 100-300km=strong, 300-600km=moderate
+```
+
+### View Context Hints
+The API uses `viewContext` to adjust Stella's behavior:
+| View | Behavior |
+|------|----------|
+| `dashboard` | Focus on daily energy, current transits |
+| `calendar` | Help with power days, moon phases |
+| `life-transits` | Proactively mention Saturn/Jupiter Returns |
+| `map` | Answer location questions confidently with line data |
+| `2026-report` | Focus on yearly themes and timing windows |
+
+## Product Analytics (`/tracking`)
+
+### Architecture
+- **Auth**: Separate from admin (`tracking_session` cookie, `TRACKING_PASSWORD` env var)
+- **Database**: `app_events` table for all tracking data
+- **Client**: `useTrack()` hook for easy event tracking
+
+### Database Table
+```sql
+app_events (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES auth.users,
+  event_name TEXT NOT NULL,
+  event_category TEXT NOT NULL,
+  properties JSONB,
+  session_id TEXT,
+  created_at TIMESTAMPTZ
+)
+```
+
+### API Endpoints
+| Route | Purpose |
+|-------|---------|
+| `/api/track` | POST events from client |
+| `/api/tracking/auth` | Login/logout |
+| `/api/tracking/data` | Overview + Stella metrics |
+| `/api/tracking/users` | User list + detail |
+| `/api/tracking/revenue` | Revenue segmentation |
+
+### Topic Categorization
+Messages are auto-categorized by keywords:
+- **Love**: love, relationship, partner, venus, dating
+- **Career**: career, job, work, money, promotion
+- **Saturn Return**: saturn return, saturn, 29, responsibility
+- **Jupiter**: jupiter, luck, expansion, opportunity
+- **Timing**: when, timing, best time, should i
+- **Home**: home, move, family, relocate
+- **Growth**: purpose, soul, north node, destiny
+
 ## Operational Notes
 - **Deploy**: `vercel --prod` or push to main
 - **Logs**: Vercel dashboard or `vercel logs`

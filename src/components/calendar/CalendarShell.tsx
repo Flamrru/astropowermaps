@@ -8,6 +8,7 @@ import type { CalendarTabType } from "./CalendarTabs";
 import BottomNav from "@/components/dashboard/BottomNav";
 import StellaFloatingButton from "@/components/dashboard/StellaFloatingButton";
 import { OnboardingProvider } from "@/components/onboarding";
+import { usePageView } from "@/lib/hooks/useTrack";
 
 // ============================================
 // Calendar State Types
@@ -296,6 +297,9 @@ export default function CalendarShell({ children }: CalendarShellProps) {
     currentMonthKey: getMonthKey(new Date()),
     selectedGoal: null,
   });
+
+  // Track page view
+  usePageView("calendar");
 
   // Stella chat integration - for "Ask Stella about this day"
   const [stellaContext, setStellaContext] = useState<StellaContext | null>(null);

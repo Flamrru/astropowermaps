@@ -15,6 +15,7 @@ Mobile-first astrology app with quiz funnel, astrocartography map, Stella+ subsc
 | `/map` | Full astrocartography map |
 | `/profile` | User profile, subscription management |
 | `/admin` | Dashboard with leads and funnel analytics |
+| `/tracking` | Product analytics (user behavior, topics, revenue) |
 
 ## Repo Map
 - `/src/app` — Next.js pages + API routes
@@ -22,7 +23,10 @@ Mobile-first astrology app with quiz funnel, astrocartography map, Stella+ subsc
 - `/src/components/reveal` — Reveal flow screens + shell
 - `/src/components/dashboard` — Stella+ dashboard components
 - `/src/components/astro-map` — AstroMap, BirthDataForm, PowerPlacesPanel
+- `/src/components/tracking` — Product analytics dashboard tabs
 - `/src/lib/astro` — Planetary calculations, types, power places
+- `/src/lib/tracking.ts` — Topic categorization, engagement classification
+- `/src/lib/hooks/useTrack.ts` — Event tracking hook
 - `/src/content` — **LOCKED** copy text (do not modify)
 
 ## Source-of-Truth Docs
@@ -47,7 +51,8 @@ npm run lint     # ESLint
 NEXT_PUBLIC_SUPABASE_URL      # Supabase project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY # Supabase anon key
 SUPABASE_SERVICE_ROLE_KEY     # Supabase admin (server-side only)
-ADMIN_PASSWORD                # Dashboard login password
+ADMIN_PASSWORD                # Admin dashboard login password
+TRACKING_PASSWORD             # Product analytics dashboard password
 NEXT_PUBLIC_META_PIXEL_ID     # Meta Pixel ID
 NEXT_PUBLIC_MAPBOX_TOKEN      # Mapbox GL JS token
 STRIPE_MODE                   # "sandbox" or "live"
@@ -64,6 +69,8 @@ OPENAI_API_KEY                # OpenAI for Stella AI
   - `astro_leads` — Quiz leads, birth data
   - `astro_purchases` — Stripe payments
   - `user_profiles` — Subscriptions, user data
+  - `stella_messages` — AI chat history
+  - `app_events` — Product analytics tracking
 
 ## Stripe Integration
 - **Subscription mode** with mixed cart (trial fee + recurring)
@@ -81,6 +88,12 @@ OPENAI_API_KEY                # OpenAI for Stella AI
 - **Use `max_completion_tokens`** — NOT `max_tokens` (deprecated)
 - Settings in `src/lib/openai.ts` → `GENERATION_SETTINGS`
 - Models: `gpt-5-mini` (content) and `gpt-5.2` (chat)
+
+## Stella AI Context
+- **View context**: Stella adapts behavior based on page (dashboard, calendar, map, life-transits)
+- **Map page**: Receives pre-computed distances from 350 cities to all planetary lines
+- **Key file**: `src/components/dashboard/stella/StellaChatDrawer.tsx` → `summarizeMapLines()`
+- See `docs/ARCHITECTURE.md` → "Stella AI Integration" for full details
 
 ## Security Rules
 - **NEVER read `.env.local` or `.env` files** — secrets could leak

@@ -1,6 +1,47 @@
 # Changelog
 
 ## 2026-01-11
+
+### Product Analytics Tracking Dashboard (`/tracking`)
+- **New Dashboard** - Separate analytics dashboard for understanding user behavior
+  - Independent authentication (TRACKING_PASSWORD env var)
+  - 4 tabs: Overview, Stella Insights, Users, Revenue
+  - Auto-refresh every 45 seconds with date range filtering
+- **Event Tracking System**
+  - New `app_events` table in Supabase for tracking feature usage
+  - `useTrack()` hook for easy event tracking in components
+  - Page views tracked automatically on dashboard pages
+- **User Analytics**
+  - Full user list with search, filters (payment type, engagement, topics)
+  - User detail modal shows: profile, payment info, activity timeline, conversations
+  - Engagement classification: High (20+ chats), Medium (5-19), Low (0-4)
+- **Topic Categorization**
+  - Auto-categorizes Stella messages: Love, Career, Saturn Return, Jupiter, Timing, Home, Growth
+  - Topic breakdown charts and filters
+- **Revenue Segmentation**
+  - Segment by payment type, engagement level, or interest topics
+  - Shows revenue per segment with comparison charts
+
+### Stella Astrocartography Fix
+- **Bug Fix** - Stella was giving generic answers on map page ("I can't see your lines")
+  - Root cause: View context mismatch (`power-map` vs `map`)
+  - Root cause: No line data being passed to AI
+- **350-City Database Integration**
+  - Stella now receives pre-computed distances from all 350 cities to all planetary lines
+  - Uses existing `MAJOR_CITIES` array and Haversine distance calculation
+  - Data grouped by region (Europe, Americas, Asia, etc.)
+- **Example Output to AI**:
+  ```
+  EUROPE:
+  Zurich, Switzerland: Venus MC (127km), Jupiter AC (342km)
+  Geneva, Switzerland: Venus MC (89km), Moon IC (456km)
+  ```
+- **Distance Guide** - `<100km=very strong, 100-300km=strong, 300-600km=moderate`
+- **System Prompt Updates**
+  - Added astrocartography guidance section
+  - Explicit constraint: "DO NOT ask users to upload screenshots"
+  - Map-specific response hints for location questions
+
 ### Admin Dashboard - Stripe API Integration
 - **Real-time Data** - Dashboard now fetches subscription and payment data directly from Stripe
   - Subscription status pulled from `stripe.subscriptions.list()` (Trialing, Active, Canceling, Canceled, Past Due)

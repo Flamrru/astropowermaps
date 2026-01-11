@@ -181,9 +181,10 @@ function MapContent() {
 
       {/* Stella floating button - positioned above auto-hiding nav */}
       <StellaFloatingButton
-        viewHint="power-map"
+        viewHint="map"
         externalContext={stellaContext}
         onContextConsumed={handleContextConsumed}
+        mapData={mapData}
       />
     </>
   );

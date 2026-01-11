@@ -8,6 +8,8 @@ import ChatInput from "./ChatInput";
 import TypingIndicator from "./TypingIndicator";
 import QuickReplies, { DEFAULT_QUICK_REPLIES, CALENDAR_QUICK_REPLIES, LIFE_TRANSITS_QUICK_REPLIES, YEAR_2026_QUICK_REPLIES } from "./QuickReplies";
 import type { ChatMessage as ChatMessageType } from "@/lib/dashboard-types";
+import type { AstrocartographyResult, PlanetaryLine } from "@/lib/astro/types";
+import { MAJOR_CITIES, type WorldCity } from "@/lib/astro/cities";
 
 interface StellaChatDrawerProps {
   isOpen: boolean;
@@ -23,6 +25,8 @@ interface StellaChatDrawerProps {
   onPrefillConsumed?: () => void;
   /** Override view context (e.g., "life-transits" from calendar tab) */
   viewHint?: string;
+  /** Astrocartography data when on map page */
+  mapData?: AstrocartographyResult | null;
 }
 
 // Derive view context from pathname
@@ -32,6 +36,137 @@ function getViewContext(pathname: string | null): string {
   if (pathname.startsWith("/profile")) return "profile";
   if (pathname.startsWith("/map")) return "map";
   return "dashboard";
+}
+
+// Line type full names for Stella
+const LINE_TYPE_NAMES: Record<string, string> = {
+  AC: "Ascendant (AC) - How you appear and your personal power",
+  DC: "Descendant (DC) - Relationships and partnerships",
+  MC: "Midheaven (MC) - Career and public recognition",
+  IC: "Imum Coeli (IC) - Home, roots, and private life",
+};
+
+// Planet names and meanings for astrocartography
+const PLANET_MEANINGS: Record<string, string> = {
+  sun: "Sun - Identity, vitality, and life force",
+  moon: "Moon - Emotions, comfort, and belonging",
+  mercury: "Mercury - Communication and mental stimulation",
+  venus: "Venus - Love, beauty, and pleasure",
+  mars: "Mars - Drive, energy, and action",
+  jupiter: "Jupiter - Expansion, luck, and opportunity",
+  saturn: "Saturn - Structure, challenge, and mastery",
+  uranus: "Uranus - Change, innovation, and awakening",
+  neptune: "Neptune - Spirituality, creativity, and dreams",
+  pluto: "Pluto - Transformation and deep power",
+};
+
+/**
+ * Haversine distance calculation (km)
+ */
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+/**
+ * Calculate minimum distance from a city to a planetary line
+ */
+function cityToLineDistance(city: WorldCity, line: PlanetaryLine): number {
+  let minDist = Infinity;
+  const coords = line.coordinates;
+  // Sample points along the line for efficiency
+  const step = Math.max(1, Math.floor(coords.length / 50));
+  for (let i = 0; i < coords.length; i += step) {
+    const [lng, lat] = coords[i];
+    const dist = haversineDistance(city.lat, city.lng, lat, lng);
+    if (dist < minDist) minDist = dist;
+  }
+  return minDist;
+}
+
+/**
+ * Summarize astrocartography lines for Stella
+ * Uses full 350-city database with accurate distance calculations
+ */
+function summarizeMapLines(mapData: AstrocartographyResult): string {
+  // Calculate distances from all 350 cities to all lines
+  const cityData: Array<{
+    city: WorldCity;
+    nearbyLines: Array<{ name: string; dist: number }>;
+  }> = [];
+
+  for (const city of MAJOR_CITIES) {
+    const nearbyLines: Array<{ name: string; dist: number }> = [];
+    for (const line of mapData.lines) {
+      if (line.coordinates.length === 0) continue;
+      const dist = cityToLineDistance(city, line);
+      if (dist <= 600) { // Within influence range
+        const planetName = line.planet.charAt(0).toUpperCase() + line.planet.slice(1);
+        nearbyLines.push({ name: `${planetName} ${line.lineType}`, dist });
+      }
+    }
+    if (nearbyLines.length > 0) {
+      nearbyLines.sort((a, b) => a.dist - b.dist);
+      cityData.push({ city, nearbyLines });
+    }
+  }
+
+  // Group by region for cleaner output
+  const byRegion: Record<string, typeof cityData> = {
+    europe: [],
+    "north-america": [],
+    "south-america": [],
+    asia: [],
+    oceania: [],
+    africa: [],
+  };
+
+  for (const item of cityData) {
+    if (byRegion[item.city.region]) {
+      byRegion[item.city.region].push(item);
+    }
+  }
+
+  // Build output
+  let output = "YOUR ASTROCARTOGRAPHY LINES - DISTANCES TO 350 MAJOR CITIES:\n\n";
+
+  const regionLabels: Record<string, string> = {
+    europe: "EUROPE",
+    "north-america": "NORTH AMERICA",
+    "south-america": "SOUTH AMERICA",
+    asia: "ASIA & MIDDLE EAST",
+    oceania: "AUSTRALIA & OCEANIA",
+    africa: "AFRICA",
+  };
+
+  for (const [region, label] of Object.entries(regionLabels)) {
+    const cities = byRegion[region];
+    if (cities.length === 0) continue;
+
+    // Sort cities by closest line distance
+    cities.sort((a, b) => a.nearbyLines[0].dist - b.nearbyLines[0].dist);
+
+    output += `${label}:\n`;
+    // Show top 15 cities per region with best planetary influences
+    for (const item of cities.slice(0, 15)) {
+      const top3 = item.nearbyLines.slice(0, 3).map(l => `${l.name} (${l.dist}km)`).join(", ");
+      output += `${item.city.name}, ${item.city.country}: ${top3}\n`;
+    }
+    output += "\n";
+  }
+
+  output += "LINE TYPE MEANINGS:\n";
+  output += "- MC: Career, success, recognition | IC: Home, roots, family\n";
+  output += "- AC: Personal power, vitality | DC: Relationships, partnerships\n\n";
+  output += "DISTANCE GUIDE: <100km=very strong, 100-300km=strong, 300-600km=moderate\n";
+  output += "You have distance data for 350+ cities - answer ANY city question confidently!\n";
+
+  return output;
 }
 
 /**
@@ -50,6 +185,7 @@ export default function StellaChatDrawer({
   prefillContext,
   onPrefillConsumed,
   viewHint,
+  mapData,
 }: StellaChatDrawerProps) {
   const pathname = usePathname();
   // Use viewHint if provided (from parent), otherwise derive from pathname
@@ -177,6 +313,9 @@ export default function StellaChatDrawer({
     try {
       // Send displayMessage and hiddenContext as separate fields
       // API stores only displayMessage, uses hiddenContext for AI prompt
+      // Include mapData summary if on map page
+      const mapLineSummary = mapData ? summarizeMapLines(mapData) : undefined;
+
       const response = await fetch("/api/stella/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -184,6 +323,7 @@ export default function StellaChatDrawer({
           displayMessage,
           hiddenContext,
           viewContext,
+          mapLineSummary,
         }),
       });
 
