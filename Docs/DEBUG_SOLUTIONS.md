@@ -537,4 +537,93 @@ const handleOpenPortal = async () => {
 
 ---
 
-*Last updated: 2026-01-08*
+## Optimistic UI with Retry Pattern (Stella Chat)
+
+**Date:** 2026-01-11
+**Status:** ✅ PATTERN DOCUMENTED
+
+### The Problem
+In chat UIs, messages should appear immediately (optimistic update) but if the API fails, the old approach was to **remove the message**, leaving users confused about what happened.
+
+### The Better Pattern
+Keep failed messages visible with a retry option:
+
+```typescript
+// Message type with status
+interface ChatMessage {
+  id: string;
+  content: string;
+  status?: "sending" | "sent" | "failed";
+}
+
+// Store pending data for retry
+const pendingMessageRef = useRef<{ content: string; context?: string } | null>(null);
+
+const sendMessage = async (content: string, retryMessageId?: string) => {
+  pendingMessageRef.current = { content };
+
+  if (retryMessageId) {
+    // Update existing failed message to "sending"
+    setMessages(prev => prev.map(m =>
+      m.id === retryMessageId ? { ...m, status: "sending" } : m
+    ));
+  } else {
+    // Add new message with "sending" status
+    setMessages(prev => [...prev, { id: newId, content, status: "sending" }]);
+  }
+
+  try {
+    const response = await fetch("/api/chat", { ... });
+    // Success: mark as "sent"
+    setMessages(prev => prev.map(m =>
+      m.id === messageId ? { ...m, status: "sent" } : m
+    ));
+  } catch (err) {
+    // Failure: mark as "failed" (don't remove!)
+    setMessages(prev => prev.map(m =>
+      m.id === messageId ? { ...m, status: "failed" } : m
+    ));
+    setError("Couldn't send. Tap retry.");
+  }
+};
+
+// Retry function
+const retryMessage = (messageId: string) => {
+  const msg = messages.find(m => m.id === messageId);
+  if (msg?.status === "failed") {
+    sendMessage(msg.content, messageId);
+  }
+};
+```
+
+### Visual Feedback
+```typescript
+// In ChatMessage component
+const isSending = message.status === "sending";
+const isFailed = message.status === "failed";
+
+<div style={{ opacity: isSending ? 0.6 : 1 }}>
+  {message.content}
+</div>
+
+{isFailed && (
+  <button onClick={() => onRetry(message.id)}>
+    Retry
+  </button>
+)}
+```
+
+### Key Learnings
+1. **Never remove failed messages** - users lose context of what they tried to send
+2. **Store context for retry** - hidden context (like AI prompts) must persist
+3. **Visual states matter** - "sending" should look different from "sent" and "failed"
+4. **Retry reuses same ID** - prevents duplicate messages in the list
+
+### Related Files
+- `src/components/dashboard/stella/StellaChatDrawer.tsx`
+- `src/components/dashboard/stella/ChatMessage.tsx`
+- `src/lib/dashboard-types.ts`
+
+---
+
+*Last updated: 2026-01-11*

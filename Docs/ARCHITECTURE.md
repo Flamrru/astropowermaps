@@ -237,11 +237,37 @@ DISTANCE GUIDE: <100km=very strong, 100-300km=strong, 300-600km=moderate
 The API uses `viewContext` to adjust Stella's behavior:
 | View | Behavior |
 |------|----------|
-| `dashboard` | Focus on daily energy, current transits |
-| `calendar` | Help with power days, moon phases |
-| `life-transits` | Proactively mention Saturn/Jupiter Returns |
+| `dashboard` | Focus on daily energy, current transits. Guides to Life Transits tab for return dates. |
+| `calendar` | Help with power days, moon phases. Guides to Life Transits tab for return dates. |
+| `life-transits` | Proactively mention Saturn/Jupiter Returns with exact dates |
 | `map` | Answer location questions confidently with line data |
 | `2026-report` | Focus on yearly themes and timing windows |
+
+### Safety & Validation
+- **Hidden context length**: Capped at 2000 chars to prevent token abuse
+- **Safety guardrails**: System prompt deflects questions about instructions/how Stella works
+- **Birth time unknown**: When user doesn't know birth time, system prompt warns Stella to:
+  - Focus on Sun sign and planets (accurate without exact time)
+  - Qualify rising/house discussions as "approximate"
+  - Suggest user find exact birth time for precision
+
+### Message Retry System
+Failed messages use optimistic UI with retry:
+1. User sends message → appears immediately with `status: "sending"`
+2. On success → `status: "sent"`
+3. On failure → `status: "failed"` (message stays visible, grayed out)
+4. "Retry" button appears below failed messages
+5. `pendingMessageRef` stores hidden context for accurate retries
+
+### Network Resilience
+- **30-second timeout**: AbortController prevents infinite loading
+- **Specific error messages**: "Request timed out" vs "Couldn't reach Stella"
+- **Rate limiting**: 200 messages/day per user (checked via Supabase)
+
+### Accessibility
+- Chat container: `role="log"`, `aria-live="polite"`
+- Error messages: `role="alert"`
+- Send button: `aria-label="Send message"`
 
 ## Product Analytics (`/tracking`)
 

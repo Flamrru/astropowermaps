@@ -2,6 +2,30 @@
 
 ## 2026-01-11
 
+### Stella AI Chat Improvements
+- **Critical Fixes**
+  - Fixed rate limit message showing "50" instead of actual limit (200)
+  - Removed artificial 3-second delay after API response (was causing sluggish UX)
+  - Increased `max_completion_tokens` from 2000 to 4000 (large system prompt was hitting limits)
+- **Retry Logic for Failed Messages**
+  - Failed messages stay visible (grayed out) instead of disappearing
+  - "Retry" button appears below failed messages
+  - Tracks hidden context for "Ask Stella about this day" retries
+- **Network Timeout**
+  - Added 30-second timeout with AbortController
+  - Shows "Request timed out" error instead of infinite loading
+- **Safety & Validation**
+  - Hidden context length capped at 2000 chars (prevents token abuse)
+  - Safety guardrails in system prompt (deflects questions about instructions)
+  - Life transits null handling: guides users to Life Transits tab instead of hallucinating dates
+- **Accessibility**
+  - Added `role="log"` and `aria-live="polite"` to chat container
+  - Added `role="alert"` to error messages
+  - Added `aria-label="Send message"` to send button
+- **Bug Fixes**
+  - Fixed ordinal formatting: "4rd" → "4th" for Saturn Returns
+  - Birth time unknown now communicated to AI (prevents false precision about rising/houses)
+
 ### Product Analytics Tracking Dashboard (`/tracking`)
 - **New Dashboard** - Separate analytics dashboard for understanding user behavior
   - Independent authentication (TRACKING_PASSWORD env var)
