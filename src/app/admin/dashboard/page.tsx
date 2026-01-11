@@ -16,6 +16,24 @@ interface UserProfile {
   stripe_customer_id: string | null;
 }
 
+// Stripe subscription data (from Stripe API)
+interface StripeSubscriptionInfo {
+  status: string;           // trialing, active, past_due, canceled, etc.
+  trialEnd: string | null;  // ISO date
+  cancelAt: string | null;  // ISO date (scheduled cancellation)
+  canceledAt: string | null; // ISO date (actual cancellation)
+  currentPeriodEnd: string; // ISO date
+  recurringAmount: number;  // subscription price in cents
+}
+
+// Stripe payment data (from Stripe API)
+interface StripePaymentInfo {
+  totalPaid: number;        // LTV - sum of all successful payments in cents
+  lastPaymentAmount: number; // Most recent payment amount
+  lastPaymentDate: string;   // ISO date
+  paymentCount: number;      // Number of successful payments
+}
+
 interface Lead {
   id: string;
   email: string;
@@ -41,6 +59,9 @@ interface Lead {
   purchase_date: string | null;
   // User profile with subscription
   profile: UserProfile | null;
+  // Stripe data (real-time from Stripe API)
+  stripeSubscription: StripeSubscriptionInfo | null;
+  stripePayments: StripePaymentInfo | null;
 }
 
 interface Analytics {
@@ -331,7 +352,7 @@ export default function AdminDashboardPage() {
   const [showLegacy, setShowLegacy] = useState(false);
 
   // Fetch leads function (reusable for refresh)
-  const fetchLeads = useCallback(async (showLoading = true, range: DateRange = dateRange) => {
+  const fetchLeads = useCallback(async (showLoading = true, range: DateRange = dateRange, refreshStripe = false) => {
     if (showLoading) setIsLoading(true);
     try {
       // Build URL with date range params (use local date, not UTC)
@@ -344,7 +365,7 @@ export default function AdminDashboardPage() {
       };
       const fromStr = formatLocalDate(range.from);
       const toStr = formatLocalDate(range.to);
-      const url = `/api/admin/leads?from=${fromStr}&to=${toStr}`;
+      const url = `/api/admin/leads?from=${fromStr}&to=${toStr}${refreshStripe ? "&refreshStripe=true" : ""}`;
 
       const res = await fetch(url);
       if (res.status === 401) {
@@ -701,10 +722,22 @@ export default function AdminDashboardPage() {
         {/* Date Range Selector (Facebook-style) */}
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-xl font-semibold text-white">Dashboard Analytics</h1>
-          <DateRangeSelector
-            value={dateRange}
-            onChange={handleDateRangeChange}
-          />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => fetchLeads(true, dateRange, true)}
+              className="px-3 py-1.5 text-sm font-medium text-[var(--text-muted)] hover:text-white bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-all flex items-center gap-2"
+              title="Force refresh data from Stripe"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Sync Stripe
+            </button>
+            <DateRangeSelector
+              value={dateRange}
+              onChange={handleDateRangeChange}
+            />
+          </div>
         </div>
 
         {/* Revenue Cards */}
@@ -1433,10 +1466,16 @@ export default function AdminDashboardPage() {
                           paymentType={lead.profile?.payment_type || null}
                           subscriptionStatus={lead.profile?.subscription_status || null}
                           hasPurchased={lead.has_purchased}
+                          stripeSubscription={lead.stripeSubscription}
                         />
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden md:table-cell text-right">
-                        {lead.purchase_amount ? (
+                        {/* Amount: Prefer Stripe last payment, fall back to purchase_amount */}
+                        {lead.stripePayments?.lastPaymentAmount ? (
+                          <span className="text-sm text-emerald-400 font-medium">
+                            ${(lead.stripePayments.lastPaymentAmount / 100).toFixed(2)}
+                          </span>
+                        ) : lead.purchase_amount ? (
                           <span className="text-sm text-emerald-400 font-medium">
                             ${(lead.purchase_amount / 100).toFixed(2)}
                           </span>
@@ -1445,7 +1484,12 @@ export default function AdminDashboardPage() {
                         )}
                       </td>
                       <td className="px-4 sm:px-6 py-4 hidden lg:table-cell text-right">
-                        {lead.purchase_amount ? (
+                        {/* LTV: Prefer Stripe total paid, fall back to purchase_amount */}
+                        {lead.stripePayments?.totalPaid ? (
+                          <span className="text-sm text-white font-medium">
+                            ${(lead.stripePayments.totalPaid / 100).toFixed(2)}
+                          </span>
+                        ) : lead.purchase_amount ? (
                           <span className="text-sm text-white font-medium">
                             ${(lead.purchase_amount / 100).toFixed(2)}
                           </span>
@@ -1582,7 +1626,9 @@ function LeadDetailModal({ lead, onClose }: { lead: Lead; onClose: () => void })
               <h2 className="text-lg font-semibold text-white">{lead.email}</h2>
               <p className="text-sm text-[var(--text-muted)]">
                 {lead.has_purchased ? (
-                  <span className="text-green-400">Customer • ${((lead.purchase_amount || 0) / 100).toFixed(2)}</span>
+                  <span className="text-green-400">
+                    Customer • ${((lead.stripePayments?.totalPaid || lead.purchase_amount || 0) / 100).toFixed(2)}
+                  </span>
                 ) : (
                   "Lead"
                 )}
@@ -1697,32 +1743,55 @@ function LeadDetailModal({ lead, onClose }: { lead: Lead; onClose: () => void })
                     paymentType={lead.profile?.payment_type || null}
                     subscriptionStatus={lead.profile?.subscription_status || null}
                     hasPurchased={lead.has_purchased}
+                    stripeSubscription={lead.stripeSubscription}
                   />
                 </div>
 
-                {/* Amount Paid */}
-                {lead.purchase_amount && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-[var(--text-muted)]">Amount Paid</span>
-                    <span className="text-sm font-medium text-emerald-400">
-                      ${(lead.purchase_amount / 100).toFixed(2)}
-                    </span>
-                  </div>
+                {/* Payment Details - from Stripe or database */}
+                {(lead.stripePayments || lead.purchase_amount) && (
+                  <>
+                    {/* Last Payment */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[var(--text-muted)]">Last Payment</span>
+                      <span className="text-sm font-medium text-emerald-400">
+                        ${((lead.stripePayments?.lastPaymentAmount || lead.purchase_amount || 0) / 100).toFixed(2)}
+                      </span>
+                    </div>
+                    {/* LTV - only show if different from last payment */}
+                    {lead.stripePayments && lead.stripePayments.paymentCount > 1 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-[var(--text-muted)]">Total Paid (LTV)</span>
+                        <span className="text-sm font-medium text-white">
+                          ${(lead.stripePayments.totalPaid / 100).toFixed(2)}
+                          <span className="text-[var(--text-faint)] ml-1">
+                            ({lead.stripePayments.paymentCount} payments)
+                          </span>
+                        </span>
+                      </div>
+                    )}
+                  </>
                 )}
 
-                {/* Subscription details - only for subscribers */}
-                {lead.profile?.payment_type === "subscription" && (
-                  <>
-                    <div className="border-t border-white/10 pt-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-[var(--text-muted)]">Subscription Status</span>
-                        <SubscriptionBadge
-                          status={lead.profile.subscription_status}
-                          purchaseDate={lead.purchase_date}
-                        />
-                      </div>
+                {/* Subscription details - show for any subscriber */}
+                {(lead.stripeSubscription || lead.profile?.payment_type === "subscription") && (
+                  <div className="border-t border-white/10 pt-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-[var(--text-muted)]">Subscription</span>
+                      <SubscriptionBadge
+                        status={lead.stripeSubscription?.status || lead.profile?.subscription_status || null}
+                        trialEnd={lead.stripeSubscription?.trialEnd}
+                        purchaseDate={lead.purchase_date}
+                      />
                     </div>
-                  </>
+                    {lead.stripeSubscription?.recurringAmount && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-[var(--text-muted)]">Monthly Rate</span>
+                        <span className="text-sm text-white">
+                          ${(lead.stripeSubscription.recurringAmount / 100).toFixed(2)}/mo
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* Account status */}
@@ -2242,41 +2311,70 @@ function CustomerStatCard({
 }
 
 // Payment type badge component - Shows customer access type
+// Now prioritizes Stripe data for real-time accuracy
 function PaymentTypeBadge({
   paymentType,
   subscriptionStatus,
   hasPurchased,
+  stripeSubscription,
 }: {
   paymentType: string | null;
   subscriptionStatus: string | null;
   hasPurchased: boolean;
+  stripeSubscription: StripeSubscriptionInfo | null;
 }) {
   // No purchase = just a lead
   if (!hasPurchased) {
     return <span className="text-xs text-white/30">—</span>;
   }
 
-  // Determine display type based on payment_type and subscription_status
+  // Determine display type - PRIORITIZE STRIPE DATA
   let label = "One-Time";
   let style = "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
   let icon = "⚡";
 
-  // Check subscription status first (from profile if available)
-  if (subscriptionStatus === "trialing") {
+  // Check Stripe subscription first (most accurate, real-time data)
+  if (stripeSubscription) {
+    const sub = stripeSubscription;
+    if (sub.status === "trialing") {
+      label = "Trialing";
+      style = "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      icon = "⏱";
+    } else if (sub.cancelAt && sub.status !== "canceled") {
+      // Scheduled to cancel but not yet canceled
+      label = "Canceling";
+      style = "bg-amber-500/20 text-amber-400 border-amber-500/30";
+      icon = "⚠";
+    } else if (sub.status === "active") {
+      label = "Active";
+      style = "bg-green-500/20 text-green-400 border-green-500/30";
+      icon = "🔄";
+    } else if (sub.status === "past_due") {
+      label = "Past Due";
+      style = "bg-orange-500/20 text-orange-400 border-orange-500/30";
+      icon = "⚠";
+    } else if (sub.status === "canceled") {
+      label = "Canceled";
+      style = "bg-red-500/20 text-red-400 border-red-500/30";
+      icon = "✕";
+    }
+  }
+  // Fall back to profile data if no Stripe subscription
+  else if (subscriptionStatus === "trialing") {
     label = "Trialing";
     style = "bg-blue-500/20 text-blue-400 border-blue-500/30";
     icon = "⏱";
   } else if (subscriptionStatus === "active" && paymentType === "subscription") {
-    label = "Subscribed";
-    style = "bg-blue-500/20 text-blue-400 border-blue-500/30";
+    label = "Active";
+    style = "bg-green-500/20 text-green-400 border-green-500/30";
     icon = "🔄";
   } else if (subscriptionStatus === "cancelled") {
-    label = "Cancelled";
+    label = "Canceled";
     style = "bg-red-500/20 text-red-400 border-red-500/30";
     icon = "✕";
   } else if (subscriptionStatus === "past_due") {
     label = "Past Due";
-    style = "bg-amber-500/20 text-amber-400 border-amber-500/30";
+    style = "bg-orange-500/20 text-orange-400 border-orange-500/30";
     icon = "⚠";
   } else if (subscriptionStatus === "grandfathered" || paymentType === "grandfathered") {
     label = "Free";

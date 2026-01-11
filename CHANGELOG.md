@@ -1,6 +1,23 @@
 # Changelog
 
 ## 2026-01-11
+### Admin Dashboard - Stripe API Integration
+- **Real-time Data** - Dashboard now fetches subscription and payment data directly from Stripe
+  - Subscription status pulled from `stripe.subscriptions.list()` (Trialing, Active, Canceling, Canceled, Past Due)
+  - Payment amounts pulled from `stripe.charges.list()` (actual trial fees: $2.99, $5.99, $9.99)
+  - LTV calculated from sum of all payments per customer
+- **Caching** - 5-minute in-memory cache prevents excessive API calls
+  - "Sync Stripe" button forces refresh from Stripe
+- **Badge Updates** - Status badges now prioritize Stripe data
+  - Shows correct subscription status even if user doesn't have a profile entry
+  - Added "Canceling" status for scheduled cancellations
+- **Amount/LTV Columns** - Now show real Stripe payment data
+  - Amount: Last payment from Stripe (or purchase_amount as fallback)
+  - LTV: Total paid from Stripe (shows payment count if > 1)
+- **Lead Detail Modal** - Enhanced payment section
+  - Shows last payment, LTV with payment count
+  - Shows subscription monthly rate and status
+
 ### Admin Dashboard - Payment Type Distinction
 - **Database** - Added `payment_type` column to `user_profiles` table
   - Values: `none`, `one_time`, `subscription`, `grandfathered`

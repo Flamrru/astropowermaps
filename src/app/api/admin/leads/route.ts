@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import Stripe from "stripe";
+import { getStripeSecretKey } from "@/lib/stripe-config";
 
 const COOKIE_NAME = "admin_session";
 
@@ -9,6 +11,178 @@ const SUBSCRIPTION_LAUNCH = new Date("2026-01-07T00:00:00+01:00");
 
 // Funnel tracking start date (Dec 31, 2025 - when we started tracking funnel events)
 const FUNNEL_TRACKING_START = new Date("2025-12-31T00:00:00+00:00");
+
+// ========== STRIPE DATA TYPES ==========
+interface StripeSubscriptionInfo {
+  status: string;           // trialing, active, past_due, canceled, etc.
+  trialEnd: string | null;  // ISO date
+  cancelAt: string | null;  // ISO date (scheduled cancellation)
+  canceledAt: string | null; // ISO date (actual cancellation)
+  currentPeriodEnd: string; // ISO date
+  recurringAmount: number;  // subscription price in cents
+}
+
+interface StripePaymentInfo {
+  totalPaid: number;        // LTV - sum of all successful payments in cents
+  lastPaymentAmount: number; // Most recent payment amount
+  lastPaymentDate: string;   // ISO date
+  paymentCount: number;      // Number of successful payments
+}
+
+// In-memory cache with TTL
+let stripeCache: {
+  subscriptions: Map<string, StripeSubscriptionInfo> | null;
+  payments: Map<string, StripePaymentInfo> | null;
+  timestamp: number;
+} = { subscriptions: null, payments: null, timestamp: 0 };
+
+const STRIPE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Get Stripe instance
+function getStripe(): Stripe {
+  const key = getStripeSecretKey();
+  if (!key) {
+    throw new Error("Stripe secret key is not configured");
+  }
+  return new Stripe(key);
+}
+
+// Fetch all subscriptions from Stripe (with caching)
+async function fetchStripeSubscriptions(forceRefresh = false): Promise<Map<string, StripeSubscriptionInfo>> {
+  // Check cache
+  if (!forceRefresh && stripeCache.subscriptions && Date.now() - stripeCache.timestamp < STRIPE_CACHE_TTL) {
+    return stripeCache.subscriptions;
+  }
+
+  const stripe = getStripe();
+  const emailToSubscription = new Map<string, StripeSubscriptionInfo>();
+
+  // Fetch all subscriptions (paginated - handle up to 300)
+  let hasMore = true;
+  let startingAfter: string | undefined;
+
+  while (hasMore) {
+    const params: Stripe.SubscriptionListParams = {
+      limit: 100,
+      expand: ["data.customer"],
+    };
+    if (startingAfter) params.starting_after = startingAfter;
+
+    const subscriptions = await stripe.subscriptions.list(params);
+
+    for (const sub of subscriptions.data) {
+      const customer = sub.customer as Stripe.Customer;
+      if (customer.email) {
+        // Get current_period_end from subscription items (where it's stored in Stripe's type system)
+        const currentPeriodEnd = sub.items.data[0]?.current_period_end;
+        emailToSubscription.set(customer.email.toLowerCase(), {
+          status: sub.status,
+          trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+          cancelAt: sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
+          canceledAt: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
+          currentPeriodEnd: currentPeriodEnd ? new Date(currentPeriodEnd * 1000).toISOString() : new Date().toISOString(),
+          recurringAmount: sub.items.data[0]?.price?.unit_amount || 0,
+        });
+      }
+    }
+
+    hasMore = subscriptions.has_more;
+    if (hasMore && subscriptions.data.length > 0) {
+      startingAfter = subscriptions.data[subscriptions.data.length - 1].id;
+    }
+  }
+
+  return emailToSubscription;
+}
+
+// Fetch payment history from Stripe (for LTV and actual amounts)
+async function fetchStripePayments(): Promise<Map<string, StripePaymentInfo>> {
+  // Check cache (payments are fetched together with subscriptions)
+  if (stripeCache.payments && Date.now() - stripeCache.timestamp < STRIPE_CACHE_TTL) {
+    return stripeCache.payments;
+  }
+
+  const stripe = getStripe();
+  const paymentsByEmail = new Map<string, { amounts: number[]; dates: string[] }>();
+
+  // Fetch all successful charges (paginated - handle up to 300)
+  let hasMore = true;
+  let startingAfter: string | undefined;
+
+  while (hasMore) {
+    const params: Stripe.ChargeListParams = {
+      limit: 100,
+      expand: ["data.customer"],
+    };
+    if (startingAfter) params.starting_after = startingAfter;
+
+    const charges = await stripe.charges.list(params);
+
+    for (const charge of charges.data) {
+      if (charge.status !== "succeeded") continue;
+
+      const customer = charge.customer as Stripe.Customer | null;
+      const email = customer?.email || charge.billing_details?.email;
+
+      if (email) {
+        const key = email.toLowerCase();
+        if (!paymentsByEmail.has(key)) {
+          paymentsByEmail.set(key, { amounts: [], dates: [] });
+        }
+        paymentsByEmail.get(key)!.amounts.push(charge.amount);
+        paymentsByEmail.get(key)!.dates.push(new Date(charge.created * 1000).toISOString());
+      }
+    }
+
+    hasMore = charges.has_more;
+    if (hasMore && charges.data.length > 0) {
+      startingAfter = charges.data[charges.data.length - 1].id;
+    }
+  }
+
+  // Calculate totals
+  const emailToPayments = new Map<string, StripePaymentInfo>();
+  for (const [email, data] of paymentsByEmail) {
+    emailToPayments.set(email, {
+      totalPaid: data.amounts.reduce((sum, a) => sum + a, 0), // LTV
+      lastPaymentAmount: data.amounts[0] || 0, // Most recent (first in list from Stripe)
+      lastPaymentDate: data.dates[0] || "",
+      paymentCount: data.amounts.length,
+    });
+  }
+
+  return emailToPayments;
+}
+
+// Fetch all Stripe data (subscriptions + payments) with caching
+async function fetchStripeData(forceRefresh = false): Promise<{
+  subscriptions: Map<string, StripeSubscriptionInfo>;
+  payments: Map<string, StripePaymentInfo>;
+}> {
+  // Check cache
+  if (!forceRefresh && stripeCache.subscriptions && stripeCache.payments &&
+      Date.now() - stripeCache.timestamp < STRIPE_CACHE_TTL) {
+    return {
+      subscriptions: stripeCache.subscriptions,
+      payments: stripeCache.payments,
+    };
+  }
+
+  // Fetch both in parallel
+  const [subscriptions, payments] = await Promise.all([
+    fetchStripeSubscriptions(forceRefresh),
+    fetchStripePayments(),
+  ]);
+
+  // Update cache
+  stripeCache = {
+    subscriptions,
+    payments,
+    timestamp: Date.now(),
+  };
+
+  return { subscriptions, payments };
+}
 
 type Period = "today" | "week" | "month" | "all";
 
@@ -123,6 +297,7 @@ export async function GET(request: NextRequest) {
 
   // Get period from query params (support both new and legacy systems)
   const { searchParams } = new URL(request.url);
+  const forceStripeRefresh = searchParams.get("refreshStripe") === "true";
 
   // New system: explicit from/to dates
   const { from: dateFrom, to: dateTo } = parseDateRange(searchParams);
@@ -567,6 +742,43 @@ export async function GET(request: NextRequest) {
       profile: emailToProfile.get(lead.email.toLowerCase()) || null,
     }));
 
+    // ========== STRIPE DATA INTEGRATION ==========
+    // Fetch subscription and payment data from Stripe (with graceful fallback)
+    let stripeSubscriptions = new Map<string, StripeSubscriptionInfo>();
+    let stripePayments = new Map<string, StripePaymentInfo>();
+    let stripeCacheAge = 0;
+
+    try {
+      const stripeData = await fetchStripeData(forceStripeRefresh);
+      stripeSubscriptions = stripeData.subscriptions;
+      stripePayments = stripeData.payments;
+      stripeCacheAge = Date.now() - stripeCache.timestamp;
+    } catch (error) {
+      console.error("Failed to fetch Stripe data:", error);
+      // Continue with empty maps - dashboard still works with DB data
+    }
+
+    // Merge Stripe data with leads
+    const leadsWithStripeData = leadsWithProfiles.map(lead => {
+      const subInfo = stripeSubscriptions.get(lead.email.toLowerCase());
+      const paymentInfo = stripePayments.get(lead.email.toLowerCase());
+      return {
+        ...lead,
+        stripeSubscription: subInfo || null,
+        stripePayments: paymentInfo || null,
+      };
+    });
+
+    // Calculate Stripe-based stats
+    const stripeStats = {
+      totalSubscriptions: stripeSubscriptions.size,
+      trialing: [...stripeSubscriptions.values()].filter(s => s.status === "trialing").length,
+      active: [...stripeSubscriptions.values()].filter(s => s.status === "active").length,
+      pastDue: [...stripeSubscriptions.values()].filter(s => s.status === "past_due").length,
+      canceled: [...stripeSubscriptions.values()].filter(s => s.status === "canceled").length,
+      canceling: [...stripeSubscriptions.values()].filter(s => s.cancelAt && s.status !== "canceled").length,
+    };
+
     // Calculate subscription stats
     const subscriptionStats = {
       trialing: profiles?.filter(p => p.subscription_status === "trialing").length || 0,
@@ -810,7 +1022,7 @@ export async function GET(request: NextRequest) {
         daysDiff,
         granularity,
       } : null,
-      leads: leadsWithProfiles,
+      leads: leadsWithStripeData,
       stats,
       funnel: funnelCounts,
       funnelWarning,
@@ -833,6 +1045,8 @@ export async function GET(request: NextRequest) {
       subscriptionStats,
       paymentTypeStats,
       purchaseStats,
+      stripeStats,
+      stripeCacheAge,
       trends: {
         leads: leadsTrendData,
         revenue: revenueTrendData,
