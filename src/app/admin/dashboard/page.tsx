@@ -617,10 +617,11 @@ export default function AdminDashboardPage() {
     URL.revokeObjectURL(url);
   };
 
-  // Format date for display
+  // Format date for display (in Zurich timezone)
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString("en-US", {
+      timeZone: "Europe/Zurich",
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -1507,8 +1508,13 @@ export default function AdminDashboardPage() {
                         )}
                       </td>
                       <td className="px-4 sm:px-6 py-4">
+                        {/* Show payment date for paid users, lead date for others */}
                         <span className="text-sm text-[var(--text-muted)] whitespace-nowrap">
-                          {formatDate(lead.created_at)}
+                          {lead.stripePayments?.lastPaymentDate
+                            ? formatDate(lead.stripePayments.lastPaymentDate)
+                            : lead.purchase_date
+                            ? formatDate(lead.purchase_date)
+                            : formatDate(lead.created_at)}
                         </span>
                       </td>
                     </tr>
@@ -1550,6 +1556,7 @@ function LeadDetailModal({ lead, onClose }: { lead: Lead; onClose: () => void })
   const formatDateTime = (dateStr: string | null) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("en-US", {
+      timeZone: "Europe/Zurich",
       year: "numeric",
       month: "short",
       day: "numeric",
