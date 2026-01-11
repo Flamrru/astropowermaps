@@ -10,11 +10,23 @@
   - Subscriptions → `payment_type = "subscription"`
 - **Dashboard Redesign** - Clear distinction between payment types
   - Renamed "Subscription Status" → "Customers" section
-  - New stat cards: Lifetime (one-time), Subscribers, Cancelled, Past Due, Free Access, Leads Only
-  - Added `PaymentTypeBadge` component with icons: ⚡ Lifetime, 🔄 Subscriber, ⏱ Trial, ✕ Cancelled, 🎁 Free
+  - New stat cards: One-Time, Subscribers, Cancelled, Past Due, Free Access, Leads Only
+  - Added `PaymentTypeBadge` component with icons: ⚡ One-Time, 🔄 Subscribed, ⏱ Trialing, ✕ Cancelled, 🎁 Free
   - Milestones simplified: Quiz → Leads → Paid (combines one-time + subscription)
-  - Lead table "Status" column replaced with "Type" showing access type badges
+  - Lead table shows: Email, Status, Amount, LTV, Source, Date (removed Q1/Q2 columns)
   - Lead detail modal shows "Payment & Access" section with amount paid and access type
+
+### Admin Dashboard - Date Filtering Fix
+- **API** - Added `purchaseStats` endpoint that respects date range filter
+  - `purchaseStats.total` now correctly filters by selected date range
+  - Previously, "Paid" count showed all-time regardless of date filter
+- **Badge Logic** - Fixed paid users showing "Lead" instead of "One-Time"
+  - Badge now defaults to "One-Time" for any paid user
+  - Only shows subscription status if profile has subscription data
+- **Terminology** - Renamed "Lifetime" → "One-Time" throughout
+- **Table Columns** - Simplified to essential data only
+  - New columns: Email, Status (badge), Amount, LTV, Source, Date
+  - Removed: Q1 Answer, Q2 Answer, Payment columns
 
 ## 2026-01-07
 ### Critical Bug Fix: Astronomical Calculations
