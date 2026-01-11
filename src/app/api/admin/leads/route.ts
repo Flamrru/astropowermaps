@@ -243,19 +243,38 @@ function getPeriodStart(period: Period): Date | null {
 }
 
 // Parse date range from query params (new system)
+// Dates are interpreted in Lithuanian timezone (DASHBOARD_TZ)
 function parseDateRange(searchParams: URLSearchParams): { from: Date | null; to: Date | null } {
   const fromStr = searchParams.get("from");
   const toStr = searchParams.get("to");
 
   if (fromStr && toStr) {
-    const from = new Date(fromStr);
-    const to = new Date(toStr);
-    // Set to end of day for 'to' date
-    to.setHours(23, 59, 59, 999);
+    // Parse date strings as Lithuanian time, not UTC
+    // "2026-01-11" should mean Jan 11 00:00 Lithuanian time
+    const from = parseDateInTimezone(fromStr, 0, 0, 0, 0);     // Start of day
+    const to = parseDateInTimezone(toStr, 23, 59, 59, 999);   // End of day
     return { from, to };
   }
 
   return { from: null, to: null };
+}
+
+// Parse a date string (YYYY-MM-DD) as a specific time in Lithuanian timezone
+// Returns the UTC Date equivalent
+function parseDateInTimezone(dateStr: string, hours: number, minutes: number, seconds: number, ms: number): Date {
+  // Parse the date parts
+  const [year, month, day] = dateStr.split("-").map(Number);
+
+  // Create a date at the specified time in UTC first
+  const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds, ms));
+
+  // Get the timezone offset for Lithuanian time on this date
+  // Lithuanian time is UTC+2 in winter, UTC+3 in summer
+  const tzOffset = getTimezoneOffset(utcDate);
+
+  // Adjust: if we want "Jan 11 00:00 Lithuanian", that's "Jan 10 22:00 UTC" (UTC+2)
+  // So we subtract the timezone offset
+  return new Date(utcDate.getTime() - tzOffset * 60 * 1000);
 }
 
 // Get comparison period (previous period of same length)
