@@ -12,8 +12,6 @@ interface UserProfile {
   account_status: "pending_setup" | "active" | null;
   subscription_status: "none" | "trialing" | "active" | "past_due" | "cancelled" | "paused" | "grandfathered" | null;
   subscription_id: string | null;
-  subscription_trial_end: string | null;
-  subscription_cancelled_at: string | null;
   payment_type: "none" | "one_time" | "subscription" | "grandfathered" | null;
   stripe_customer_id: string | null;
 }
@@ -1732,23 +1730,9 @@ function LeadDetailModal({ lead, onClose }: { lead: Lead; onClose: () => void })
                         <span className="text-sm text-[var(--text-muted)]">Subscription Status</span>
                         <SubscriptionBadge
                           status={lead.profile.subscription_status}
-                          trialEnd={lead.profile.subscription_trial_end}
-                          cancelledAt={lead.profile.subscription_cancelled_at}
                           purchaseDate={lead.purchase_date}
                         />
                       </div>
-                      {lead.profile.subscription_trial_end && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-[var(--text-muted)]">Trial Ends</span>
-                          <span className="text-sm text-white">{formatDate(lead.profile.subscription_trial_end)}</span>
-                        </div>
-                      )}
-                      {lead.profile.subscription_cancelled_at && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-red-400">Cancelled On</span>
-                          <span className="text-sm text-white">{formatDate(lead.profile.subscription_cancelled_at)}</span>
-                        </div>
-                      )}
                     </div>
                   </>
                 )}

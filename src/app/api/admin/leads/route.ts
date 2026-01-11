@@ -528,6 +528,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Fetch user profiles with subscription data
+    // Note: Only selecting columns that exist in the schema
     const { data: profiles } = await supabaseAdmin
       .from("user_profiles")
       .select(`
@@ -535,8 +536,6 @@ export async function GET(request: NextRequest) {
         account_status,
         subscription_status,
         subscription_id,
-        subscription_trial_end,
-        subscription_cancelled_at,
         payment_type,
         stripe_customer_id
       `);
@@ -551,8 +550,6 @@ export async function GET(request: NextRequest) {
       account_status: string | null;
       subscription_status: string | null;
       subscription_id: string | null;
-      subscription_trial_end: string | null;
-      subscription_cancelled_at: string | null;
       payment_type: string | null;
       stripe_customer_id: string | null;
     }>();
