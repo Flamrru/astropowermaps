@@ -100,12 +100,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     // Support both old format (message) and new format (displayMessage + hiddenContext)
     const displayMessage = (body.displayMessage || body.message)?.trim();
-    const hiddenContext = body.hiddenContext?.trim(); // Only for AI, NOT stored in DB
+    let hiddenContext = body.hiddenContext?.trim(); // Only for AI, NOT stored in DB
     const viewContext = body.viewContext || "dashboard"; // Which page the user is viewing
     const mapLineSummary = body.mapLineSummary?.trim(); // Astrocartography data when on map
 
     if (!displayMessage) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
+    }
+
+    // Validate hidden context length to prevent abuse (max 2000 chars for day context)
+    if (hiddenContext && hiddenContext.length > 2000) {
+      hiddenContext = hiddenContext.slice(0, 2000);
     }
 
     // Build the message for OpenAI (includes hidden context if provided)
@@ -324,11 +329,11 @@ function buildStellaSystemPrompt(
 
   // View-specific context hints
   const viewContextHints: Record<string, string> = {
-    dashboard: "The user is on their main dashboard viewing their daily score and forecast.",
-    calendar: "The user is viewing their CALENDAR with power days and moon phases. Help them understand what specific days mean for them, why certain days are marked as power days or rest days.",
+    dashboard: "The user is on their main dashboard viewing their daily score and forecast. If they ask about Saturn Returns or Jupiter Returns, explain the concept but DO NOT give specific dates - instead suggest they check the Life Transits tab for exact timing.",
+    calendar: "The user is viewing their CALENDAR with power days and moon phases. Help them understand what specific days mean for them, why certain days are marked as power days or rest days. If they ask about Saturn Returns, suggest they check the Life Transits tab.",
     "life-transits": "The user is viewing their LIFE TRANSITS timeline showing Saturn Returns, Jupiter Returns, and other major life transits. Help them understand their cosmic journey and what these major transits mean for them.",
     "2026-report": "The user is viewing their 2026 YEARLY FORECAST report. This shows their key themes, opportunities, and challenges for the year based on major transits affecting their chart. Help them understand what 2026 holds for them - career, love, personal growth, and important timing windows.",
-    profile: "The user is on their PROFILE page viewing their birth data. Help them understand their chart placements and what their Big Three means.",
+    profile: "The user is on their PROFILE page viewing their birth data. Help them understand their chart placements and what their Big Three means. If they ask about Saturn Returns, suggest they check the Life Transits tab.",
     map: "The user is viewing their ASTROCARTOGRAPHY MAP. You have FULL ACCESS to their planetary lines below. Help them understand which lines affect specific locations and what living/visiting there would mean for them.",
   };
   const currentViewContext = viewContextHints[viewContext || "dashboard"] || viewContextHints.dashboard;
@@ -422,9 +427,16 @@ The user is on the map but line data isn't available. Help them understand astro
       return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
     };
 
+    // Helper for proper ordinal suffixes (1st, 2nd, 3rd, 4th, etc.)
+    const getOrdinal = (n: number): string => {
+      const s = ["th", "st", "nd", "rd"];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    };
+
     const saturnReturns = lifeTransitsReport.saturnReturns.map((sr, i) => {
       const isCompleted = new Date(sr.exactDate) < new Date();
-      return `- ${i + 1}${i === 0 ? "st" : i === 1 ? "nd" : "rd"} Saturn Return: ${formatTransitDate(sr.exactDate)} (age ~${sr.ageAtTransit}) ${isCompleted ? "✓ Completed" : "⏳ Upcoming"}`;
+      return `- ${getOrdinal(i + 1)} Saturn Return: ${formatTransitDate(sr.exactDate)} (age ~${sr.ageAtTransit}) ${isCompleted ? "✓ Completed" : "⏳ Upcoming"}`;
     }).join("\n");
 
     const jupiterReturns = lifeTransitsReport.jupiterReturns
