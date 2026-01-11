@@ -333,6 +333,10 @@ export default function StellaChatDrawer({
 
     setIsLoading(true);
 
+    // Set up 30-second timeout to prevent infinite loading
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     try {
       // Send displayMessage and hiddenContext as separate fields
       // API stores only displayMessage, uses hiddenContext for AI prompt
@@ -348,7 +352,10 @@ export default function StellaChatDrawer({
           viewContext,
           mapLineSummary,
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.status === 429) {
         // Rate limited - mark message as failed
@@ -403,12 +410,18 @@ export default function StellaChatDrawer({
         setDynamicSuggestions(data.suggestions);
       }
     } catch (err) {
+      clearTimeout(timeoutId);
       console.error("Chat error:", err);
       // Mark the user message as failed (but keep it visible!)
       setMessages((prev) =>
         prev.map((m) => (m.id === userMessageId ? { ...m, status: "failed" } : m))
       );
-      setError("Couldn't reach Stella. Tap retry to try again.");
+      // Show specific error for timeout vs general network error
+      if (err instanceof Error && err.name === "AbortError") {
+        setError("Request timed out. Check your connection and try again.");
+      } else {
+        setError("Couldn't reach Stella. Tap retry to try again.");
+      }
     } finally {
       setIsLoading(false);
     }
