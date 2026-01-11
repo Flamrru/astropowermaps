@@ -186,24 +186,59 @@ async function fetchStripeData(forceRefresh = false): Promise<{
 
 type Period = "today" | "week" | "month" | "all";
 
-// Get the start date for a legacy period
-function getPeriodStart(period: Period): Date | null {
+// Zurich timezone for day cutoff
+const ZURICH_TZ = "Europe/Zurich";
+
+// Get the start of today in Zurich timezone (00:00 Zurich time)
+function getZurichDayStart(daysAgo = 0): Date {
+  // Get current time formatted in Zurich timezone
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ZURICH_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  // Get today's date in Zurich
   const now = new Date();
+  const zurichDateStr = formatter.format(now); // "YYYY-MM-DD"
+
+  // Parse it and subtract days if needed
+  const [year, month, day] = zurichDateStr.split("-").map(Number);
+  const zurichDate = new Date(Date.UTC(year, month - 1, day));
+
+  if (daysAgo > 0) {
+    zurichDate.setUTCDate(zurichDate.getUTCDate() - daysAgo);
+  }
+
+  // Convert Zurich 00:00 to UTC
+  // Zurich is UTC+1 in winter, UTC+2 in summer
+  // Get the offset for this specific date
+  const testDate = new Date(zurichDate);
+  const zurichOffset = getZurichOffset(testDate);
+
+  // Zurich 00:00 = UTC (00:00 - offset)
+  return new Date(zurichDate.getTime() - zurichOffset * 60 * 1000);
+}
+
+// Get Zurich timezone offset in minutes for a given date
+function getZurichOffset(date: Date): number {
+  // Create a date string in Zurich timezone and parse it to find the offset
+  const zurichStr = date.toLocaleString("en-US", { timeZone: ZURICH_TZ });
+  const zurichDate = new Date(zurichStr);
+  const utcDate = new Date(date.toLocaleString("en-US", { timeZone: "UTC" }));
+  return (zurichDate.getTime() - utcDate.getTime()) / 60000;
+}
+
+// Get the start date for a legacy period (using Zurich timezone)
+function getPeriodStart(period: Period): Date | null {
   switch (period) {
     case "today":
-      const today = new Date(now);
-      today.setHours(0, 0, 0, 0);
-      return today;
+      return getZurichDayStart(0);
     case "week":
-      const weekAgo = new Date(now);
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      weekAgo.setHours(0, 0, 0, 0);
-      return weekAgo;
+      return getZurichDayStart(7);
     case "month":
-      const monthAgo = new Date(now);
-      monthAgo.setDate(monthAgo.getDate() - 30);
-      monthAgo.setHours(0, 0, 0, 0);
-      return monthAgo;
+      return getZurichDayStart(30);
     case "all":
     default:
       return null;
@@ -358,13 +393,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate time-based stats (always from all leads for context)
-    const now = new Date();
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
-    const weekStart = new Date(now);
-    weekStart.setDate(weekStart.getDate() - 7);
-    const monthStart = new Date(now);
-    monthStart.setDate(monthStart.getDate() - 30);
+    // Using Zurich timezone for day boundaries (00:00 Zurich time)
+    const todayStart = getZurichDayStart(0);   // Today 00:00 Zurich
+    const weekStart = getZurichDayStart(7);    // 7 days ago 00:00 Zurich
+    const monthStart = getZurichDayStart(30);  // 30 days ago 00:00 Zurich
 
     // Fetch ALL leads for stats (not filtered by period)
     const { data: allLeads } = await supabaseAdmin
