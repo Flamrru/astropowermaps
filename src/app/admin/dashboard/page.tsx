@@ -621,7 +621,7 @@ export default function AdminDashboardPage() {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString("en-US", {
-      timeZone: "Europe/Zurich",
+      timeZone: "Europe/Vilnius",
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -1556,7 +1556,7 @@ function LeadDetailModal({ lead, onClose }: { lead: Lead; onClose: () => void })
   const formatDateTime = (dateStr: string | null) => {
     if (!dateStr) return "-";
     return new Date(dateStr).toLocaleDateString("en-US", {
-      timeZone: "Europe/Zurich",
+      timeZone: "Europe/Vilnius",
       year: "numeric",
       month: "short",
       day: "numeric",
