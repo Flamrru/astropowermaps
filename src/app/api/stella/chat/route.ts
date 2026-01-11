@@ -125,8 +125,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "Daily message limit reached",
-          message:
-            "You've reached your daily limit of 50 messages. Come back tomorrow for more cosmic guidance!",
+          message: `You've reached your daily limit of ${DAILY_MESSAGE_LIMIT} messages. Come back tomorrow for more cosmic guidance!`,
           remaining: 0,
         },
         { status: 429 }

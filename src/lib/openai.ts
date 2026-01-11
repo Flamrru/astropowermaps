@@ -55,6 +55,6 @@ export const GENERATION_SETTINGS = {
     model: MODELS.QUALITY,
     reasoning_effort: "low" as const,
     verbosity: "low" as const,
-    max_completion_tokens: 2000, // Needs room for reasoning + response
+    max_completion_tokens: 4000, // Large system prompt + reasoning + response
   },
 } as const;

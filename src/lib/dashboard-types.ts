@@ -121,6 +121,8 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   createdAt: string;
+  /** Message status for retry functionality */
+  status?: "sending" | "sent" | "failed";
 }
 
 export interface QuickReply {

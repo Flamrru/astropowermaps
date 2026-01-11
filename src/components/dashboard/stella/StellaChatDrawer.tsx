@@ -197,6 +197,8 @@ export default function StellaChatDrawer({
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
   const [dynamicSuggestions, setDynamicSuggestions] = useState<string[] | null>(null);
+  // Store pending message data for retry functionality
+  const pendingMessageRef = useRef<{ displayMessage: string; hiddenContext?: string } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -286,28 +288,49 @@ export default function StellaChatDrawer({
    * Send a message with optional hidden context (for "Ask Stella about this day")
    * Shows displayMessage to user, but passes hiddenContext to API for better responses
    * @param clearFirst - If true, clears previous messages before adding new one (for fresh day questions)
+   * @param retryMessageId - If provided, this is a retry of a failed message
    */
-  const sendMessageWithContext = async (displayMessage: string, hiddenContext?: string, clearFirst?: boolean) => {
+  const sendMessageWithContext = async (
+    displayMessage: string,
+    hiddenContext?: string,
+    clearFirst?: boolean,
+    retryMessageId?: string
+  ) => {
     if (isLoading || remaining <= 0) return;
 
     // Clear any previous error
     setError(null);
 
-    // Create user message (what the user sees)
-    const userMessage: ChatMessageType = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      content: displayMessage,
-      createdAt: new Date().toISOString(),
-    };
+    // Store message data for potential retry
+    pendingMessageRef.current = { displayMessage, hiddenContext };
 
-    // Add user message immediately (optimistic update)
-    // If clearFirst is true, start fresh with just this message
-    if (clearFirst) {
-      setMessages([userMessage]);
+    let userMessageId: string;
+
+    if (retryMessageId) {
+      // Retrying a failed message - update its status to "sending"
+      userMessageId = retryMessageId;
+      setMessages((prev) =>
+        prev.map((m) => (m.id === retryMessageId ? { ...m, status: "sending" } : m))
+      );
     } else {
-      setMessages((prev) => [...prev, userMessage]);
+      // New message - create with status "sending"
+      userMessageId = `user-${Date.now()}`;
+      const userMessage: ChatMessageType = {
+        id: userMessageId,
+        role: "user",
+        content: displayMessage,
+        createdAt: new Date().toISOString(),
+        status: "sending",
+      };
+
+      // Add user message immediately (optimistic update)
+      if (clearFirst) {
+        setMessages([userMessage]);
+      } else {
+        setMessages((prev) => [...prev, userMessage]);
+      }
     }
+
     setIsLoading(true);
 
     try {
@@ -328,13 +351,19 @@ export default function StellaChatDrawer({
       });
 
       if (response.status === 429) {
-        // Rate limited
+        // Rate limited - mark message as failed
         setRemaining(0);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === userMessageId ? { ...m, status: "failed" } : m))
+        );
         setError("You've reached your daily message limit. Come back tomorrow!");
         return;
       }
 
       if (response.status === 401) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === userMessageId ? { ...m, status: "failed" } : m))
+        );
         setError("Please log in to chat with Stella.");
         return;
       }
@@ -345,8 +374,10 @@ export default function StellaChatDrawer({
 
       const data = await response.json();
 
-      // Add delay for natural feeling (Stella is "thinking")
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // Success! Update user message status to "sent"
+      setMessages((prev) =>
+        prev.map((m) => (m.id === userMessageId ? { ...m, status: "sent" } : m))
+      );
 
       // Add assistant message
       const assistantMessage: ChatMessageType = {
@@ -354,9 +385,13 @@ export default function StellaChatDrawer({
         role: "assistant",
         content: data.message,
         createdAt: new Date().toISOString(),
+        status: "sent",
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+
+      // Clear pending message data on success
+      pendingMessageRef.current = null;
 
       // Update remaining count
       if (typeof data.remaining === "number") {
@@ -369,13 +404,30 @@ export default function StellaChatDrawer({
       }
     } catch (err) {
       console.error("Chat error:", err);
-      setError("Couldn't reach Stella. Please try again.");
-      // Remove the optimistic user message on error
-      setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+      // Mark the user message as failed (but keep it visible!)
+      setMessages((prev) =>
+        prev.map((m) => (m.id === userMessageId ? { ...m, status: "failed" } : m))
+      );
+      setError("Couldn't reach Stella. Tap retry to try again.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  /**
+   * Retry a failed message
+   */
+  const retryMessage = useCallback((messageId: string) => {
+    // Find the failed message content
+    const failedMessage = messages.find((m) => m.id === messageId);
+    if (!failedMessage || failedMessage.status !== "failed") return;
+
+    // Get the hidden context from pendingMessageRef if available
+    const hiddenContext = pendingMessageRef.current?.hiddenContext;
+
+    // Retry with the same content
+    sendMessageWithContext(failedMessage.content, hiddenContext, false, messageId);
+  }, [messages]);
 
   const handleQuickReply = (prompt: string) => {
     sendMessage(prompt);
@@ -389,6 +441,9 @@ export default function StellaChatDrawer({
       {/* Messages area - scrollable */}
       <div
         ref={containerRef}
+        role="log"
+        aria-live="polite"
+        aria-label="Chat messages"
         className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
         style={{
           scrollbarWidth: "thin",
@@ -420,6 +475,7 @@ export default function StellaChatDrawer({
             key={message.id}
             message={message}
             isLast={index === arr.length - 1}
+            onRetry={message.status === "failed" ? () => retryMessage(message.id) : undefined}
           />
         ))}
 
@@ -430,7 +486,7 @@ export default function StellaChatDrawer({
 
         {/* Error message */}
         {error && (
-          <div className="text-center py-2">
+          <div role="alert" className="text-center py-2">
             <p className="text-red-400/80 text-sm">{error}</p>
           </div>
         )}
