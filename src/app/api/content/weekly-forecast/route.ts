@@ -4,6 +4,8 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { openai, GENERATION_SETTINGS } from "@/lib/openai";
 import { getCurrentTransits, formatTransitsForPrompt } from "@/lib/astro/transits";
 import { calculateFullChart, FullChart } from "@/lib/astro/chart";
+import { calculateDailyScore, DailyScore, DayType } from "@/lib/astro/power-days";
+import { get2026Transits } from "@/lib/astro/transit-calculations";
 import type { BirthData } from "@/lib/astro/types";
 import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
 
@@ -87,8 +89,25 @@ export async function POST(request: NextRequest) {
     const chart = calculateFullChart(birthData);
     const transits = getCurrentTransits();
 
-    // 7. Generate forecast with OpenAI
-    const prompt = buildWeeklyForecastPrompt(profile, chart, transits, weekStart);
+    // 7. Calculate power days for each day of the week (consistent with calendar)
+    const transitCache = get2026Transits();
+    const natalPositions = chart.planetPositions;
+    const weekDaysData = getWeekDaysWithISO(weekStart);
+
+    const calculatedDays: CalculatedDayInfo[] = weekDaysData.map(({ day, isoDate, displayDate }) => {
+      const dailyScore = calculateDailyScore(natalPositions, isoDate, transitCache);
+      return {
+        day,
+        isoDate,
+        displayDate,
+        score: dailyScore.score,
+        dayType: dailyScore.dayType,
+        description: dailyScore.description,
+      };
+    });
+
+    // 8. Generate forecast with OpenAI (with calculated power days context)
+    const prompt = buildWeeklyForecastPrompt(profile, chart, transits, weekStart, calculatedDays);
 
     const completion = await openai.chat.completions.create({
       model: GENERATION_SETTINGS.weekly.model,
@@ -116,12 +135,10 @@ export async function POST(request: NextRequest) {
     try {
       forecast = JSON.parse(responseText);
     } catch {
-      // Fallback if JSON parsing fails
+      // Fallback if JSON parsing fails - theme/summary only (powerDays come from calculation)
       forecast = {
         theme: "Renewal",
         summary: "This week brings opportunities for growth and reflection.",
-        powerDays: [],
-        cautionDays: [],
         keyInsight: "Trust your intuition this week.",
       };
     }
@@ -132,15 +149,32 @@ export async function POST(request: NextRequest) {
       forecast = {
         theme: "Renewal",
         summary: "This week brings opportunities for growth and reflection.",
-        powerDays: [],
-        cautionDays: [],
         keyInsight: "Trust your intuition this week.",
       };
     }
 
-    // Add metadata
+    // Build powerDays from calculated scores (consistent with calendar)
+    const powerDays = calculatedDays
+      .filter(d => d.dayType === "power")
+      .map(d => ({
+        day: d.day,
+        date: d.displayDate,
+        energy: d.description,
+        score: d.score,
+      }));
+
+    // Build cautionDays (rest days) from calculated scores
+    const cautionDays = calculatedDays
+      .filter(d => d.dayType === "rest")
+      .map(d => d.day);
+
+    // Merge AI narrative with calculated power days
     const weeklyForecast = {
-      ...forecast,
+      theme: forecast.theme,
+      summary: forecast.summary,
+      powerDays,      // FROM CALCULATION - consistent with calendar
+      cautionDays,    // FROM CALCULATION - consistent with calendar
+      keyInsight: forecast.keyInsight,
       weekStart,
       generatedAt: new Date().toISOString(),
     };
@@ -178,32 +212,61 @@ function getWeekStart(): string {
 }
 
 /**
- * Get array of day names and dates for the week
+ * Get array of day names and dates for the week (with ISO dates for calculations)
  */
-function getWeekDays(weekStart: string): Array<{ day: string; date: string }> {
+function getWeekDaysWithISO(weekStart: string): Array<{
+  day: string;
+  isoDate: string;
+  displayDate: string;
+}> {
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const start = new Date(weekStart);
 
   return days.map((day, i) => {
     const date = new Date(start);
     date.setDate(start.getDate() + i);
-    const formatted = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    return { day, date: formatted };
+    const isoDate = date.toISOString().split("T")[0];
+    const displayDate = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return { day, isoDate, displayDate };
   });
 }
 
 /**
+ * Calculated day info for power days integration
+ */
+interface CalculatedDayInfo {
+  day: string;
+  isoDate: string;
+  displayDate: string;
+  score: number;
+  dayType: DayType;
+  description: string;
+}
+
+/**
  * Build the prompt for weekly forecast generation
+ * Now includes calculated power days data for AI context
  */
 function buildWeeklyForecastPrompt(
   profile: { display_name?: string; birth_place?: string },
   chart: FullChart,
   transits: ReturnType<typeof getCurrentTransits>,
-  weekStart: string
+  weekStart: string,
+  calculatedDays: CalculatedDayInfo[]
 ): string {
-  const weekDays = getWeekDays(weekStart);
-  const daysList = weekDays.map((d) => `${d.day} (${d.date})`).join(", ");
   const bigThree = chart.bigThree;
+
+  // Format calculated days for AI context
+  const daysWithScores = calculatedDays
+    .map(d => {
+      const marker = d.dayType === "power" ? "POWER DAY" : d.dayType === "rest" ? "REST DAY" : "";
+      return `- ${d.day} (${d.displayDate}): ${d.score}/100 ${marker ? `[${marker}]` : ""} - ${d.description}`;
+    })
+    .join("\n");
+
+  // Identify power days and rest days for summary
+  const powerDayNames = calculatedDays.filter(d => d.dayType === "power").map(d => d.day);
+  const restDayNames = calculatedDays.filter(d => d.dayType === "rest").map(d => d.day);
 
   return `Generate a personalized weekly forecast for ${profile.display_name || "this user"}.
 
@@ -216,26 +279,24 @@ ${chart.houses ? `- MC (Career): ${chart.houses.cusps[9].formatted}` : ""}
 
 ${formatTransitsForPrompt(transits)}
 
-This Week: ${daysList}
+CALCULATED ENERGY SCORES FOR THIS WEEK (based on transit aspects to natal chart):
+${daysWithScores}
+
+${powerDayNames.length > 0 ? `Power Days (score 70+): ${powerDayNames.join(", ")}` : "No power days this week (all scores below 70)"}
+${restDayNames.length > 0 ? `Rest Days (score 30-): ${restDayNames.join(", ")}` : ""}
 
 Generate a JSON response with this exact structure:
 {
   "theme": "<single word or short phrase capturing the week's energy, e.g., 'Transformation', 'New Beginnings', 'Inner Work'>",
-  "summary": "<2-3 paragraphs of personalized forecast for the week, referencing their chart and transits>",
-  "powerDays": [
-    {
-      "day": "<day name>",
-      "date": "<formatted date like 'Jan 8'>",
-      "energy": "<brief description of why this day is powerful>",
-      "score": <0-100>
-    }
-  ],
-  "cautionDays": ["<day name if any challenging days, empty array if none>"],
+  "summary": "<2-3 paragraphs of personalized forecast. Reference the specific power days and rest days listed above. Explain what makes those days special based on the transit descriptions.>",
   "keyInsight": "<one memorable sentence they'll remember all week>"
 }
 
+IMPORTANT: Do NOT include "powerDays" or "cautionDays" in your response - they will be added automatically from the calculated scores above.
+
 Guidelines:
-- Include 2-3 power days based on favorable transits to their chart
+- Reference the SPECIFIC days marked as POWER DAYS in your summary
+- If there are REST DAYS, mention them as days to take it easy
 - Reference their ${bigThree.sun.sign} Sun energy when discussing actions
 - Reference their ${bigThree.moon.sign} Moon when discussing emotions or intuition
 - Reference their North Node theme when discussing growth opportunities
