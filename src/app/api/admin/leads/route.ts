@@ -294,7 +294,20 @@ function getGranularity(daysDiff: number): "daily" | "weekly" | "monthly" {
   return "monthly";
 }
 
-// Group data points by granularity
+// Format a date as YYYY-MM-DD in Lithuanian timezone
+// This ensures events are grouped by their Lithuanian local date, not UTC
+function formatDateInTimezone(date: Date): string {
+  return date.toLocaleDateString("sv-SE", { timeZone: DASHBOARD_TZ }); // Returns "YYYY-MM-DD"
+}
+
+// Get month key in Lithuanian timezone
+function formatMonthInTimezone(date: Date): string {
+  const year = date.toLocaleDateString("en-US", { timeZone: DASHBOARD_TZ, year: "numeric" });
+  const month = date.toLocaleDateString("en-US", { timeZone: DASHBOARD_TZ, month: "2-digit" });
+  return `${year}-${month}`;
+}
+
+// Group data points by granularity (using Lithuanian timezone)
 function groupByGranularity(
   dates: Date[],
   granularity: "daily" | "weekly" | "monthly"
@@ -304,19 +317,50 @@ function groupByGranularity(
   dates.forEach(date => {
     let key: string;
     if (granularity === "daily") {
-      key = date.toISOString().split("T")[0];
+      // Use Lithuanian timezone for day grouping
+      key = formatDateInTimezone(date);
     } else if (granularity === "weekly") {
-      // Get start of week (Monday)
-      const d = new Date(date);
-      const day = d.getDay();
-      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      // Get start of week (Monday) in Lithuanian timezone
+      const localDateStr = formatDateInTimezone(date);
+      const [year, month, day] = localDateStr.split("-").map(Number);
+      const d = new Date(year, month - 1, day);
+      const dayOfWeek = d.getDay();
+      const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
       d.setDate(diff);
-      key = d.toISOString().split("T")[0];
+      key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     } else {
-      // Monthly
-      key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      // Monthly - use Lithuanian timezone
+      key = formatMonthInTimezone(date);
     }
     groups.set(key, (groups.get(key) || 0) + 1);
+  });
+
+  return groups;
+}
+
+// Group revenue data by granularity (using Lithuanian timezone)
+function groupRevenueByGranularity(
+  items: { date: Date; amount: number }[],
+  granularity: "daily" | "weekly" | "monthly"
+): Map<string, number> {
+  const groups = new Map<string, number>();
+
+  items.forEach(({ date, amount }) => {
+    let key: string;
+    if (granularity === "daily") {
+      key = formatDateInTimezone(date);
+    } else if (granularity === "weekly") {
+      const localDateStr = formatDateInTimezone(date);
+      const [year, month, day] = localDateStr.split("-").map(Number);
+      const d = new Date(year, month - 1, day);
+      const dayOfWeek = d.getDay();
+      const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      d.setDate(diff);
+      key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    } else {
+      key = formatMonthInTimezone(date);
+    }
+    groups.set(key, (groups.get(key) || 0) + amount);
   });
 
   return groups;
@@ -868,49 +912,19 @@ export async function GET(request: NextRequest) {
     const compLeadDates = comparisonLeads?.map(l => new Date(l.created_at)) || [];
     const previousLeadsByDate = groupByGranularity(compLeadDates, granularity);
 
-    // Group revenue by date for trend chart
+    // Group revenue by date for trend chart (using Lithuanian timezone)
     const revenueDates = completedPurchases.map(p => ({
       date: new Date(p.completed_at),
       amount: p.amount_cents || 0,
     }));
-    const currentRevenueByDate = new Map<string, number>();
-    revenueDates.forEach(({ date, amount }) => {
-      let key: string;
-      if (granularity === "daily") {
-        key = date.toISOString().split("T")[0];
-      } else if (granularity === "weekly") {
-        const d = new Date(date);
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-        d.setDate(diff);
-        key = d.toISOString().split("T")[0];
-      } else {
-        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      }
-      currentRevenueByDate.set(key, (currentRevenueByDate.get(key) || 0) + amount);
-    });
+    const currentRevenueByDate = groupRevenueByGranularity(revenueDates, granularity);
 
     // Comparison revenue
     const compRevenueDates = (comparisonPurchases?.filter(p => p.status === "completed") || []).map(p => ({
       date: new Date(p.completed_at),
       amount: p.amount_cents || 0,
     }));
-    const previousRevenueByDate = new Map<string, number>();
-    compRevenueDates.forEach(({ date, amount }) => {
-      let key: string;
-      if (granularity === "daily") {
-        key = date.toISOString().split("T")[0];
-      } else if (granularity === "weekly") {
-        const d = new Date(date);
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-        d.setDate(diff);
-        key = d.toISOString().split("T")[0];
-      } else {
-        key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      }
-      previousRevenueByDate.set(key, (previousRevenueByDate.get(key) || 0) + amount);
-    });
+    const previousRevenueByDate = groupRevenueByGranularity(compRevenueDates, granularity);
 
     // Build trend data arrays
     const allDateKeys = new Set([...currentLeadsByDate.keys()]);
@@ -1062,6 +1076,71 @@ export async function GET(request: NextRequest) {
       cutoffDate: SUBSCRIPTION_LAUNCH.toISOString(),
     };
 
+    // ========== DAILY BREAKDOWN (Last 7 days, always shown) ==========
+    // Fetch all leads from last 7 days for the breakdown (independent of date filter)
+    const sevenDaysAgo = getDayStart(7);
+    const { data: last7DaysLeads } = await supabaseAdmin
+      .from("astro_leads")
+      .select("id, created_at")
+      .gte("created_at", sevenDaysAgo.toISOString())
+      .neq("email", "test@example.com")
+      .order("created_at", { ascending: false });
+
+    const { data: last7DaysPurchases } = await supabaseAdmin
+      .from("astro_purchases")
+      .select("id, completed_at, amount_cents, status")
+      .gte("completed_at", sevenDaysAgo.toISOString())
+      .eq("status", "completed")
+      .neq("email", "test@example.com")
+      .gte("amount_cents", 100);
+
+    // Group by day in Lithuanian timezone
+    const dailyLeadCounts = new Map<string, number>();
+    const dailyRevenue = new Map<string, number>();
+
+    (last7DaysLeads || []).forEach(lead => {
+      const key = formatDateInTimezone(new Date(lead.created_at));
+      dailyLeadCounts.set(key, (dailyLeadCounts.get(key) || 0) + 1);
+    });
+
+    (last7DaysPurchases || []).forEach(purchase => {
+      const key = formatDateInTimezone(new Date(purchase.completed_at));
+      dailyRevenue.set(key, (dailyRevenue.get(key) || 0) + (purchase.amount_cents || 0));
+    });
+
+    // Build daily breakdown array (last 7 days including today)
+    const dailyBreakdown: { date: string; dayLabel: string; leads: number; revenue: number }[] = [];
+    const today = new Date();
+    const todayKey = formatDateInTimezone(today);
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateKey = formatDateInTimezone(d);
+
+      // Create readable label
+      let dayLabel: string;
+      if (i === 0) {
+        dayLabel = "Today";
+      } else if (i === 1) {
+        dayLabel = "Yesterday";
+      } else {
+        dayLabel = d.toLocaleDateString("en-US", {
+          timeZone: DASHBOARD_TZ,
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        });
+      }
+
+      dailyBreakdown.push({
+        date: dateKey,
+        dayLabel,
+        leads: dailyLeadCounts.get(dateKey) || 0,
+        revenue: dailyRevenue.get(dateKey) || 0,
+      });
+    }
+
     return NextResponse.json({
       period,
       dateRange: effectiveFrom && effectiveTo ? {
@@ -1101,6 +1180,7 @@ export async function GET(request: NextRequest) {
       },
       comparison,
       legacyStats,
+      dailyBreakdown,
     });
   } catch (error) {
     console.error("Error fetching leads:", error);

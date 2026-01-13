@@ -241,6 +241,14 @@ interface LegacyStats {
   cutoffDate: string;
 }
 
+// Daily breakdown (last 7 days)
+interface DailyBreakdownItem {
+  date: string;
+  dayLabel: string;
+  leads: number;
+  revenue: number;
+}
+
 // Q1 and Q2 answer options for analytics
 const Q1_OPTIONS = ["Yes, definitely", "Maybe once or twice", "Not sure"];
 const Q2_OPTIONS = [
@@ -308,11 +316,11 @@ export default function AdminDashboardPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const router = useRouter();
 
-  // New date range state (Facebook-style)
+  // New date range state (Facebook-style) - defaults to Today
   const [dateRange, setDateRange] = useState<DateRange>(() => {
-    const from = subDays(new Date(), 30);
-    from.setHours(0, 0, 0, 0);
-    return { from, to: new Date(), preset: "last_30_days" };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return { from: today, to: new Date(), preset: "today" };
   });
 
   // New trend and comparison state
@@ -350,6 +358,9 @@ export default function AdminDashboardPage() {
     cutoffDate: "",
   });
   const [showLegacy, setShowLegacy] = useState(false);
+
+  // Daily breakdown (last 7 days - always shown regardless of date filter)
+  const [dailyBreakdown, setDailyBreakdown] = useState<DailyBreakdownItem[]>([]);
 
   // Fetch leads function (reusable for refresh)
   const fetchLeads = useCallback(async (showLoading = true, range: DateRange = dateRange, refreshStripe = false) => {
@@ -450,6 +461,7 @@ export default function AdminDashboardPage() {
         leadToPurchase: 0,
         cutoffDate: "",
       });
+      setDailyBreakdown(data.dailyBreakdown || []);
 
       setLastUpdated(new Date());
       setError("");
@@ -895,6 +907,76 @@ export default function AdminDashboardPage() {
                     : '0.00'}%
                 </span>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Daily Breakdown (Last 7 Days) - Always visible */}
+        {dailyBreakdown.length > 0 && (
+          <div className="mb-8 animate-in stagger-3">
+            <div className="section-header">
+              <div className="section-icon" style={{ background: 'rgba(59, 130, 246, 0.15)', color: 'var(--premium-sapphire)' }}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h2>Daily Breakdown</h2>
+              <span className="section-subtitle">Last 7 days</span>
+            </div>
+            <div className="premium-card overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/10 bg-black/20">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">Day</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-white/40 uppercase tracking-wider">Leads</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-white/40 uppercase tracking-wider">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {dailyBreakdown.map((day, idx) => (
+                    <tr key={day.date} className={idx === 0 ? "bg-white/5" : "hover:bg-white/5 transition-colors"}>
+                      <td className="px-4 py-3">
+                        <span className={`text-sm ${idx === 0 ? "text-white font-medium" : "text-white/70"}`}>
+                          {day.dayLabel}
+                        </span>
+                        {idx === 0 && (
+                          <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 uppercase tracking-wide">
+                            Live
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={`text-sm font-medium ${idx === 0 ? "text-[var(--gold-bright)]" : "text-white"}`}>
+                          {day.leads}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={`text-sm font-medium ${day.revenue > 0 ? "text-emerald-400" : "text-white/30"}`}>
+                          {day.revenue > 0 ? `$${(day.revenue / 100).toFixed(2)}` : "$0"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                {/* Totals row */}
+                <tfoot>
+                  <tr className="border-t border-white/10 bg-black/20">
+                    <td className="px-4 py-3">
+                      <span className="text-sm font-medium text-white/60">7-Day Total</span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="text-sm font-bold text-[var(--gold-bright)]">
+                        {dailyBreakdown.reduce((sum, d) => sum + d.leads, 0)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="text-sm font-bold text-emerald-400">
+                        ${(dailyBreakdown.reduce((sum, d) => sum + d.revenue, 0) / 100).toFixed(2)}
+                      </span>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
         )}
