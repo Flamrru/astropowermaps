@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-01-13
+
+### Winback Paywall for Email Campaigns
+- **New $9.99 Winback Offer** - Discounted paywall for email re-engagement campaigns
+  - URL: `/reveal?sid=xxx&offer=win` shows $9.99 paywall with "Save 80%" badge
+  - URL: `/reveal?sid=xxx&offer=full` shows $19.99 paywall for email A/B testing
+  - Quiz/ads flow unchanged - always shows $19.99
+- **Stripe Integration**
+  - Added `WINBACK` price ($9.99 one-time) in both sandbox and live modes
+  - Setup script creates winback price automatically (`scripts/setup-stripe-products.ts`)
+  - Checkout API handles `winback` plan type correctly
+- **Direct-to-Paywall Navigation**
+  - Email links with `offer` param now skip directly to paywall (step 9)
+  - No need to go through map reveal for returning leads
+  - Birth data loaded from Supabase via `sid` parameter
+- **Meta Pixel Tracking**
+  - Email campaigns (`offer=win` or `offer=full`) skip Meta CAPI tracking
+  - Prevents ad algorithm confusion from non-ad-driven purchases
+  - Quiz/ads purchases still tracked normally
+- **Files Changed**
+  - `src/components/reveal/RevealShell.tsx` - Skip to paywall for email campaigns
+  - `src/components/reveal/screens/RevealScreen09Paywall.tsx` - Winback variant detection
+  - `src/components/reveal/paywall/PricingSelector.tsx` - WinbackPaymentCard component
+  - `src/app/api/stripe/create-checkout-session/route.ts` - Handle winback + offer param
+  - `src/app/api/stripe/webhook/route.ts` - Skip tracking based on offer param
+  - `src/lib/subscription-plans.ts` - Added `winback` plan type
+  - `src/lib/stripe-config.ts` - Added `WINBACK` price IDs
+
 ## 2026-01-11
 
 ### Stella AI Chat Improvements

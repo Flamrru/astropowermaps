@@ -401,6 +401,14 @@ export default function RevealShell({ children }: RevealShellProps) {
         }
       }
 
+      // EMAIL CAMPAIGN: If offer param is present, skip directly to paywall (step 9)
+      // This handles both ?offer=win ($9.99) and ?offer=full ($19.99) email links
+      const offerParam = searchParams.get("offer");
+      if (offerParam && (offerParam === "win" || offerParam === "full")) {
+        console.log(`📧 Email campaign detected (offer=${offerParam}) - jumping to paywall`);
+        dispatch({ type: "SET_STEP", payload: 9 });
+      }
+
       setIsHydrating(false);
       setHasHydrated(true); // Mark as hydrated to prevent re-runs
       setMounted(true);
