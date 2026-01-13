@@ -56,13 +56,13 @@ function getMoonPhase(date: Date): { phase: string; illumination: number } {
   return { phase: phaseName, illumination: Math.round(illumination * 100) };
 }
 
-// Get all days in a month
+// Get all days in a month (using UTC to avoid timezone issues)
 function getDaysInMonth(year: number, month: number): Date[] {
   const days: Date[] = [];
-  const date = new Date(year, month, 1);
-  while (date.getMonth() === month) {
+  const date = new Date(Date.UTC(year, month, 1));
+  while (date.getUTCMonth() === month) {
     days.push(new Date(date));
-    date.setDate(date.getDate() + 1);
+    date.setUTCDate(date.getUTCDate() + 1);
   }
   return days;
 }

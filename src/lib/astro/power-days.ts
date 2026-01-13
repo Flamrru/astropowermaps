@@ -307,7 +307,8 @@ export function calculateMonthPowerDays(
 ): DailyScore[] {
   const cache = get2026Transits();
   const scores: DailyScore[] = [];
-  const daysInMonth = new Date(year, month, 0).getDate();
+  // Use UTC to avoid timezone issues with month boundaries
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
 
   for (let day = 1; day <= daysInMonth; day++) {
     const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -452,8 +453,8 @@ function calculateDayScoreForGoal(
  */
 function formatDisplayDate(dateStr: string): string {
   const date = new Date(dateStr);
-  const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "short" });
-  const dayOfMonth = date.getDate();
+  const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+  const dayOfMonth = date.getUTCDate();
 
   // Add ordinal suffix
   const suffix =
@@ -486,7 +487,8 @@ export function getBestDaysForGoal(
   limit: number = 5
 ): BestDay[] {
   const cache = get2026Transits();
-  const daysInMonth = new Date(year, month, 0).getDate();
+  // Use UTC to avoid timezone issues with month boundaries
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const allDays: Array<{ date: string; score: number; reason: string }> = [];
 
   // Calculate score for each day

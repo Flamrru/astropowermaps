@@ -237,8 +237,9 @@ export function findAspectsOnDate(
   const todayTransits = transitCache?.get(transitDate) || getTransitsForDate(transitDate);
 
   // Calculate tomorrow's date for applying/separating detection
+  // Use UTC methods to avoid timezone issues
   const tomorrow = new Date(transitDate);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
   const tomorrowDate = dateToISOString(tomorrow);
   const tomorrowTransits = transitCache?.get(tomorrowDate) || getTransitsForDate(tomorrowDate);
 
@@ -400,7 +401,7 @@ export function getWeekDates(startDate: string): string[] {
 
   for (let i = 0; i < 7; i++) {
     dates.push(dateToISOString(current));
-    current.setDate(current.getDate() + 1);
+    current.setUTCDate(current.getUTCDate() + 1);
   }
 
   return dates;
