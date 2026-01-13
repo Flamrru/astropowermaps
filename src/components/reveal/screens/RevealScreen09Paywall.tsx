@@ -148,7 +148,7 @@ export default function RevealScreen09Paywall() {
           selectedPlan={selectedPlan}
           onSelectPlan={setSelectedPlan}
           variant={variant}
-          onCheckout={variant === "single" ? handleCheckoutClick : undefined}
+          onCheckout={variant === "single" || variant === "winback" ? handleCheckoutClick : undefined}
         />
       </section>
 
