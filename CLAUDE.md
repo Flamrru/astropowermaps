@@ -5,6 +5,11 @@
 ## Project Goal
 Mobile-first astrology app with quiz funnel, astrocartography map, Stella+ subscription, and AI chat.
 
+## Production Domain
+- **Live site:** `https://astropowermap.com` (singular, no "s")
+- **Vercel subdomain:** `https://astropowermaps.vercel.app` (has "s")
+- **Repo name:** `astropowermaps` (has "s") — don't confuse with domain!
+
 ## Main Routes
 | Route | Purpose |
 |-------|---------|
