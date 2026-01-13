@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { subDays, differenceInDays, differenceInMonths } from "date-fns";
 import DateRangeSelector from "@/components/admin/DateRangeSelector";
 import TrendChart from "@/components/admin/TrendChart";
+import ChartCarousel from "@/components/admin/ChartCarousel";
 import "./premium-dashboard.css";
 
 interface UserProfile {
@@ -249,6 +250,18 @@ interface DailyBreakdownItem {
   revenue: number;
 }
 
+// Carousel chart data (for the chart carousel)
+interface CarouselChart {
+  id: string;
+  title: string;
+  subtitle: string;
+  data: { date: string; label: string; value: number }[];
+  total: number;
+  changePercent: number;
+  color: string;
+  valueFormatter: "currency" | "number";
+}
+
 // Q1 and Q2 answer options for analytics
 const Q1_OPTIONS = ["Yes, definitely", "Maybe once or twice", "Not sure"];
 const Q2_OPTIONS = [
@@ -362,6 +375,9 @@ export default function AdminDashboardPage() {
   // Daily breakdown (last 7 days - always shown regardless of date filter)
   const [dailyBreakdown, setDailyBreakdown] = useState<DailyBreakdownItem[]>([]);
 
+  // Carousel charts (pre-built charts for carousel - always shown regardless of date filter)
+  const [carouselCharts, setCarouselCharts] = useState<CarouselChart[]>([]);
+
   // Fetch leads function (reusable for refresh)
   const fetchLeads = useCallback(async (showLoading = true, range: DateRange = dateRange, refreshStripe = false) => {
     if (showLoading) setIsLoading(true);
@@ -462,6 +478,7 @@ export default function AdminDashboardPage() {
         cutoffDate: "",
       });
       setDailyBreakdown(data.dailyBreakdown || []);
+      setCarouselCharts(data.carouselCharts || []);
 
       setLastUpdated(new Date());
       setError("");
@@ -811,32 +828,21 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* Trends Section - Leads & Revenue over time */}
-        <div className="mb-8 animate-in stagger-2">
-          <div className="section-header">
-            <div className="section-icon" style={{ background: 'rgba(232, 197, 71, 0.15)', color: 'var(--premium-gold)' }}>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
+        {/* Trends Carousel - Pre-built charts that work regardless of date filter */}
+        {carouselCharts.length > 0 && (
+          <div className="mb-8 animate-in stagger-2">
+            <div className="section-header">
+              <div className="section-icon" style={{ background: 'rgba(232, 197, 71, 0.15)', color: 'var(--premium-gold)' }}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+              <h2>Trends</h2>
+              <span className="section-subtitle">swipe to explore</span>
             </div>
-            <h2>Trends</h2>
-            <span className="section-subtitle">vs previous period</span>
+            <ChartCarousel charts={carouselCharts} />
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <TrendChart
-              title="Leads Over Time"
-              data={trends.leads}
-              comparison={comparison.leads}
-            />
-            <TrendChart
-              title="Revenue Over Time"
-              data={trends.revenue}
-              comparison={comparison.revenue}
-              valueFormatter={(v) => `$${(v / 100).toFixed(0)}`}
-              color="#22c55e"
-            />
-          </div>
-        </div>
+        )}
 
         {/* Key Milestones - Conversion Flow: Quiz → Leads → Paid */}
         {milestones.quizStart > 0 && (

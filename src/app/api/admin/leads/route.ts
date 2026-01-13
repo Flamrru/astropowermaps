@@ -287,8 +287,11 @@ function getComparisonPeriod(from: Date, to: Date): { compareFrom: Date; compare
   return { compareFrom, compareTo };
 }
 
+// Granularity types
+type Granularity = "hourly" | "daily" | "weekly" | "monthly";
+
 // Determine granularity based on date range
-function getGranularity(daysDiff: number): "daily" | "weekly" | "monthly" {
+function getGranularity(daysDiff: number): Granularity {
   if (daysDiff < 30) return "daily";
   if (daysDiff < 90) return "weekly";
   return "monthly";
@@ -298,6 +301,17 @@ function getGranularity(daysDiff: number): "daily" | "weekly" | "monthly" {
 // This ensures events are grouped by their Lithuanian local date, not UTC
 function formatDateInTimezone(date: Date): string {
   return date.toLocaleDateString("sv-SE", { timeZone: DASHBOARD_TZ }); // Returns "YYYY-MM-DD"
+}
+
+// Format a date as YYYY-MM-DD-HH in Lithuanian timezone (for hourly grouping)
+function formatHourInTimezone(date: Date): string {
+  const dateStr = formatDateInTimezone(date);
+  const hour = date.toLocaleString("en-US", {
+    timeZone: DASHBOARD_TZ,
+    hour: "2-digit",
+    hour12: false,
+  }).padStart(2, "0");
+  return `${dateStr}-${hour}`;
 }
 
 // Get month key in Lithuanian timezone
@@ -310,13 +324,15 @@ function formatMonthInTimezone(date: Date): string {
 // Group data points by granularity (using Lithuanian timezone)
 function groupByGranularity(
   dates: Date[],
-  granularity: "daily" | "weekly" | "monthly"
+  granularity: Granularity
 ): Map<string, number> {
   const groups = new Map<string, number>();
 
   dates.forEach(date => {
     let key: string;
-    if (granularity === "daily") {
+    if (granularity === "hourly") {
+      key = formatHourInTimezone(date);
+    } else if (granularity === "daily") {
       // Use Lithuanian timezone for day grouping
       key = formatDateInTimezone(date);
     } else if (granularity === "weekly") {
@@ -341,13 +357,15 @@ function groupByGranularity(
 // Group revenue data by granularity (using Lithuanian timezone)
 function groupRevenueByGranularity(
   items: { date: Date; amount: number }[],
-  granularity: "daily" | "weekly" | "monthly"
+  granularity: Granularity
 ): Map<string, number> {
   const groups = new Map<string, number>();
 
   items.forEach(({ date, amount }) => {
     let key: string;
-    if (granularity === "daily") {
+    if (granularity === "hourly") {
+      key = formatHourInTimezone(date);
+    } else if (granularity === "daily") {
       key = formatDateInTimezone(date);
     } else if (granularity === "weekly") {
       const localDateStr = formatDateInTimezone(date);
@@ -367,7 +385,15 @@ function groupRevenueByGranularity(
 }
 
 // Format date label based on granularity
-function formatLabel(dateKey: string, granularity: "daily" | "weekly" | "monthly"): string {
+function formatLabel(dateKey: string, granularity: Granularity): string {
+  if (granularity === "hourly") {
+    // dateKey format: "YYYY-MM-DD-HH"
+    const parts = dateKey.split("-");
+    const hour = parseInt(parts[3] || "0");
+    const ampm = hour < 12 ? "am" : "pm";
+    const hour12 = hour % 12 || 12;
+    return `${hour12}${ampm}`;
+  }
   const date = new Date(dateKey);
   if (granularity === "daily") {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -1110,11 +1136,11 @@ export async function GET(request: NextRequest) {
 
     // Build daily breakdown array (last 7 days including today)
     const dailyBreakdown: { date: string; dayLabel: string; leads: number; revenue: number }[] = [];
-    const today = new Date();
-    const todayKey = formatDateInTimezone(today);
+    const now = new Date();
+    const todayKey = formatDateInTimezone(now);
 
     for (let i = 0; i < 7; i++) {
-      const d = new Date(today);
+      const d = new Date(now);
       d.setDate(d.getDate() - i);
       const dateKey = formatDateInTimezone(d);
 
@@ -1140,6 +1166,258 @@ export async function GET(request: NextRequest) {
         revenue: dailyRevenue.get(dateKey) || 0,
       });
     }
+
+    // ========== CAROUSEL CHARTS (Independent of date filter) ==========
+    // Calculate pre-built chart data for 6 slides (always shown regardless of filter)
+
+    // Helper to generate all hours/days in a range (fills gaps with zeros)
+    const generateHourlySlots = (hoursBack: number): string[] => {
+      const slots: string[] = [];
+      for (let i = hoursBack - 1; i >= 0; i--) {
+        const d = new Date(now.getTime() - i * 60 * 60 * 1000);
+        slots.push(formatHourInTimezone(d));
+      }
+      return slots;
+    };
+
+    const generateDailySlots = (daysBack: number): string[] => {
+      const slots: string[] = [];
+      for (let i = daysBack - 1; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        slots.push(formatDateInTimezone(d));
+      }
+      return slots;
+    };
+
+    // Fetch data for last 24 hours
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const { data: leads24h } = await supabaseAdmin
+      .from("astro_leads")
+      .select("id, created_at")
+      .gte("created_at", twentyFourHoursAgo.toISOString())
+      .neq("email", "test@example.com");
+
+    const { data: purchases24h } = await supabaseAdmin
+      .from("astro_purchases")
+      .select("id, completed_at, amount_cents, status")
+      .gte("completed_at", twentyFourHoursAgo.toISOString())
+      .eq("status", "completed")
+      .neq("email", "test@example.com")
+      .gte("amount_cents", 100);
+
+    // Fetch data for last 14 days (covers 7d as subset)
+    const fourteenDaysAgo = getDayStart(14);
+    const { data: leads14d } = await supabaseAdmin
+      .from("astro_leads")
+      .select("id, created_at")
+      .gte("created_at", fourteenDaysAgo.toISOString())
+      .neq("email", "test@example.com");
+
+    const { data: purchases14d } = await supabaseAdmin
+      .from("astro_purchases")
+      .select("id, completed_at, amount_cents, status")
+      .gte("completed_at", fourteenDaysAgo.toISOString())
+      .eq("status", "completed")
+      .neq("email", "test@example.com")
+      .gte("amount_cents", 100);
+
+    // Group 24h data by hour
+    const leads24hByHour = groupByGranularity(
+      (leads24h || []).map(l => new Date(l.created_at)),
+      "hourly"
+    );
+    const revenue24hByHour = groupRevenueByGranularity(
+      (purchases24h || []).map(p => ({ date: new Date(p.completed_at), amount: p.amount_cents || 0 })),
+      "hourly"
+    );
+
+    // Group 14d data by day
+    const leads14dByDay = groupByGranularity(
+      (leads14d || []).map(l => new Date(l.created_at)),
+      "daily"
+    );
+    const revenue14dByDay = groupRevenueByGranularity(
+      (purchases14d || []).map(p => ({ date: new Date(p.completed_at), amount: p.amount_cents || 0 })),
+      "daily"
+    );
+
+    // Generate time slots
+    const hourlySlots = generateHourlySlots(24);
+    const daily7Slots = generateDailySlots(7);
+    const daily14Slots = generateDailySlots(14);
+
+    // Build 24h hourly data arrays
+    const revenue24hData = hourlySlots.map(slot => ({
+      date: slot,
+      label: formatLabel(slot, "hourly"),
+      value: revenue24hByHour.get(slot) || 0,
+    }));
+    const leads24hData = hourlySlots.map(slot => ({
+      date: slot,
+      label: formatLabel(slot, "hourly"),
+      value: leads24hByHour.get(slot) || 0,
+    }));
+
+    // Build 7d daily data arrays
+    const revenue7dData = daily7Slots.map(slot => ({
+      date: slot,
+      label: formatLabel(slot, "daily"),
+      value: revenue14dByDay.get(slot) || 0,
+    }));
+    const leads7dData = daily7Slots.map(slot => ({
+      date: slot,
+      label: formatLabel(slot, "daily"),
+      value: leads14dByDay.get(slot) || 0,
+    }));
+
+    // Build 14d daily data arrays
+    const revenue14dData = daily14Slots.map(slot => ({
+      date: slot,
+      label: formatLabel(slot, "daily"),
+      value: revenue14dByDay.get(slot) || 0,
+    }));
+    const leads14dData = daily14Slots.map(slot => ({
+      date: slot,
+      label: formatLabel(slot, "daily"),
+      value: leads14dByDay.get(slot) || 0,
+    }));
+
+    // Calculate totals and comparisons for each slide
+    const sumValues = (data: { value: number }[]) => data.reduce((sum, d) => sum + d.value, 0);
+
+    // For 24h: compare to previous 24h
+    const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+    const { data: leadsPrev24h } = await supabaseAdmin
+      .from("astro_leads")
+      .select("id")
+      .gte("created_at", fortyEightHoursAgo.toISOString())
+      .lt("created_at", twentyFourHoursAgo.toISOString())
+      .neq("email", "test@example.com");
+    const { data: purchasesPrev24h } = await supabaseAdmin
+      .from("astro_purchases")
+      .select("amount_cents")
+      .gte("completed_at", fortyEightHoursAgo.toISOString())
+      .lt("completed_at", twentyFourHoursAgo.toISOString())
+      .eq("status", "completed")
+      .neq("email", "test@example.com")
+      .gte("amount_cents", 100);
+
+    const prevLeads24h = leadsPrev24h?.length || 0;
+    const prevRevenue24h = (purchasesPrev24h || []).reduce((sum, p) => sum + (p.amount_cents || 0), 0);
+
+    // For 7d: compare to previous 7d
+    const twentyOneDaysAgo = getDayStart(21);
+    const { data: leadsPrev7d } = await supabaseAdmin
+      .from("astro_leads")
+      .select("id")
+      .gte("created_at", twentyOneDaysAgo.toISOString())
+      .lt("created_at", fourteenDaysAgo.toISOString())
+      .neq("email", "test@example.com");
+    const { data: purchasesPrev7d } = await supabaseAdmin
+      .from("astro_purchases")
+      .select("amount_cents")
+      .gte("completed_at", twentyOneDaysAgo.toISOString())
+      .lt("completed_at", fourteenDaysAgo.toISOString())
+      .eq("status", "completed")
+      .neq("email", "test@example.com")
+      .gte("amount_cents", 100);
+
+    // Calculate 7d totals (first 7 days of 14d data)
+    const leads7dTotal = sumValues(leads7dData);
+    const revenue7dTotal = sumValues(revenue7dData);
+    const prevLeads7d = leadsPrev7d?.length || 0;
+    const prevRevenue7d = (purchasesPrev7d || []).reduce((sum, p) => sum + (p.amount_cents || 0), 0);
+
+    // For 14d: compare to previous 14d
+    const twentyEightDaysAgo = getDayStart(28);
+    const { data: leadsPrev14d } = await supabaseAdmin
+      .from("astro_leads")
+      .select("id")
+      .gte("created_at", twentyEightDaysAgo.toISOString())
+      .lt("created_at", fourteenDaysAgo.toISOString())
+      .neq("email", "test@example.com");
+    const { data: purchasesPrev14d } = await supabaseAdmin
+      .from("astro_purchases")
+      .select("amount_cents")
+      .gte("completed_at", twentyEightDaysAgo.toISOString())
+      .lt("completed_at", fourteenDaysAgo.toISOString())
+      .eq("status", "completed")
+      .neq("email", "test@example.com")
+      .gte("amount_cents", 100);
+
+    const leads14dTotal = sumValues(leads14dData);
+    const revenue14dTotal = sumValues(revenue14dData);
+    const prevLeads14d = leadsPrev14d?.length || 0;
+    const prevRevenue14d = (purchasesPrev14d || []).reduce((sum, p) => sum + (p.amount_cents || 0), 0);
+
+    // Helper to calculate percent change
+    const calcChange = (current: number, previous: number) =>
+      previous > 0 ? ((current - previous) / previous) * 100 : current > 0 ? 100 : 0;
+
+    // Build carousel charts array (Revenue first as default)
+    const carouselCharts = [
+      {
+        id: "revenue-24h",
+        title: "Revenue",
+        subtitle: "Last 24 hours",
+        data: revenue24hData,
+        total: sumValues(revenue24hData),
+        changePercent: calcChange(sumValues(revenue24hData), prevRevenue24h),
+        color: "#10b981", // green
+        valueFormatter: "currency" as const,
+      },
+      {
+        id: "leads-24h",
+        title: "Leads",
+        subtitle: "Last 24 hours",
+        data: leads24hData,
+        total: sumValues(leads24hData),
+        changePercent: calcChange(sumValues(leads24hData), prevLeads24h),
+        color: "#6366f1", // indigo
+        valueFormatter: "number" as const,
+      },
+      {
+        id: "revenue-7d",
+        title: "Revenue",
+        subtitle: "Last 7 days",
+        data: revenue7dData,
+        total: revenue7dTotal,
+        changePercent: calcChange(revenue7dTotal, prevRevenue7d),
+        color: "#10b981",
+        valueFormatter: "currency" as const,
+      },
+      {
+        id: "leads-7d",
+        title: "Leads",
+        subtitle: "Last 7 days",
+        data: leads7dData,
+        total: leads7dTotal,
+        changePercent: calcChange(leads7dTotal, prevLeads7d),
+        color: "#6366f1",
+        valueFormatter: "number" as const,
+      },
+      {
+        id: "revenue-14d",
+        title: "Revenue",
+        subtitle: "Last 14 days",
+        data: revenue14dData,
+        total: revenue14dTotal,
+        changePercent: calcChange(revenue14dTotal, prevRevenue14d),
+        color: "#10b981",
+        valueFormatter: "currency" as const,
+      },
+      {
+        id: "leads-14d",
+        title: "Leads",
+        subtitle: "Last 14 days",
+        data: leads14dData,
+        total: leads14dTotal,
+        changePercent: calcChange(leads14dTotal, prevLeads14d),
+        color: "#6366f1",
+        valueFormatter: "number" as const,
+      },
+    ];
 
     return NextResponse.json({
       period,
@@ -1181,6 +1459,7 @@ export async function GET(request: NextRequest) {
       comparison,
       legacyStats,
       dailyBreakdown,
+      carouselCharts,
     });
   } catch (error) {
     console.error("Error fetching leads:", error);
