@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
     // Send Lead event to Meta Conversions API (async, don't block response)
     const clientIp = request.headers.get("x-forwarded-for")?.split(",")[0] || "";
     const userAgent = request.headers.get("user-agent") || "";
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://astropowermaps.com";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.astropowermap.com";
 
     sendLeadEvent({
       email: body.email,
@@ -206,8 +206,9 @@ export async function POST(request: NextRequest) {
     }).catch((err) => console.error("Meta CAPI Lead error:", err));
 
     // Add to MailerLite Leads group (async, don't block response)
-    // URL leads to reveal flow with winback paywall (not /map which requires auth)
-    const mapUrl = `${baseUrl}/reveal?sid=${body.session_id}`;
+    // Email campaign URLs with offer params for A/B testing
+    const mapUrl = `${baseUrl}/reveal?sid=${body.session_id}&offer=full`;      // $19.99
+    const mapUrlWin = `${baseUrl}/reveal?sid=${body.session_id}&offer=win`;    // $9.99
 
     // Parse quiz interests from JSON array (e.g., '["Career / business growth", "Love / relationships"]')
     let quizInterest = "";
@@ -223,6 +224,7 @@ export async function POST(request: NextRequest) {
     addSubscriberToLeads({
       email: body.email,
       mapUrl,
+      mapUrlWin,
       birthLocation: body.birthData?.location?.name,
       quizInterest,
       utmSource: body.utm?.utm_source,

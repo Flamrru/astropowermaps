@@ -29,7 +29,8 @@ function getConfig() {
 
 interface AddToLeadsParams {
   email: string;
-  mapUrl: string;
+  mapUrl: string;        // Full price link (&offer=full)
+  mapUrlWin: string;     // Winback link (&offer=win)
   birthLocation?: string;
   quizInterest?: string;
   utmSource?: string | null;
@@ -48,6 +49,7 @@ interface MailerLiteResult {
 export async function addSubscriberToLeads({
   email,
   mapUrl,
+  mapUrlWin,
   birthLocation,
   quizInterest,
   utmSource,
@@ -74,6 +76,7 @@ export async function addSubscriberToLeads({
         email,
         fields: {
           map_url: mapUrl,
+          map_url_win: mapUrlWin,
           birth_location: birthLocation || "",
           quiz_interest: quizInterest || "",
           utm_source: utmSource || "direct",
