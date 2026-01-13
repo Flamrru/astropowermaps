@@ -84,6 +84,13 @@ OPENAI_API_KEY                # OpenAI for Stella AI
 - Update CHANGELOG.md after features
 - **Do not push to main** without explicit user approval
 
+## Vercel Deployments — CRITICAL
+- **NEVER use `vercel` CLI to deploy** — it deploys local files and can overwrite production
+- **ONLY use `git push`** to trigger deployments via GitHub integration
+- Feature branches → Preview (automatic via GitHub)
+- Main branch → Production (automatic via GitHub)
+- If you need to test on Preview, push to the feature branch and wait for GitHub to deploy
+
 ## OpenAI API
 - **Use `max_completion_tokens`** — NOT `max_tokens` (deprecated)
 - Settings in `src/lib/openai.ts` → `GENERATION_SETTINGS`
