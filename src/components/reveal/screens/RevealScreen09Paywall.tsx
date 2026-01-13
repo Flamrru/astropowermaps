@@ -91,13 +91,10 @@ export default function RevealScreen09Paywall() {
   const [showCheckout, setShowCheckout] = useState(false);
 
   // Determine paywall variant from URL params
-  // Priority: ?offer=winback > ?plan=subscription > presence of sid (winback) > default (single)
-  const hasWinbackOffer = searchParams.get("offer") === "winback";
-  const hasSid = searchParams.get("sid") !== null || state.session_id !== "";
+  // Only show winback ($9.99) when explicitly requested via ?offer=win
+  // Default is always $19.99 (quiz, ads, email without offer param)
   const hasSubscriptionPlan = searchParams.get("plan") === "subscription";
-
-  // Winback: explicitly set via ?offer=winback OR has sid without explicit plan param
-  const isWinback = hasWinbackOffer || (hasSid && !hasSubscriptionPlan && searchParams.get("plan") !== "single");
+  const isWinback = searchParams.get("offer") === "win";
 
   const variant: PaywallVariant = isWinback
     ? "winback"
