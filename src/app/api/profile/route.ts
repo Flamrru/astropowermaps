@@ -214,7 +214,21 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // 5. Transform to camelCase for frontend
+    // 5. Invalidate cached forecasts if birth data changed
+    const birthDataChanged = body.birthTime !== undefined || body.birthPlace !== undefined;
+    if (birthDataChanged) {
+      const { error: cacheError } = await supabaseAdmin
+        .from("daily_content")
+        .delete()
+        .eq("user_id", userId);
+
+      if (cacheError) {
+        console.error("Failed to invalidate forecast cache:", cacheError);
+        // Don't fail the request, just log the error
+      }
+    }
+
+    // 6. Transform to camelCase for frontend
     const transformedProfile = {
       id: updatedProfile.id,
       userId: updatedProfile.user_id,
