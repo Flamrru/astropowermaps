@@ -90,12 +90,27 @@ export default function RevealScreen09Paywall() {
   const searchParams = useSearchParams();
   const [showCheckout, setShowCheckout] = useState(false);
 
-  // Determine paywall variant from URL param
-  // Default is "single" ($19.99 one-time). Use ?plan=subscription for trial flow.
-  const variant: PaywallVariant = searchParams.get("plan") === "subscription" ? "subscription" : "single";
+  // Determine paywall variant from URL params
+  // Priority: ?offer=winback > ?plan=subscription > presence of sid (winback) > default (single)
+  const hasWinbackOffer = searchParams.get("offer") === "winback";
+  const hasSid = searchParams.get("sid") !== null || state.session_id !== "";
+  const hasSubscriptionPlan = searchParams.get("plan") === "subscription";
 
-  // Default plan depends on variant: one_time for single payment, trial_7day for subscription
-  const defaultPlan: PlanId = variant === "single" ? "one_time" : "trial_7day";
+  // Winback: explicitly set via ?offer=winback OR has sid without explicit plan param
+  const isWinback = hasWinbackOffer || (hasSid && !hasSubscriptionPlan && searchParams.get("plan") !== "single");
+
+  const variant: PaywallVariant = isWinback
+    ? "winback"
+    : hasSubscriptionPlan
+      ? "subscription"
+      : "single";
+
+  // Default plan depends on variant
+  const defaultPlan: PlanId = variant === "winback"
+    ? "winback"
+    : variant === "single"
+      ? "one_time"
+      : "trial_7day";
   const [selectedPlan, setSelectedPlan] = useState<PlanId>(defaultPlan);
 
   // Scroll to pricing section (for CTAs throughout page)

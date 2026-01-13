@@ -111,6 +111,7 @@ async function main() {
 // Subscription pricing configuration
 const MONTHLY_PRICE_CENTS = 1999; // $19.99/month after trial
 const ONE_TIME_PRICE_CENTS = 1999; // $19.99 one-time (A/B test variant B)
+const WINBACK_PRICE_CENTS = 999; // $9.99 one-time (winback offer for email leads)
 
 const PLANS = [
   {
@@ -250,6 +251,31 @@ async function setupStripeProducts() {
       priceIds.one_time = oneTimePrice.id;
     }
 
+    // Step 5: Create winback offer price ($9.99 one-time for email leads)
+    console.log("\n5️⃣  Creating winback offer price ($9.99)...");
+
+    let winbackPrice = existingPrices.data.find(
+      (p) => p.metadata?.nickname === "stella_winback" && !p.recurring
+    );
+
+    if (winbackPrice) {
+      console.log(`   ✓ Found existing winback price: ${winbackPrice.id}`);
+      priceIds.winback = winbackPrice.id;
+    } else {
+      winbackPrice = await stripe.prices.create({
+        product: product.id,
+        unit_amount: WINBACK_PRICE_CENTS,
+        currency: "usd",
+        metadata: {
+          nickname: "stella_winback",
+          payment_type: "winback_offer",
+          description: "Winback offer - email re-engagement ($9.99)",
+        },
+      });
+      console.log(`   ✓ Created winback price: ${winbackPrice.id} ($${(WINBACK_PRICE_CENTS / 100).toFixed(2)})`);
+      priceIds.winback = winbackPrice.id;
+    }
+
     // Output results
     console.log("\n" + "=".repeat(60));
     console.log(`✅ SETUP COMPLETE! (${keyMode.toUpperCase()} MODE)`);
@@ -266,6 +292,8 @@ async function setupStripeProducts() {
     console.log(`  TRIAL_14DAY: "${priceIds.stella_14day}",`);
     console.log(`  // One-time payment for A/B test variant B ($19.99)`);
     console.log(`  ONE_TIME: "${priceIds.one_time}",`);
+    console.log(`  // Winback offer for email leads ($9.99)`);
+    console.log(`  WINBACK: "${priceIds.winback}",`);
     console.log(`} as const;`);
     console.log("\n");
 

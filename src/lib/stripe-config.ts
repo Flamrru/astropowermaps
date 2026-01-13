@@ -130,6 +130,8 @@ export const SANDBOX_PRICES = {
   TRIAL_14DAY: "price_1SmTR51yURwpWT9Ltlu1jKs0",
   // One-time payment for A/B test variant B ($19.99)
   ONE_TIME: "price_1SnR0I1yURwpWT9LmAc37tl9",
+  // Winback offer for email leads ($9.99)
+  WINBACK: "price_1Sp5Sb1yURwpWT9L9G94w2QG",
 } as const;
 
 /**
@@ -144,6 +146,8 @@ export const LIVE_PRICES = {
   TRIAL_14DAY: "price_1SmUSp24zElYF83GmsTPZYdc",
   // One-time payment for A/B test variant B ($19.99)
   ONE_TIME: "price_1So5w024zElYF83Ge1cbG80R",
+  // Winback offer for email leads ($9.99)
+  WINBACK: "price_1Sp5Sr24zElYF83G9mseZLLS",
 } as const;
 
 // ============================================

@@ -206,7 +206,8 @@ export async function POST(request: NextRequest) {
     }).catch((err) => console.error("Meta CAPI Lead error:", err));
 
     // Add to MailerLite Leads group (async, don't block response)
-    const mapUrl = `${baseUrl}/map?sid=${body.session_id}`;
+    // URL leads to reveal flow with winback paywall (not /map which requires auth)
+    const mapUrl = `${baseUrl}/reveal?sid=${body.session_id}`;
 
     // Parse quiz interests from JSON array (e.g., '["Career / business growth", "Love / relationships"]')
     let quizInterest = "";

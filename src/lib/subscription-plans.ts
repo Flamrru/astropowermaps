@@ -17,7 +17,8 @@ export const CURRENT_STRIPE_MODE = getStripeMode();
 
 // Plan IDs match the UI component (PricingSelector)
 // "one_time" is for A/B test variant B (single $19.99 payment)
-export type PlanId = "trial_3day" | "trial_7day" | "trial_14day" | "one_time";
+// "winback" is for email lead re-engagement ($9.99 one-time)
+export type PlanId = "trial_3day" | "trial_7day" | "trial_14day" | "one_time" | "winback";
 
 // Map plan IDs to Stripe price keys
 const PLAN_TO_PRICE_KEY: Record<PlanId, keyof typeof STRIPE_PRICES> = {
@@ -25,6 +26,7 @@ const PLAN_TO_PRICE_KEY: Record<PlanId, keyof typeof STRIPE_PRICES> = {
   trial_7day: "TRIAL_7DAY",
   trial_14day: "TRIAL_14DAY",
   one_time: "ONE_TIME",
+  winback: "WINBACK",
 };
 
 // Plan details for UI and checkout
@@ -89,6 +91,18 @@ export const SUBSCRIPTION_PLANS: Record<
     stripePriceKey: "ONE_TIME",
     description: "One-time purchase, lifetime access",
   },
+  // Winback offer: Discounted one-time payment for email leads
+  winback: {
+    id: "winback",
+    name: "Special Offer",
+    trialPriceCents: 999, // $9.99 one-time
+    trialPriceDisplay: "$9.99",
+    trialDays: 0, // No trial - immediate full access
+    monthlyPriceCents: 0, // No recurring charge
+    monthlyPriceDisplay: "$0",
+    stripePriceKey: "WINBACK",
+    description: "Winback offer for email leads",
+  },
 };
 
 /**
@@ -125,6 +139,7 @@ export function isStripeConfigured(): boolean {
       STRIPE_PRICES.TRIAL_3DAY &&
       STRIPE_PRICES.TRIAL_7DAY &&
       STRIPE_PRICES.TRIAL_14DAY &&
-      STRIPE_PRICES.ONE_TIME
+      STRIPE_PRICES.ONE_TIME &&
+      STRIPE_PRICES.WINBACK
   );
 }
