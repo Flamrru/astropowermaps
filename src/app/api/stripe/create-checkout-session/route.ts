@@ -63,19 +63,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine if this is a one-time payment or subscription
-    const isOneTimePayment = planId === "one_time";
-    const paymentVariant = isOneTimePayment ? "single" : "subscription";
+    // Both "one_time" ($19.99) and "winback" ($9.99) are one-time payments
+    const isOneTimePayment = planId === "one_time" || planId === "winback";
+    const paymentVariant = isOneTimePayment ? (planId === "winback" ? "winback" : "single") : "subscription";
 
     // Get prices based on mode
     const prices = getStripePrices();
 
     if (isOneTimePayment) {
-      // One-time payment mode - need ONE_TIME price ID
-      const oneTimePriceId = prices.ONE_TIME;
-      if (!oneTimePriceId || oneTimePriceId.startsWith("price_TODO")) {
-        console.error("One-time price ID not configured");
+      // One-time payment mode - need correct price ID based on plan
+      const priceId = planId === "winback" ? prices.WINBACK : prices.ONE_TIME;
+      if (!priceId || priceId.startsWith("price_TODO")) {
+        console.error(`Price ID not configured for plan: ${planId}`);
         return NextResponse.json(
-          { error: "One-time payment not configured yet" },
+          { error: `${planId} payment not configured yet` },
           { status: 500 }
         );
       }
@@ -150,10 +151,10 @@ export async function POST(request: NextRequest) {
               customer_creation: "always",
             }),
 
-        // Single one-time line item
+        // Single one-time line item (use WINBACK or ONE_TIME based on plan)
         line_items: [
           {
-            price: prices.ONE_TIME,
+            price: planId === "winback" ? prices.WINBACK : prices.ONE_TIME,
             quantity: 1,
           },
         ],
