@@ -114,7 +114,7 @@ export async function PATCH(request: NextRequest) {
     // 2. Get current profile to check constraints
     const { data: currentProfile, error: fetchError } = await supabaseAdmin
       .from("user_profiles")
-      .select("birth_time_unknown, preferences, birth_data_last_updated")
+      .select("birth_time_unknown, preferences, birth_time_last_updated, birth_location_last_updated")
       .eq("user_id", userId)
       .single();
 
@@ -132,11 +132,9 @@ export async function PATCH(request: NextRequest) {
       updates.display_name = body.displayName.trim() || null;
     }
 
-    // Check rate limit for birth data changes (once per month)
-    const isBirthDataChange = body.birthTime !== undefined || body.birthPlace !== undefined;
-
-    if (isBirthDataChange && currentProfile.birth_data_last_updated) {
-      const lastUpdate = new Date(currentProfile.birth_data_last_updated);
+    // Check rate limit for birth TIME (once per month)
+    if (body.birthTime !== undefined && currentProfile.birth_time_last_updated) {
+      const lastUpdate = new Date(currentProfile.birth_time_last_updated);
       const now = new Date();
       const daysSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
 
@@ -145,7 +143,24 @@ export async function PATCH(request: NextRequest) {
         nextDate.setDate(nextDate.getDate() + 30);
         return NextResponse.json({
           error: "rate_limit",
-          message: "You can only update your birth details once per month",
+          message: "You can only update your birth time once per month",
+          nextUpdateDate: nextDate.toISOString()
+        }, { status: 429 });
+      }
+    }
+
+    // Check rate limit for birth LOCATION (once per month)
+    if (body.birthPlace !== undefined && currentProfile.birth_location_last_updated) {
+      const lastUpdate = new Date(currentProfile.birth_location_last_updated);
+      const now = new Date();
+      const daysSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (daysSinceUpdate < 30) {
+        const nextDate = new Date(lastUpdate);
+        nextDate.setDate(nextDate.getDate() + 30);
+        return NextResponse.json({
+          error: "rate_limit",
+          message: "You can only update your birth location once per month",
           nextUpdateDate: nextDate.toISOString()
         }, { status: 429 });
       }
@@ -162,6 +177,7 @@ export async function PATCH(request: NextRequest) {
       }
       updates.birth_time = body.birthTime;
       updates.birth_time_unknown = false;
+      updates.birth_time_last_updated = new Date().toISOString();
     }
 
     // Birth location update
@@ -170,11 +186,7 @@ export async function PATCH(request: NextRequest) {
       updates.birth_lat = body.birthLat;
       updates.birth_lng = body.birthLng;
       updates.birth_timezone = body.birthTimezone;
-    }
-
-    // Track when birth data was last updated
-    if (isBirthDataChange) {
-      updates.birth_data_last_updated = new Date().toISOString();
+      updates.birth_location_last_updated = new Date().toISOString();
     }
 
     // Preferences - merge with existing
