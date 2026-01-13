@@ -23,16 +23,17 @@ const VALID_GOALS: GoalCategory[] = ["love", "career", "creativity", "clarity", 
  */
 
 // Moon phase calculation (simplified Meeus algorithm)
+// Uses noon UTC for consistency with transit calculations
 function getMoonPhase(date: Date): { phase: string; illumination: number } {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() + 1;
+  const day = date.getUTCDate();
 
-  // Calculate Julian Date
+  // Calculate Julian Date at noon UTC (add 0.5 for noon)
   const a = Math.floor((14 - month) / 12);
   const y = year + 4800 - a;
   const m = month + 12 * a - 3;
-  const jd = day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+  const jd = day + 0.5 + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
 
   // Calculate moon phase (0-29.5 day cycle)
   const daysSinceNew = (jd - 2451550.1) % 29.530588853;

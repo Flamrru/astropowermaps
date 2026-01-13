@@ -25,20 +25,23 @@ import {
 // ============================================
 
 /**
- * Convert a Date object to Julian Day
+ * Convert a Date object to Julian Day (at noon UTC)
  *
- * IMPORTANT: Uses UTC methods to ensure consistent results regardless of
- * server timezone. Transit calculations should be timezone-agnostic since
- * we're calculating planetary positions at a specific moment in time.
+ * IMPORTANT: Always uses noon UTC (day + 0.5) regardless of the time in the
+ * Date object. This ensures consistent moon sign calculations - the Moon
+ * moves ~0.5° per hour, so using midnight vs noon can shift the sign by
+ * up to 6° (about 1/5 of a zodiac sign).
+ *
+ * Bug fix: Previously used hour/minute from Date which caused Feb 1, 2026
+ * to show Cancer instead of Leo (moon was at 119.9° at midnight, 127° at noon).
  */
 export function dateToJulianDay(date: Date): number {
   const year = date.getUTCFullYear();
   const month = date.getUTCMonth() + 1;
   const day = date.getUTCDate();
-  const hour = date.getUTCHours();
-  const minute = date.getUTCMinutes();
 
-  const decimalDay = day + (hour + minute / 60) / 24;
+  // Always use noon UTC for consistency across all transit calculations
+  const decimalDay = day + 0.5;
   return julian.CalendarGregorianToJD(year, month, decimalDay);
 }
 
@@ -106,10 +109,10 @@ export function calculateTransitPositionsForDate(isoDate: string): TransitPositi
 export function generateYearTransits(year: number = 2026): TransitCache {
   const cache: TransitCache = new Map();
 
-  // Start from January 1st
-  const startDate = new Date(year, 0, 1);
-  // End at December 31st
-  const endDate = new Date(year, 11, 31);
+  // Use explicit UTC dates to avoid timezone issues
+  // (Previously used local dates which caused off-by-one errors on non-UTC servers)
+  const startDate = new Date(Date.UTC(year, 0, 1));
+  const endDate = new Date(Date.UTC(year, 11, 31));
 
   // Iterate through each day
   const currentDate = new Date(startDate);
@@ -117,8 +120,8 @@ export function generateYearTransits(year: number = 2026): TransitCache {
     const isoDate = dateToISOString(currentDate);
     cache.set(isoDate, calculateTransitPositions(currentDate));
 
-    // Move to next day
-    currentDate.setDate(currentDate.getDate() + 1);
+    // Move to next day (use UTC to avoid DST issues)
+    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
   }
 
   return cache;
