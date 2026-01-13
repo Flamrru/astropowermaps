@@ -6,6 +6,10 @@ import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
 interface ProfileUpdatePayload {
   displayName?: string;
   birthTime?: string;
+  birthPlace?: string;
+  birthLat?: number;
+  birthLng?: number;
+  birthTimezone?: string;
   preferences?: {
     theme?: "dark" | "light";
     units?: "km" | "miles";
@@ -110,7 +114,7 @@ export async function PATCH(request: NextRequest) {
     // 2. Get current profile to check constraints
     const { data: currentProfile, error: fetchError } = await supabaseAdmin
       .from("user_profiles")
-      .select("birth_time_unknown, preferences")
+      .select("birth_time_unknown, preferences, birth_data_last_updated")
       .eq("user_id", userId)
       .single();
 
@@ -128,14 +132,27 @@ export async function PATCH(request: NextRequest) {
       updates.display_name = body.displayName.trim() || null;
     }
 
-    // Birth time - only allow if originally unknown
-    if (body.birthTime !== undefined) {
-      if (!currentProfile.birth_time_unknown) {
-        return NextResponse.json(
-          { error: "Birth time can only be updated if it was originally unknown" },
-          { status: 400 }
-        );
+    // Check rate limit for birth data changes (once per month)
+    const isBirthDataChange = body.birthTime !== undefined || body.birthPlace !== undefined;
+
+    if (isBirthDataChange && currentProfile.birth_data_last_updated) {
+      const lastUpdate = new Date(currentProfile.birth_data_last_updated);
+      const now = new Date();
+      const daysSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (daysSinceUpdate < 30) {
+        const nextDate = new Date(lastUpdate);
+        nextDate.setDate(nextDate.getDate() + 30);
+        return NextResponse.json({
+          error: "rate_limit",
+          message: "You can only update your birth details once per month",
+          nextUpdateDate: nextDate.toISOString()
+        }, { status: 429 });
       }
+    }
+
+    // Birth time update
+    if (body.birthTime !== undefined) {
       // Validate time format (HH:MM)
       if (!/^\d{2}:\d{2}$/.test(body.birthTime)) {
         return NextResponse.json(
@@ -145,6 +162,19 @@ export async function PATCH(request: NextRequest) {
       }
       updates.birth_time = body.birthTime;
       updates.birth_time_unknown = false;
+    }
+
+    // Birth location update
+    if (body.birthPlace !== undefined) {
+      updates.birth_place = body.birthPlace;
+      updates.birth_lat = body.birthLat;
+      updates.birth_lng = body.birthLng;
+      updates.birth_timezone = body.birthTimezone;
+    }
+
+    // Track when birth data was last updated
+    if (isBirthDataChange) {
+      updates.birth_data_last_updated = new Date().toISOString();
     }
 
     // Preferences - merge with existing
