@@ -24,6 +24,7 @@ interface CheckoutPayload {
   email: string;
   planId?: PlanId; // Optional for backward compatibility, defaults to "trial_7day"
   devMode?: boolean; // True if testing in dev mode (no real lead in DB)
+  offer?: string; // "win"/"full" = email campaign, undefined = quiz/ads
   // Meta CAPI tracking data for deduplication
   metaEventId?: string;  // Event ID for deduplication with client pixel
   fbp?: string;          // Facebook Browser ID (_fbp cookie)
@@ -122,6 +123,8 @@ export async function POST(request: NextRequest) {
       plan_id: planId,
       payment_variant: paymentVariant, // Track A/B test variant
       product_type: isOneTimePayment ? "stella_plus_one_time" : "stella_plus_subscription",
+      // Offer param: "win"/"full" = email campaign (skip tracking), empty = quiz/ads (track)
+      offer: body.offer || "",
       // Meta CAPI tracking data for deduplication
       meta_event_id: body.metaEventId || "",
       fbp: body.fbp || "",

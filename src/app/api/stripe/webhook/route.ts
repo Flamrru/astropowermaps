@@ -357,8 +357,12 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   }
 
   // Send Purchase event to Meta Conversions API
-  // Skip for winback purchases - they come from email, not ads, and would confuse the algorithm
-  if (planId !== "winback") {
+  // Skip for email campaigns (offer param present) - they would confuse the ad algorithm
+  // Only track quiz/ads purchases (no offer param)
+  const offer = session.metadata?.offer;
+
+  if (!offer) {
+    // No offer param = came from quiz/ads → Track normally
     const amountPaid = session.amount_total ? session.amount_total / 100 : 19.0;
     const currency = session.currency?.toUpperCase() || "USD";
 
@@ -383,7 +387,8 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       console.log(`Meta CAPI: Purchase event sent for ${appSessionId}, eventId: ${eventId}, deduped: ${Boolean(metaEventId)}`);
     }
   } else {
-    console.log(`Meta CAPI: Skipped for winback purchase (${appSessionId}) - email-driven, not ad-driven`);
+    // Has offer param (win/full) = came from email → Skip tracking
+    console.log(`Meta CAPI: Skipped for email campaign purchase (${appSessionId}, offer=${offer}) - email-driven, not ad-driven`);
   }
 
   // Send confirmation email with permanent map link via Resend

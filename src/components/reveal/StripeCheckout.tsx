@@ -82,9 +82,10 @@ export default function StripeCheckout({
       const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
       const email = isValidEmail(state.email) ? state.email : "test@example.com";
 
-      // Check if in dev mode
+      // Check URL params
       const urlParams = new URLSearchParams(window.location.search);
       const isDevMode = urlParams.has("d");
+      const offer = urlParams.get("offer"); // "win", "full", or null (quiz/ads)
 
       // Save email to localStorage for account setup page
       if (email) {
@@ -107,6 +108,7 @@ export default function StripeCheckout({
           email,
           planId, // Pass selected plan to API
           devMode: isDevMode, // Pass dev mode flag
+          offer: offer || undefined, // "win"/"full" = email, undefined = quiz/ads
           // Meta tracking data for CAPI deduplication
           metaEventId,
           fbp: fbp || undefined,
