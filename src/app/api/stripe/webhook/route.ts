@@ -357,28 +357,33 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   }
 
   // Send Purchase event to Meta Conversions API
-  const amountPaid = session.amount_total ? session.amount_total / 100 : 19.0;
-  const currency = session.currency?.toUpperCase() || "USD";
+  // Skip for winback purchases - they come from email, not ads, and would confuse the algorithm
+  if (planId !== "winback") {
+    const amountPaid = session.amount_total ? session.amount_total / 100 : 19.0;
+    const currency = session.currency?.toUpperCase() || "USD";
 
-  // Get Meta tracking data from session metadata (stored during checkout creation)
-  const metaEventId = session.metadata?.meta_event_id;
-  const fbp = session.metadata?.fbp;
-  const fbc = session.metadata?.fbc;
+    // Get Meta tracking data from session metadata (stored during checkout creation)
+    const metaEventId = session.metadata?.meta_event_id;
+    const fbp = session.metadata?.fbp;
+    const fbc = session.metadata?.fbc;
 
-  const { success: metaSuccess, eventId } = await sendPurchaseEvent({
-    email,
-    value: amountPaid,
-    currency,
-    // Deduplication: use same event ID as client-side pixel
-    eventId: metaEventId || undefined,
-    // Facebook identifiers for better match rate
-    fbp: fbp || undefined,
-    fbc: fbc || undefined,
-    eventSourceUrl: `${baseUrl}/reveal`,
-  });
+    const { success: metaSuccess, eventId } = await sendPurchaseEvent({
+      email,
+      value: amountPaid,
+      currency,
+      // Deduplication: use same event ID as client-side pixel
+      eventId: metaEventId || undefined,
+      // Facebook identifiers for better match rate
+      fbp: fbp || undefined,
+      fbc: fbc || undefined,
+      eventSourceUrl: `${baseUrl}/reveal`,
+    });
 
-  if (metaSuccess) {
-    console.log(`Meta CAPI: Purchase event sent for ${appSessionId}, eventId: ${eventId}, deduped: ${Boolean(metaEventId)}`);
+    if (metaSuccess) {
+      console.log(`Meta CAPI: Purchase event sent for ${appSessionId}, eventId: ${eventId}, deduped: ${Boolean(metaEventId)}`);
+    }
+  } else {
+    console.log(`Meta CAPI: Skipped for winback purchase (${appSessionId}) - email-driven, not ad-driven`);
   }
 
   // Send confirmation email with permanent map link via Resend
