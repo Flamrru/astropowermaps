@@ -6,6 +6,10 @@ import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
 interface ProfileUpdatePayload {
   displayName?: string;
   birthTime?: string;
+  birthPlace?: string;
+  birthLat?: number;
+  birthLng?: number;
+  birthTimezone?: string;
   preferences?: {
     theme?: "dark" | "light";
     units?: "km" | "miles";
@@ -110,7 +114,7 @@ export async function PATCH(request: NextRequest) {
     // 2. Get current profile to check constraints
     const { data: currentProfile, error: fetchError } = await supabaseAdmin
       .from("user_profiles")
-      .select("birth_time_unknown, preferences")
+      .select("birth_time_unknown, preferences, birth_time_last_updated, birth_location_last_updated")
       .eq("user_id", userId)
       .single();
 
@@ -128,14 +132,42 @@ export async function PATCH(request: NextRequest) {
       updates.display_name = body.displayName.trim() || null;
     }
 
-    // Birth time - only allow if originally unknown
-    if (body.birthTime !== undefined) {
-      if (!currentProfile.birth_time_unknown) {
-        return NextResponse.json(
-          { error: "Birth time can only be updated if it was originally unknown" },
-          { status: 400 }
-        );
+    // Check rate limit for birth TIME (once per month)
+    if (body.birthTime !== undefined && currentProfile.birth_time_last_updated) {
+      const lastUpdate = new Date(currentProfile.birth_time_last_updated);
+      const now = new Date();
+      const daysSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (daysSinceUpdate < 30) {
+        const nextDate = new Date(lastUpdate);
+        nextDate.setDate(nextDate.getDate() + 30);
+        return NextResponse.json({
+          error: "rate_limit",
+          message: "You can only update your birth time once per month",
+          nextUpdateDate: nextDate.toISOString()
+        }, { status: 429 });
       }
+    }
+
+    // Check rate limit for birth LOCATION (once per month)
+    if (body.birthPlace !== undefined && currentProfile.birth_location_last_updated) {
+      const lastUpdate = new Date(currentProfile.birth_location_last_updated);
+      const now = new Date();
+      const daysSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (daysSinceUpdate < 30) {
+        const nextDate = new Date(lastUpdate);
+        nextDate.setDate(nextDate.getDate() + 30);
+        return NextResponse.json({
+          error: "rate_limit",
+          message: "You can only update your birth location once per month",
+          nextUpdateDate: nextDate.toISOString()
+        }, { status: 429 });
+      }
+    }
+
+    // Birth time update
+    if (body.birthTime !== undefined) {
       // Validate time format (HH:MM)
       if (!/^\d{2}:\d{2}$/.test(body.birthTime)) {
         return NextResponse.json(
@@ -145,6 +177,16 @@ export async function PATCH(request: NextRequest) {
       }
       updates.birth_time = body.birthTime;
       updates.birth_time_unknown = false;
+      updates.birth_time_last_updated = new Date().toISOString();
+    }
+
+    // Birth location update
+    if (body.birthPlace !== undefined) {
+      updates.birth_place = body.birthPlace;
+      updates.birth_lat = body.birthLat;
+      updates.birth_lng = body.birthLng;
+      updates.birth_timezone = body.birthTimezone;
+      updates.birth_location_last_updated = new Date().toISOString();
     }
 
     // Preferences - merge with existing
@@ -172,7 +214,21 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // 5. Transform to camelCase for frontend
+    // 5. Invalidate cached forecasts if birth data changed
+    const birthDataChanged = body.birthTime !== undefined || body.birthPlace !== undefined;
+    if (birthDataChanged) {
+      const { error: cacheError } = await supabaseAdmin
+        .from("daily_content")
+        .delete()
+        .eq("user_id", userId);
+
+      if (cacheError) {
+        console.error("Failed to invalidate forecast cache:", cacheError);
+        // Don't fail the request, just log the error
+      }
+    }
+
+    // 6. Transform to camelCase for frontend
     const transformedProfile = {
       id: updatedProfile.id,
       userId: updatedProfile.user_id,
