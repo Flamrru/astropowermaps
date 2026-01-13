@@ -18,9 +18,7 @@ export default function BirthDataCard() {
   const { profile } = state;
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [selectedHour, setSelectedHour] = useState("12");
-  const [selectedMinute, setSelectedMinute] = useState("00");
-  const [selectedPeriod, setSelectedPeriod] = useState<"AM" | "PM">("PM");
+  const [selectedTime, setSelectedTime] = useState("12:00");
   const [selectedLocation, setSelectedLocation] = useState<BirthLocation | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,20 +26,16 @@ export default function BirthDataCard() {
   if (!profile) return null;
 
   const handleSaveBirthTime = async () => {
+    if (!selectedTime) return;
+
     setIsSaving(true);
     setError(null);
 
     try {
-      // Convert to 24-hour format
-      let hour = parseInt(selectedHour);
-      if (selectedPeriod === "PM" && hour !== 12) hour += 12;
-      if (selectedPeriod === "AM" && hour === 12) hour = 0;
-      const time24 = `${hour.toString().padStart(2, "0")}:${selectedMinute}`;
-
       const response = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ birthTime: time24 }),
+        body: JSON.stringify({ birthTime: selectedTime }),
       });
 
       if (!response.ok) {
@@ -344,62 +338,23 @@ export default function BirthDataCard() {
                   </p>
                 </div>
 
-                {/* Time Picker */}
+                {/* Time Picker - Native input for better mobile experience */}
                 <div className="px-6 pb-4">
-                  <div className="flex items-center justify-center gap-2">
-                    {/* Hour */}
-                    <select
-                      value={selectedHour}
-                      onChange={(e) => setSelectedHour(e.target.value)}
-                      className="px-4 py-3 rounded-xl text-lg font-medium bg-white/5 border border-white/10 text-white appearance-none cursor-pointer focus:outline-none focus:border-[#E8C547]/50"
-                      style={{ minWidth: "70px" }}
-                    >
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
-                        <option key={h} value={h.toString()} className="bg-[#1a1a2e]">
-                          {h}
-                        </option>
-                      ))}
-                    </select>
-
-                    <span className="text-white/40 text-2xl">:</span>
-
-                    {/* Minute */}
-                    <select
-                      value={selectedMinute}
-                      onChange={(e) => setSelectedMinute(e.target.value)}
-                      className="px-4 py-3 rounded-xl text-lg font-medium bg-white/5 border border-white/10 text-white appearance-none cursor-pointer focus:outline-none focus:border-[#E8C547]/50"
-                      style={{ minWidth: "70px" }}
-                    >
-                      {Array.from({ length: 60 }, (_, i) => i).map((m) => (
-                        <option key={m} value={m.toString().padStart(2, "0")} className="bg-[#1a1a2e]">
-                          {m.toString().padStart(2, "0")}
-                        </option>
-                      ))}
-                    </select>
-
-                    {/* AM/PM */}
-                    <div className="flex rounded-xl overflow-hidden border border-white/10">
-                      {(["AM", "PM"] as const).map((period) => (
-                        <button
-                          key={period}
-                          onClick={() => setSelectedPeriod(period)}
-                          className="px-4 py-3 text-sm font-medium transition-colors"
-                          style={{
-                            background:
-                              selectedPeriod === period
-                                ? "rgba(201, 162, 39, 0.2)"
-                                : "transparent",
-                            color:
-                              selectedPeriod === period
-                                ? "#E8C547"
-                                : "rgba(255, 255, 255, 0.5)",
-                          }}
-                        >
-                          {period}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <input
+                    type="time"
+                    value={selectedTime}
+                    onChange={(e) => setSelectedTime(e.target.value)}
+                    className="
+                      w-full px-4 py-4 rounded-xl
+                      bg-white/10 backdrop-blur-xl
+                      border border-white/20
+                      text-white text-lg text-center
+                      focus:outline-none focus:border-[#C9A227]/50
+                      focus:shadow-[0_0_20px_rgba(201,162,39,0.15)]
+                      transition-all duration-300
+                      [color-scheme:dark]
+                    "
+                  />
 
                   {error && (
                     <p className="text-red-400 text-sm text-center mt-4">{error}</p>
