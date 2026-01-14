@@ -13,8 +13,10 @@ import {
   Calendar,
   ChevronDown,
   Activity,
+  Brain,
 } from "lucide-react";
 import { UserDetailModal } from "@/components/tracking/UserDetailModal";
+import { ChatAnalysisTab } from "@/components/tracking/ChatAnalysisTab";
 
 // Types
 type DatePreset =
@@ -35,7 +37,7 @@ interface DateRange {
   preset: DatePreset;
 }
 
-type TabId = "overview" | "stella" | "users" | "revenue";
+type TabId = "overview" | "stella" | "users" | "revenue" | "chat_analysis";
 
 interface Tab {
   id: TabId;
@@ -46,6 +48,7 @@ interface Tab {
 const TABS: Tab[] = [
   { id: "overview", label: "Overview", icon: <BarChart3 className="w-4 h-4" /> },
   { id: "stella", label: "Stella Insights", icon: <Sparkles className="w-4 h-4" /> },
+  { id: "chat_analysis", label: "Chat Analysis", icon: <Brain className="w-4 h-4" /> },
   { id: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
   { id: "revenue", label: "Revenue", icon: <DollarSign className="w-4 h-4" /> },
 ];
@@ -76,6 +79,7 @@ export default function TrackingDashboardPage() {
   const [overviewData, setOverviewData] = useState<Record<string, unknown> | null>(null);
   const [usersData, setUsersData] = useState<Record<string, unknown> | null>(null);
   const [revenueData, setRevenueData] = useState<Record<string, unknown> | null>(null);
+  const [chatAnalysisData, setChatAnalysisData] = useState<Record<string, unknown> | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // Check authentication on mount
@@ -105,10 +109,11 @@ export default function TrackingDashboardPage() {
         const toISO = dateRange.to.toISOString();
 
         // Fetch all data in parallel
-        const [overviewRes, usersRes, revenueRes] = await Promise.all([
+        const [overviewRes, usersRes, revenueRes, chatAnalysisRes] = await Promise.all([
           fetch(`/api/tracking/data?from=${fromISO}&to=${toISO}`),
           fetch(`/api/tracking/users?limit=50`),
           fetch(`/api/tracking/revenue?segment_by=payment_type`),
+          fetch(`/api/tracking/chat-analysis`),
         ]);
 
         if (overviewRes.ok) {
@@ -124,6 +129,11 @@ export default function TrackingDashboardPage() {
         if (revenueRes.ok) {
           const data = await revenueRes.json();
           setRevenueData(data);
+        }
+
+        if (chatAnalysisRes.ok) {
+          const data = await chatAnalysisRes.json();
+          setChatAnalysisData(data);
         }
 
         setLastUpdated(new Date());
@@ -317,6 +327,19 @@ export default function TrackingDashboardPage() {
           <>
             {activeTab === "overview" && <OverviewTab data={overviewData} />}
             {activeTab === "stella" && <StellaInsightsTab data={overviewData} />}
+            {activeTab === "chat_analysis" && (
+              <ChatAnalysisTab
+                data={chatAnalysisData as Parameters<typeof ChatAnalysisTab>[0]["data"]}
+                onRunAnalysis={async () => {
+                  const res = await fetch("/api/tracking/chat-analysis", { method: "POST" });
+                  if (res.ok) {
+                    // Refresh data after analysis
+                    await fetchData(false);
+                  }
+                }}
+                onViewUser={setSelectedUserId}
+              />
+            )}
             {activeTab === "users" && <UsersTab data={usersData} onSelectUser={setSelectedUserId} />}
             {activeTab === "revenue" && <RevenueTab data={revenueData} />}
           </>

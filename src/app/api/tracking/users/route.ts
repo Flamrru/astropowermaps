@@ -212,10 +212,14 @@ async function getUserDetail(userId: string) {
     }
 
     const firstUserMessage = dayMessages.find((m) => m.role === "user");
+    // Sort messages by timestamp ascending (oldest first) to ensure correct order
+    const sortedMessages = [...dayMessages].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
     conversations.push({
       date,
       topics: Array.from(dayTopics),
-      messages: [...dayMessages].reverse().map((m) => ({
+      messages: sortedMessages.map((m) => ({
         role: m.role,
         content: m.content,
         created_at: m.created_at,

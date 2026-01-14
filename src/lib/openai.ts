@@ -57,4 +57,18 @@ export const GENERATION_SETTINGS = {
     verbosity: "low" as const,
     max_completion_tokens: 4000, // Large system prompt + reasoning + response
   },
+  /** Chat classification - fast topic detection for analytics */
+  classify: {
+    model: MODELS.QUALITY,
+    reasoning_effort: "low" as const,
+    verbosity: "low" as const,
+    max_completion_tokens: 500, // Small structured JSON response
+  },
+  /** Batch classification - multiple messages at once */
+  classifyBatch: {
+    model: MODELS.QUALITY,
+    reasoning_effort: "low" as const,
+    verbosity: "low" as const,
+    max_completion_tokens: 2000, // Multiple classification results
+  },
 } as const;
