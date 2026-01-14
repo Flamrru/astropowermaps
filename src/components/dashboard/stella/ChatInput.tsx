@@ -41,9 +41,10 @@ export default function ChatInput({
     if (trimmed && !isLoading && !disabled) {
       onSend(trimmed);
       setMessage("");
-      // Reset height
+      // Reset height and refocus for next message
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
+        textareaRef.current.focus();
       }
     }
   };
@@ -77,7 +78,7 @@ export default function ChatInput({
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          disabled={isLoading || disabled}
+          disabled={disabled}
           rows={1}
           className="w-full px-4 py-3 bg-transparent text-white/90 text-sm placeholder:text-white/30 resize-none focus:outline-none disabled:opacity-50"
           style={{ maxHeight: "120px" }}
