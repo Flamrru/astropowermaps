@@ -4,21 +4,17 @@ import { useState } from "react";
 import {
   Brain,
   AlertTriangle,
-  MessageSquareWarning,
   Target,
   Play,
   Loader2,
-  Filter,
   Bug,
-  HelpCircle,
-  ShieldAlert,
-  ExternalLink,
   Quote,
   TrendingUp,
   Sparkles,
   CheckCircle2,
   Clock,
 } from "lucide-react";
+import { FlaggedInbox } from "./FlaggedInbox";
 
 // ============================================
 // Types
@@ -44,6 +40,36 @@ interface FlaggedMessage {
   review_reason: string | null;
   classified_at: string;
   message_created_at: string;
+}
+
+interface FlaggedConversation {
+  user_id: string;
+  user_email: string;
+  total_flagged: number;
+  unread_count: number;
+  status: "new" | "in_progress" | "resolved" | "snoozed";
+  manually_flagged: boolean;
+  is_unread: boolean;
+  admin_notes: string | null;
+  latest_message: {
+    content_preview: string;
+    primary_topic: string;
+    topic_label: string;
+    review_reason: string | null;
+    created_at: string;
+  };
+  topics: string[];
+  last_flagged_at: string;
+  last_read_at: string | null;
+  messages: Array<{
+    id: string;
+    message_id: string;
+    content_preview: string;
+    primary_topic: string;
+    topic_label: string;
+    review_reason: string | null;
+    created_at: string;
+  }>;
 }
 
 interface PainPointItem {
@@ -72,9 +98,13 @@ interface ChatAnalysisData {
     totalUnclassified: number;
     flaggedForReview: number;
     totalPainPoints: number;
+    totalUnread?: number;
+    totalInProgress?: number;
+    totalConversations?: number;
   };
   topicBreakdown: TopicBreakdownItem[];
   flaggedMessages: FlaggedMessage[];
+  flaggedConversations?: FlaggedConversation[];
   painPoints: PainPointItem[];
   lastJob: LastJob | null;
 }
@@ -83,28 +113,16 @@ interface ChatAnalysisTabProps {
   data: ChatAnalysisData | null;
   onRunAnalysis: () => Promise<void>;
   onViewUser?: (userId: string) => void;
+  onRefresh?: () => Promise<void>;
 }
 
-// ============================================
-// Filter Types
-// ============================================
-
-type FlagFilter = "all" | "support_issue" | "off_topic" | "abuse";
-
-const FLAG_FILTERS: Array<{ key: FlagFilter; label: string; icon: React.ReactNode }> = [
-  { key: "all", label: "All", icon: <Filter className="w-3.5 h-3.5" /> },
-  { key: "support_issue", label: "Support", icon: <Bug className="w-3.5 h-3.5" /> },
-  { key: "off_topic", label: "Off-topic", icon: <HelpCircle className="w-3.5 h-3.5" /> },
-  { key: "abuse", label: "Abuse", icon: <ShieldAlert className="w-3.5 h-3.5" /> },
-];
 
 // ============================================
 // Main Component
 // ============================================
 
-export function ChatAnalysisTab({ data, onRunAnalysis, onViewUser }: ChatAnalysisTabProps) {
+export function ChatAnalysisTab({ data, onRunAnalysis, onViewUser, onRefresh }: ChatAnalysisTabProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [flagFilter, setFlagFilter] = useState<FlagFilter>("all");
   const [analysisResult, setAnalysisResult] = useState<{
     status: string;
     messagesClassified?: number;
@@ -125,11 +143,26 @@ export function ChatAnalysisTab({ data, onRunAnalysis, onViewUser }: ChatAnalysi
     }
   };
 
-  // Filter flagged messages
-  const filteredFlagged =
-    flagFilter === "all"
-      ? data?.flaggedMessages || []
-      : (data?.flaggedMessages || []).filter((m) => m.primary_topic === flagFilter);
+  // Handle inbox status updates
+  const handleUpdateStatus = async (
+    userId: string,
+    action: string,
+    updateData?: { status?: string; note?: string }
+  ) => {
+    try {
+      await fetch(`/api/tracking/chat-analysis/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, ...updateData }),
+      });
+      // Refresh data after update
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } catch (error) {
+      console.error("Failed to update conversation status:", error);
+    }
+  };
 
   // Format relative time
   const formatTimeAgo = (dateStr: string) => {
@@ -144,16 +177,6 @@ export function ChatAnalysisTab({ data, onRunAnalysis, onViewUser }: ChatAnalysi
     if (diffHours > 0) return `${diffHours}h ago`;
     if (diffMins > 0) return `${diffMins}m ago`;
     return "just now";
-  };
-
-  // Get topic icon and color
-  const getTopicVisuals = (topic: string) => {
-    const visuals: Record<string, { icon: React.ReactNode; color: string }> = {
-      support_issue: { icon: <Bug className="w-4 h-4" />, color: "text-orange-400" },
-      off_topic: { icon: <HelpCircle className="w-4 h-4" />, color: "text-amber-400" },
-      abuse: { icon: <ShieldAlert className="w-4 h-4" />, color: "text-red-400" },
-    };
-    return visuals[topic] || { icon: <MessageSquareWarning className="w-4 h-4" />, color: "text-white/60" };
   };
 
   return (
@@ -288,40 +311,14 @@ export function ChatAnalysisTab({ data, onRunAnalysis, onViewUser }: ChatAnalysi
         </GlassCard>
       </div>
 
-      {/* Flagged Messages Panel */}
-      <GlassCard
-        title="Flagged for Review"
-        subtitle={`${filteredFlagged.length} messages need attention`}
-        headerAction={
-          <div className="flex items-center gap-1">
-            {FLAG_FILTERS.map((filter) => (
-              <button
-                key={filter.key}
-                onClick={() => setFlagFilter(filter.key)}
-                className={`
-                  flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium
-                  transition-all duration-200
-                  ${
-                    flagFilter === filter.key
-                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                      : "text-white/40 hover:text-white/60 hover:bg-white/5"
-                  }
-                `}
-              >
-                {filter.icon}
-                <span className="hidden sm:inline">{filter.label}</span>
-              </button>
-            ))}
-          </div>
-        }
-      >
-        <FlaggedMessagesList
-          messages={filteredFlagged}
-          getTopicVisuals={getTopicVisuals}
-          formatTimeAgo={formatTimeAgo}
-          onViewUser={onViewUser}
-        />
-      </GlassCard>
+      {/* Flagged Conversations Inbox */}
+      <FlaggedInbox
+        conversations={data?.flaggedConversations || []}
+        totalUnread={data?.summary.totalUnread || 0}
+        totalInProgress={data?.summary.totalInProgress || 0}
+        onUpdateStatus={handleUpdateStatus}
+        onViewUser={onViewUser}
+      />
 
       {/* Custom Animations */}
       <style jsx>{`
@@ -533,116 +530,3 @@ function PainPointsList({ painPoints }: { painPoints: PainPointItem[] }) {
   );
 }
 
-function FlaggedMessagesList({
-  messages,
-  getTopicVisuals,
-  formatTimeAgo,
-  onViewUser,
-}: {
-  messages: FlaggedMessage[];
-  getTopicVisuals: (topic: string) => { icon: React.ReactNode; color: string };
-  formatTimeAgo: (date: string) => string;
-  onViewUser?: (userId: string) => void;
-}) {
-  if (messages.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <CheckCircle2 className="w-10 h-10 text-emerald-400/50 mx-auto mb-3" />
-        <p className="text-white/40 text-sm">No flagged messages</p>
-        <p className="text-white/30 text-xs mt-1">All clear! No issues detected.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-      {messages.map((msg, i) => {
-        const visuals = getTopicVisuals(msg.primary_topic);
-
-        return (
-          <div
-            key={msg.id}
-            className="group p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 hover:bg-white/[0.04] transition-all duration-200"
-            style={{ animationDelay: `${i * 30}ms` }}
-          >
-            {/* Header Row */}
-            <div className="flex items-start justify-between gap-4 mb-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className={`p-1.5 rounded-lg bg-white/5 ${visuals.color}`}>
-                  {visuals.icon}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-white/80 truncate">
-                    {msg.user_email}
-                  </p>
-                  <p className="text-xs text-white/30">
-                    {formatTimeAgo(msg.message_created_at)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span
-                  className={`
-                    px-2 py-0.5 rounded-md text-xs font-medium border
-                    ${
-                      msg.primary_topic === "support_issue"
-                        ? "bg-orange-500/20 text-orange-400 border-orange-500/30"
-                        : msg.primary_topic === "abuse"
-                        ? "bg-red-500/20 text-red-400 border-red-500/30"
-                        : "bg-amber-500/20 text-amber-400 border-amber-500/30"
-                    }
-                  `}
-                >
-                  {msg.topic_label}
-                </span>
-              </div>
-            </div>
-
-            {/* Message Preview */}
-            <p className="text-sm text-white/50 line-clamp-2 mb-3">
-              {msg.content_preview || "No preview available"}
-            </p>
-
-            {/* Review Reason */}
-            {msg.review_reason && (
-              <p className="text-xs text-white/30 mb-3 flex items-center gap-1.5">
-                <AlertTriangle className="w-3 h-3" />
-                {msg.review_reason}
-              </p>
-            )}
-
-            {/* Action */}
-            {onViewUser && (
-              <button
-                onClick={() => onViewUser(msg.user_id)}
-                className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 transition-colors opacity-0 group-hover:opacity-100"
-              >
-                <ExternalLink className="w-3 h-3" />
-                View User Chat
-              </button>
-            )}
-          </div>
-        );
-      })}
-
-      {/* Custom scrollbar styles */}
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.02);
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.2);
-        }
-      `}</style>
-    </div>
-  );
-}

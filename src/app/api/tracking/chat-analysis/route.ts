@@ -70,8 +70,12 @@ export async function GET(request: NextRequest) {
       .select("id", { count: "exact" })
       .eq("needs_review", true);
 
-    // Get flagged messages with user info
-    let flaggedQuery = supabaseAdmin
+    // ============================================
+    // Grouped Conversations (new inbox-style)
+    // ============================================
+
+    // Get all flagged classifications with message content
+    const { data: allFlaggedRaw } = await supabaseAdmin
       .from("chat_classifications")
       .select(`
         id,
@@ -83,30 +87,137 @@ export async function GET(request: NextRequest) {
         stella_messages!inner(content, created_at)
       `)
       .eq("needs_review", true)
-      .order("classified_at", { ascending: false })
-      .limit(limit);
+      .order("classified_at", { ascending: false });
 
-    if (topicFilter) {
-      flaggedQuery = flaggedQuery.eq("primary_topic", topicFilter);
+    // Get review status for all users
+    const { data: reviewsData } = await supabaseAdmin
+      .from("flagged_conversation_reviews")
+      .select("*");
+
+    const reviewsMap = new Map<string, {
+      last_read_at: string | null;
+      status: string;
+      manually_flagged: boolean;
+      admin_notes: string | null;
+    }>();
+
+    for (const review of reviewsData || []) {
+      reviewsMap.set(review.user_id, {
+        last_read_at: review.last_read_at,
+        status: review.status,
+        manually_flagged: review.manually_flagged,
+        admin_notes: review.admin_notes,
+      });
     }
 
-    const { data: flaggedRaw } = await flaggedQuery;
-
-    // Get user emails for flagged messages
-    const userIds = [...new Set((flaggedRaw || []).map((f) => f.user_id))];
+    // Get user emails for all flagged users
+    const allUserIds = [...new Set((allFlaggedRaw || []).map((f) => f.user_id))];
     const emailMap = new Map<string, string>();
 
-    if (userIds.length > 0) {
+    if (allUserIds.length > 0) {
       const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
       for (const user of authData?.users || []) {
-        if (userIds.includes(user.id)) {
+        if (allUserIds.includes(user.id)) {
           emailMap.set(user.id, user.email || "Unknown");
         }
       }
     }
 
-    const flaggedMessages = (flaggedRaw || []).map((f) => {
-      // Supabase returns joined data - handle both array and object cases
+    // Group flagged messages by user
+    const userGroups = new Map<string, Array<{
+      id: string;
+      message_id: string;
+      primary_topic: string;
+      review_reason: string | null;
+      classified_at: string;
+      content: string;
+      created_at: string;
+    }>>();
+
+    for (const f of allFlaggedRaw || []) {
+      const stellaData = f.stella_messages as unknown;
+      const message = Array.isArray(stellaData)
+        ? (stellaData[0] as { content: string; created_at: string } | undefined)
+        : (stellaData as { content: string; created_at: string } | null);
+
+      if (!userGroups.has(f.user_id)) {
+        userGroups.set(f.user_id, []);
+      }
+      userGroups.get(f.user_id)!.push({
+        id: f.id,
+        message_id: f.message_id,
+        primary_topic: f.primary_topic,
+        review_reason: f.review_reason,
+        classified_at: f.classified_at,
+        content: message?.content || "",
+        created_at: message?.created_at || f.classified_at,
+      });
+    }
+
+    // Build grouped conversations
+    const flaggedConversations = Array.from(userGroups.entries()).map(([userId, messages]) => {
+      const review = reviewsMap.get(userId);
+      const lastReadAt = review?.last_read_at ? new Date(review.last_read_at) : null;
+
+      // Calculate unread count (messages classified after last read)
+      const unreadCount = lastReadAt
+        ? messages.filter((m) => new Date(m.classified_at) > lastReadAt).length
+        : messages.length;
+
+      // Get unique topics
+      const topics = [...new Set(messages.map((m) => m.primary_topic))];
+
+      // Latest message (first in array since sorted desc)
+      const latestMsg = messages[0];
+
+      return {
+        user_id: userId,
+        user_email: emailMap.get(userId) || "Unknown",
+        total_flagged: messages.length,
+        unread_count: unreadCount,
+        status: review?.status || "new",
+        manually_flagged: review?.manually_flagged || false,
+        is_unread: unreadCount > 0 || !lastReadAt,
+        admin_notes: review?.admin_notes || null,
+        latest_message: {
+          content_preview: latestMsg.content.substring(0, 150) + (latestMsg.content.length > 150 ? "..." : ""),
+          primary_topic: latestMsg.primary_topic,
+          topic_label: CLASSIFICATION_TOPICS[latestMsg.primary_topic as ClassificationTopic]?.label || latestMsg.primary_topic,
+          review_reason: latestMsg.review_reason,
+          created_at: latestMsg.created_at,
+        },
+        topics,
+        last_flagged_at: latestMsg.classified_at,
+        last_read_at: review?.last_read_at || null,
+        // Include all messages for expanded view
+        messages: messages.map((m) => ({
+          id: m.id,
+          message_id: m.message_id,
+          content_preview: m.content.substring(0, 300) + (m.content.length > 300 ? "..." : ""),
+          primary_topic: m.primary_topic,
+          topic_label: CLASSIFICATION_TOPICS[m.primary_topic as ClassificationTopic]?.label || m.primary_topic,
+          review_reason: m.review_reason,
+          created_at: m.created_at,
+        })),
+      };
+    })
+      // Sort: unread first, then by last flagged date
+      .sort((a, b) => {
+        if (a.is_unread !== b.is_unread) return a.is_unread ? -1 : 1;
+        return new Date(b.last_flagged_at).getTime() - new Date(a.last_flagged_at).getTime();
+      });
+
+    // Filter by topic if specified
+    const filteredConversations = topicFilter
+      ? flaggedConversations.filter((c) => c.topics.includes(topicFilter))
+      : flaggedConversations;
+
+    // Calculate unread totals
+    const totalUnread = flaggedConversations.filter((c) => c.is_unread).length;
+    const totalInProgress = flaggedConversations.filter((c) => c.status === "in_progress").length;
+
+    // Legacy flaggedMessages format (for backward compatibility)
+    const flaggedMessages = (allFlaggedRaw || []).slice(0, limit).map((f) => {
       const stellaData = f.stella_messages as unknown;
       const message = Array.isArray(stellaData)
         ? (stellaData[0] as { content: string; created_at: string } | undefined)
@@ -198,9 +309,14 @@ export async function GET(request: NextRequest) {
         totalUnclassified: actualUnclassified,
         flaggedForReview: flaggedCount || 0,
         totalPainPoints,
+        // New inbox stats
+        totalUnread,
+        totalInProgress,
+        totalConversations: flaggedConversations.length,
       },
       topicBreakdown,
-      flaggedMessages,
+      flaggedMessages, // Legacy format
+      flaggedConversations: filteredConversations, // New grouped format
       painPoints,
       lastJob: lastJob
         ? {
@@ -335,6 +451,29 @@ export async function POST(request: NextRequest) {
           errors += batch.length;
         } else {
           classified += batch.length;
+
+          // Sync flagged_conversation_reviews for newly flagged messages
+          const flaggedInBatch = insertData.filter((d) => d.needs_review);
+          if (flaggedInBatch.length > 0) {
+            const flaggedUserIds = [...new Set(flaggedInBatch.map((d) => d.user_id))];
+            for (const userId of flaggedUserIds) {
+              // Upsert review record - this marks conversation as unread if new flags after read
+              await supabaseAdmin
+                .from("flagged_conversation_reviews")
+                .upsert(
+                  {
+                    user_id: userId,
+                    last_flagged_message_at: new Date().toISOString(),
+                    status: "new",
+                    updated_at: new Date().toISOString(),
+                  },
+                  {
+                    onConflict: "user_id",
+                    ignoreDuplicates: false,
+                  }
+                );
+            }
+          }
         }
       } catch (batchError) {
         console.error("Batch classification error:", batchError);

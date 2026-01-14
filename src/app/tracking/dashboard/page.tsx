@@ -338,6 +338,14 @@ export default function TrackingDashboardPage() {
                   }
                 }}
                 onViewUser={setSelectedUserId}
+                onRefresh={async () => {
+                  // Refetch just the chat analysis data
+                  const res = await fetch("/api/tracking/chat-analysis");
+                  if (res.ok) {
+                    const data = await res.json();
+                    setChatAnalysisData(data);
+                  }
+                }}
               />
             )}
             {activeTab === "users" && <UsersTab data={usersData} onSelectUser={setSelectedUserId} />}
