@@ -139,12 +139,23 @@ export function FlaggedInbox({
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [savingNote, setSavingNote] = useState(false);
+  // Optimistic updates
+  const [optimisticStatus, setOptimisticStatus] = useState<string | null>(null);
+  const [optimisticFlag, setOptimisticFlag] = useState<boolean | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Get selected conversation
-  const selectedConversation = useMemo(
-    () => conversations.find((c) => c.user_id === selectedUserId),
-    [conversations, selectedUserId]
-  );
+  // Get selected conversation with optimistic updates applied
+  const selectedConversation = useMemo(() => {
+    const conv = conversations.find((c) => c.user_id === selectedUserId);
+    if (!conv) return undefined;
+
+    // Apply optimistic updates
+    return {
+      ...conv,
+      status: (optimisticStatus as typeof conv.status) || conv.status,
+      manually_flagged: optimisticFlag !== null ? optimisticFlag : conv.manually_flagged,
+    };
+  }, [conversations, selectedUserId, optimisticStatus, optimisticFlag]);
 
   // Filter conversations
   const filteredConversations = useMemo(() => {
@@ -171,11 +182,31 @@ export function FlaggedInbox({
     { key: "flagged", label: "⚑" },
   ];
 
-  // Handle actions
+  // Handle actions with optimistic updates
   const handleAction = async (userId: string, action: string, data?: { status?: string; note?: string }) => {
     setLoadingAction(`${userId}-${action}`);
+    setErrorMessage(null);
+
+    // Optimistic updates for immediate feedback
+    if (action === "set_status" && data?.status) {
+      setOptimisticStatus(data.status);
+    } else if (action === "toggle_flag") {
+      const currentConv = conversations.find(c => c.user_id === userId);
+      setOptimisticFlag(currentConv ? !currentConv.manually_flagged : null);
+    }
+
     try {
       await onUpdateStatus(userId, action, data);
+      // Success - clear optimistic state (real data will come from refresh)
+      setOptimisticStatus(null);
+      setOptimisticFlag(null);
+    } catch (error) {
+      // Rollback optimistic updates on failure
+      setOptimisticStatus(null);
+      setOptimisticFlag(null);
+      setErrorMessage(error instanceof Error ? error.message : "Failed to update. Please try again.");
+      // Auto-clear error after 4 seconds
+      setTimeout(() => setErrorMessage(null), 4000);
     } finally {
       setLoadingAction(null);
     }
@@ -211,6 +242,16 @@ export function FlaggedInbox({
           selectedUserId ? "-translate-x-full" : "translate-x-0"
         }`}
       >
+        {/* Error Toast */}
+        {errorMessage && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-slideDown">
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 text-sm shadow-lg backdrop-blur-sm">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          </div>
+        )}
+
         {/* Header with Filter Tabs */}
         <div className="sticky top-0 z-10 bg-[#060609]/95 backdrop-blur-sm border-b border-white/5">
           <div className="px-5 py-4 flex items-center justify-between">
@@ -342,6 +383,13 @@ export function FlaggedInbox({
         }
         .unread-indicator {
           animation: pulse-glow 2s ease-in-out infinite;
+        }
+        @keyframes slideDown {
+          from { opacity: 0; transform: translate(-50%, -10px); }
+          to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        .animate-slideDown {
+          animation: slideDown 0.3s ease-out;
         }
       `}</style>
     </div>

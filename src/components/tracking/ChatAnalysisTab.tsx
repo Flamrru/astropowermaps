@@ -13,6 +13,7 @@ import {
   Sparkles,
   CheckCircle2,
   Clock,
+  ChevronDown,
 } from "lucide-react";
 import { FlaggedInbox } from "./FlaggedInbox";
 
@@ -127,6 +128,7 @@ export function ChatAnalysisTab({ data, onRunAnalysis, onViewUser, onRefresh }: 
     status: string;
     messagesClassified?: number;
   } | null>(null);
+  const [analyticsExpanded, setAnalyticsExpanded] = useState(false);
 
   // Handle run analysis
   const handleRunAnalysis = async () => {
@@ -149,18 +151,20 @@ export function ChatAnalysisTab({ data, onRunAnalysis, onViewUser, onRefresh }: 
     action: string,
     updateData?: { status?: string; note?: string }
   ) => {
-    try {
-      await fetch(`/api/tracking/chat-analysis/${userId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, ...updateData }),
-      });
-      // Refresh data after update
-      if (onRefresh) {
-        await onRefresh();
-      }
-    } catch (error) {
-      console.error("Failed to update conversation status:", error);
+    const response = await fetch(`/api/tracking/chat-analysis/${userId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, ...updateData }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to update (HTTP ${response.status})`);
+    }
+
+    // Refresh data after successful update
+    if (onRefresh) {
+      await onRefresh();
     }
   };
 
@@ -289,29 +293,7 @@ export function ChatAnalysisTab({ data, onRunAnalysis, onViewUser, onRefresh }: 
         />
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Topic Breakdown */}
-        <GlassCard title="Topic Breakdown" subtitle="AI-classified message categories">
-          <TopicBreakdownChart topics={data?.topicBreakdown || []} />
-        </GlassCard>
-
-        {/* Pain Points Insights */}
-        <GlassCard
-          title="Pain Points"
-          subtitle="User needs extracted for ad targeting"
-          headerAction={
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Ad Insights</span>
-            </div>
-          }
-        >
-          <PainPointsList painPoints={data?.painPoints || []} />
-        </GlassCard>
-      </div>
-
-      {/* Flagged Conversations Inbox */}
+      {/* Flagged Conversations Inbox - PRIMARY FOCUS */}
       <FlaggedInbox
         conversations={data?.flaggedConversations || []}
         totalUnread={data?.summary.totalUnread || 0}
@@ -319,6 +301,61 @@ export function ChatAnalysisTab({ data, onRunAnalysis, onViewUser, onRefresh }: 
         onUpdateStatus={handleUpdateStatus}
         onViewUser={onViewUser}
       />
+
+      {/* Analytics Section - Collapsible */}
+      <div className="rounded-2xl bg-white/[0.01] border border-white/10 overflow-hidden">
+        {/* Collapse Header */}
+        <button
+          onClick={() => setAnalyticsExpanded(!analyticsExpanded)}
+          className="w-full flex items-center justify-between px-6 py-4 hover:bg-white/[0.02] transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-teal-500/10">
+              <Brain className="w-4 h-4 text-teal-400" />
+            </div>
+            <div className="text-left">
+              <h3 className="font-medium text-white">Topic Analytics</h3>
+              <p className="text-xs text-white/40">
+                {data?.topicBreakdown?.length || 0} topics • {data?.painPoints?.length || 0} pain points
+              </p>
+            </div>
+          </div>
+          <ChevronDown
+            className={`w-5 h-5 text-white/40 transition-transform duration-200 ${
+              analyticsExpanded ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+
+        {/* Collapsible Content */}
+        <div
+          className={`
+            transition-all duration-300 ease-in-out overflow-hidden
+            ${analyticsExpanded ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"}
+          `}
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 pt-0">
+            {/* Topic Breakdown */}
+            <GlassCard title="Topic Breakdown" subtitle="AI-classified message categories">
+              <TopicBreakdownChart topics={data?.topicBreakdown || []} />
+            </GlassCard>
+
+            {/* Pain Points Insights */}
+            <GlassCard
+              title="Pain Points"
+              subtitle="User needs extracted for ad targeting"
+              headerAction={
+                <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Ad Insights</span>
+                </div>
+              }
+            >
+              <PainPointsList painPoints={data?.painPoints || []} />
+            </GlassCard>
+          </div>
+        </div>
+      </div>
 
       {/* Custom Animations */}
       <style jsx>{`
