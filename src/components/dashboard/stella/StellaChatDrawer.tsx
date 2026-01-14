@@ -27,6 +27,8 @@ interface StellaChatDrawerProps {
   viewHint?: string;
   /** Astrocartography data when on map page */
   mapData?: AstrocartographyResult | null;
+  /** Current month being viewed in calendar (e.g., "2026-01") */
+  viewingMonth?: string;
 }
 
 // Derive view context from pathname
@@ -186,6 +188,7 @@ export default function StellaChatDrawer({
   onPrefillConsumed,
   viewHint,
   mapData,
+  viewingMonth,
 }: StellaChatDrawerProps) {
   const pathname = usePathname();
   // Use viewHint if provided (from parent), otherwise derive from pathname
@@ -351,6 +354,7 @@ export default function StellaChatDrawer({
           hiddenContext,
           viewContext,
           mapLineSummary,
+          viewingMonth,
         }),
         signal: controller.signal,
       });

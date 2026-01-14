@@ -22,6 +22,8 @@ interface StellaFloatingButtonProps {
   viewHint?: string;
   /** Astrocartography data when on map page */
   mapData?: AstrocartographyResult | null;
+  /** Current month being viewed in calendar (e.g., "2026-01") */
+  viewingMonth?: string;
 }
 
 /**
@@ -37,6 +39,7 @@ export default function StellaFloatingButton({
   onContextConsumed,
   viewHint,
   mapData,
+  viewingMonth,
 }: StellaFloatingButtonProps = {}) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -295,6 +298,7 @@ export default function StellaFloatingButton({
                 onPrefillConsumed={() => setPendingContext(null)}
                 viewHint={viewHint}
                 mapData={mapData}
+                viewingMonth={viewingMonth}
               />
             </motion.div>
           </>

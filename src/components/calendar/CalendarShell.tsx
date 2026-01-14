@@ -469,6 +469,7 @@ export default function CalendarShell({ children }: CalendarShellProps) {
               activeCalendarTab === "2026" ? "2026-report" :
               "calendar"
             }
+            viewingMonth={state.currentMonthKey}
           />
 
           {/* Bottom navigation */}

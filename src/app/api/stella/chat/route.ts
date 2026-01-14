@@ -9,8 +9,9 @@ import { calculateLifetimeTransits } from "@/lib/astro/lifetime-transits";
 import type { LifetimeTransitReport } from "@/lib/astro/lifetime-transits-types";
 import { HOUSE_MEANINGS } from "@/lib/astro/houses";
 import { ASPECT_SYMBOLS, AspectType } from "@/lib/astro/transit-types";
-import type { BirthData } from "@/lib/astro/types";
+import type { BirthData, PlanetPosition } from "@/lib/astro/types";
 import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
+import { calculateMonthPowerDays, type DailyScore } from "@/lib/astro/power-days";
 
 /**
  * Stella Chat API
@@ -103,6 +104,7 @@ export async function POST(request: NextRequest) {
     let hiddenContext = body.hiddenContext?.trim(); // Only for AI, NOT stored in DB
     const viewContext = body.viewContext || "dashboard"; // Which page the user is viewing
     const mapLineSummary = body.mapLineSummary?.trim(); // Astrocartography data when on map
+    const viewingMonth = body.viewingMonth?.trim(); // Current month in calendar view (e.g., "2026-01")
 
     if (!displayMessage) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
@@ -184,6 +186,16 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // 6c. Calculate calendar power days for calendar view context
+    let calendarSummary: string | null = null;
+    if (viewContext === "calendar" && viewingMonth) {
+      const [year, month] = viewingMonth.split("-").map(Number);
+      if (year && month) {
+        const dailyScores = calculateMonthPowerDays(chart.planetPositions, year, month);
+        calendarSummary = formatCalendarForStella(dailyScores, year, month);
+      }
+    }
+
     // 7. Get today's score for context
     const { data: todayScore } = await supabaseAdmin
       .from("daily_content")
@@ -201,7 +213,8 @@ export async function POST(request: NextRequest) {
       todayScore?.content,
       viewContext,
       lifeTransitsReport,
-      mapLineSummary
+      mapLineSummary,
+      calendarSummary
     );
 
     // 9. Build messages array for OpenAI (use aiMessage which includes hidden context)
@@ -312,6 +325,43 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * Format calendar power/rest days for Stella's context
+ */
+function formatCalendarForStella(dailyScores: DailyScore[], year: number, month: number): string {
+  const monthName = new Date(year, month - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+  const powerDays = dailyScores.filter(d => d.dayType === "power");
+  const restDays = dailyScores.filter(d => d.dayType === "rest");
+
+  // Format day with ordinal suffix
+  const formatDay = (date: string, score: number) => {
+    const day = parseInt(date.split("-")[2]);
+    const suffix = [1, 21, 31].includes(day) ? "st" : [2, 22].includes(day) ? "nd" : [3, 23].includes(day) ? "rd" : "th";
+    return `${day}${suffix} (${score})`;
+  };
+
+  const powerList = powerDays.length > 0
+    ? powerDays.map(d => formatDay(d.date, d.score)).join(", ")
+    : "None this month";
+
+  const restList = restDays.length > 0
+    ? restDays.map(d => formatDay(d.date, d.score)).join(", ")
+    : "None this month";
+
+  return `📅 ${monthName.toUpperCase()} CALENDAR:
+
+POWER DAYS (score 70+): ${powerList}
+→ High-energy days when cosmic momentum supports action. Best for: important decisions, launches, meetings, bold moves.
+
+REST DAYS (score 30 or below): ${restList}
+→ Lower-energy days for recovery and reflection. Best for: self-care, completing tasks, avoiding major decisions.
+
+All other days are NEUTRAL (score 31-69) - balanced energy, follow your own rhythm.
+
+This month: ${powerDays.length} power days, ${restDays.length} rest days, ${dailyScores.length - powerDays.length - restDays.length} neutral days.`;
+}
+
+/**
  * Build Stella's system prompt with FULL astrological context
  * Including houses, nodes, natal aspects, and life transits
  */
@@ -322,7 +372,8 @@ function buildStellaSystemPrompt(
   todayScore?: { message?: string; score?: number },
   viewContext?: string,
   lifeTransitsReport?: LifetimeTransitReport | null,
-  mapLineSummary?: string
+  mapLineSummary?: string,
+  calendarSummary?: string | null
 ): string {
   const name = profile.display_name || "dear one";
   const bigThree = chart.bigThree;
@@ -330,7 +381,7 @@ function buildStellaSystemPrompt(
   // View-specific context hints
   const viewContextHints: Record<string, string> = {
     dashboard: "The user is on their main dashboard viewing their daily score and forecast. If they ask about Saturn Returns or Jupiter Returns, explain the concept but DO NOT give specific dates - instead suggest they check the Life Transits tab for exact timing.",
-    calendar: "The user is viewing their CALENDAR with power days and moon phases. Help them understand what specific days mean for them, why certain days are marked as power days or rest days. If they ask about Saturn Returns, suggest they check the Life Transits tab.",
+    calendar: "The user is viewing their CALENDAR. You have FULL ACCESS to their power days and rest days for the current month below. Help them understand what specific days mean and plan their activities accordingly. If they ask about a different month, tell them to navigate to that month in the calendar.",
     "life-transits": "The user is viewing their LIFE TRANSITS timeline showing Saturn Returns, Jupiter Returns, and other major life transits. Help them understand their cosmic journey and what these major transits mean for them.",
     "2026-report": "The user is viewing their 2026 YEARLY FORECAST report. This shows their key themes, opportunities, and challenges for the year based on major transits affecting their chart. Help them understand what 2026 holds for them - career, love, personal growth, and important timing windows.",
     profile: "The user is on their PROFILE page viewing their birth data. Help them understand their chart placements and what their Big Three means. If they ask about Saturn Returns, suggest they check the Life Transits tab.",
@@ -360,6 +411,21 @@ ASTROCARTOGRAPHY GUIDANCE:
 
 🗺️ ASTROCARTOGRAPHY:
 The user is on the map but line data isn't available. Help them understand astrocartography concepts in general, and suggest they explore the map visually.`;
+  }
+
+  // Build calendar section if on calendar view
+  let calendarSection = "";
+  if (viewContext === "calendar" && calendarSummary) {
+    calendarSection = `
+
+${calendarSummary}
+
+CALENDAR GUIDANCE:
+- You have FULL ACCESS to this month's power days and rest days above - use them!
+- ONLY use these terms: "power day" (score 70+), "rest day" (score 30-), "neutral day" (31-69)
+- Do NOT invent terms like "reset day", "quiet day", "low-tide day" - these do not exist
+- If user asks about a different month, tell them to navigate to that month in the calendar
+- For detailed info about a specific day (transits, activities), suggest they tap that day and click "Ask Stella about this day"`;
   }
 
   // Get brief sign descriptions
@@ -506,7 +572,7 @@ ${planetaryPositions}
 ☊ LUNAR NODES (Soul Purpose):
 - North Node in ${chart.nodes.northNode.formatted}: ${chart.nodeThemes.northTheme}
 - South Node in ${chart.nodes.southNode.formatted}: ${chart.nodeThemes.southTheme}
-${housesSection}${aspectsSection}${lifeTransitsSection}${astrocartographySection}
+${housesSection}${aspectsSection}${lifeTransitsSection}${astrocartographySection}${calendarSection}
 
 🌙 CURRENT COSMIC WEATHER:
 ${formatTransitsForPrompt(transits)}
@@ -543,13 +609,26 @@ TOPIC HINTS (pick ONE to mention, not all):
 - Life transits/returns → ONLY when user asks OR they're in Life Transits view
 
 CONTEXT-AWARE RESPONSES:
-- Dashboard/Calendar: Focus on DAILY/WEEKLY energy, current transits, moon phases. Do NOT randomly bring up Saturn Returns or Jupiter Returns unless asked.
+- Dashboard: Focus on TODAY's energy, current transits, moon phases. Do NOT randomly bring up Saturn Returns or Jupiter Returns unless asked.
+- Calendar view: You have the user's power days and rest days for the month they're viewing. Tell them which days are power days (best for action) and rest days (best for recovery). If they ask about a different month, tell them to navigate there in the calendar.
 - Life Transits view: The user came here to learn about their major life transits. Proactively mention their upcoming Saturn Return, Jupiter Return, etc. Use the exact dates you have.
 - 2026 Report view: The user wants to know about their YEAR AHEAD. Focus on yearly themes, big opportunities, challenges, and key timing windows in 2026. Talk about what months will be powerful for them, any major transits hitting their chart this year, and how to make the most of 2026.
 - Map/Astrocartography view: The user wants to know about LOCATIONS. You have their full line data - tell them which planetary lines affect specific places they ask about. Explain what living/working/loving in a location would feel like. NEVER ask them to upload screenshots or tell you what lines they see - YOU have their data and YOU tell THEM.
 - When user asks about "Saturn Return" or "Jupiter Return": Give them the EXACT date from your data, not vague estimates.
 
 Make them feel seen with precision, not volume.
+
+SUPPORT & APP ISSUES (CRITICAL):
+- For app problems (login issues, photos not working, payments, bugs, subscription questions, technical issues): Direct them to support@astropowermap.com
+- Do NOT troubleshoot technical issues yourself - you are an astrology guide, not tech support
+- Example: "For help with that, please email support@astropowermap.com - they'll assist you quickly!"
+- Do NOT help with sending screenshots, uploading images, or app navigation problems
+
+ACCURACY (CRITICAL):
+- ONLY state facts you have actual data for
+- NEVER invent dates, concepts, or features that don't exist in the app
+- If you don't have data for something, say so honestly
+- Use ONLY these day types: "power day", "rest day", "neutral day" - do NOT invent terms like "reset day", "quiet day", "low-tide day"
 
 RESPONSE FORMAT (CRITICAL):
 You MUST respond with valid JSON in this exact format:
