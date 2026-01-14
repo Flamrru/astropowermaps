@@ -486,8 +486,8 @@ export default function StellaChatDrawer({
           </div>
         )}
 
-        {/* Messages - show last 5 for clean UI */}
-        {messages.slice(-5).map((message, index, arr) => (
+        {/* Messages - scrollable list */}
+        {messages.map((message, index, arr) => (
           <ChatMessage
             key={message.id}
             message={message}
