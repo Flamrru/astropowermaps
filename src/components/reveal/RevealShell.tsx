@@ -103,10 +103,15 @@ async function trackRevealEvent(
   }
 }
 
-// Fetch lead data from Supabase
-async function fetchLead(sessionId: string) {
+// Fetch lead data from Supabase (and track email link click if offer param present)
+async function fetchLead(sessionId: string, offer?: string | null) {
   try {
-    const res = await fetch(`/api/lead?sid=${sessionId}`);
+    let url = `/api/lead?sid=${sessionId}`;
+    // Pass offer param for email link click tracking
+    if (offer && (offer === "win" || offer === "full")) {
+      url += `&offer=${offer}`;
+    }
+    const res = await fetch(url);
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -132,6 +137,7 @@ export default function RevealShell({ children }: RevealShellProps) {
 
     const hydrateState = async () => {
       const sid = searchParams.get("sid");
+      const offerParam = searchParams.get("offer"); // Email link type: 'full' or 'win'
       // Dev mode: ?dev=1 OR ?d OR ?d=4 (step number)
       const dParam = searchParams.get("d");
       const devMode = searchParams.get("dev") === "1" || dParam !== null;
@@ -347,7 +353,8 @@ export default function RevealShell({ children }: RevealShellProps) {
         }
       } else if (sid) {
         // Fallback: Fetch lead from Supabase (for refreshes or older links)
-        const lead = await fetchLead(sid);
+        // Pass offerParam to track email link click
+        const lead = await fetchLead(sid, offerParam);
         if (lead?.email) {
           dispatch({
             type: "HYDRATE",
@@ -403,7 +410,6 @@ export default function RevealShell({ children }: RevealShellProps) {
 
       // EMAIL CAMPAIGN: If offer param is present, skip directly to paywall (step 9)
       // This handles both ?offer=win ($9.99) and ?offer=full ($19.99) email links
-      const offerParam = searchParams.get("offer");
       if (offerParam && (offerParam === "win" || offerParam === "full")) {
         console.log(`📧 Email campaign detected (offer=${offerParam}) - jumping to paywall`);
         dispatch({ type: "SET_STEP", payload: 9 });

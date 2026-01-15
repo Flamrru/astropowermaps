@@ -58,6 +58,9 @@ interface Lead {
   // Purchase info
   purchase_amount: number | null;
   purchase_date: string | null;
+  // Email link tracking
+  email_link_clicked_at: string | null;
+  email_link_offer_type: string | null;
   // User profile with subscription
   profile: UserProfile | null;
   // Stripe data (real-time from Stripe API)
@@ -575,6 +578,20 @@ export default function AdminDashboardPage() {
     const q2Respondents = leads.filter((l) => l.quiz_q2).length;
 
     return { q1Counts, q1Total, q2Counts, q2Respondents };
+  }, [leads]);
+
+  // Email click analytics calculations
+  const emailClickStats = useMemo(() => {
+    const totalClicks = leads.filter(l => l.email_link_clicked_at).length;
+    const fullClicks = leads.filter(l => l.email_link_offer_type === "full").length;
+    const winbackClicks = leads.filter(l => l.email_link_offer_type === "win").length;
+    const clickRate = leads.length > 0 ? (totalClicks / leads.length) * 100 : 0;
+
+    // Conversion: leads who clicked AND purchased
+    const clickedAndPurchased = leads.filter(l => l.email_link_clicked_at && l.has_purchased).length;
+    const clickToConversion = totalClicks > 0 ? (clickedAndPurchased / totalClicks) * 100 : 0;
+
+    return { totalClicks, fullClicks, winbackClicks, clickRate, clickedAndPurchased, clickToConversion };
   }, [leads]);
 
   // Filter leads by search query and status
@@ -1294,6 +1311,48 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
+        {/* Email Engagement Stats */}
+        {emailClickStats.totalClicks > 0 && (
+          <div className="mb-8 animate-in stagger-5">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-[var(--gold-main)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              Email Link Engagement
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="glass-card rounded-xl p-4">
+                <p className="text-xs text-[var(--text-faint)] mb-1">Total Clicks</p>
+                <p className="text-2xl font-bold text-white">{emailClickStats.totalClicks}</p>
+              </div>
+              <div className="glass-card rounded-xl p-4">
+                <p className="text-xs text-[var(--text-faint)] mb-1">Click Rate</p>
+                <p className="text-2xl font-bold text-[var(--gold-main)]">{emailClickStats.clickRate.toFixed(1)}%</p>
+              </div>
+              <div className="glass-card rounded-xl p-4">
+                <p className="text-xs text-[var(--text-faint)] mb-1">Full Price</p>
+                <p className="text-2xl font-bold text-blue-400">{emailClickStats.fullClicks}</p>
+                <p className="text-xs text-[var(--text-faint)]">Initial funnel</p>
+              </div>
+              <div className="glass-card rounded-xl p-4">
+                <p className="text-xs text-[var(--text-faint)] mb-1">Winback</p>
+                <p className="text-2xl font-bold text-orange-400">{emailClickStats.winbackClicks}</p>
+                <p className="text-xs text-[var(--text-faint)]">Re-engagement</p>
+              </div>
+              <div className="glass-card rounded-xl p-4">
+                <p className="text-xs text-[var(--text-faint)] mb-1">Converted</p>
+                <p className="text-2xl font-bold text-green-400">{emailClickStats.clickedAndPurchased}</p>
+                <p className="text-xs text-[var(--text-faint)]">Clicked → Paid</p>
+              </div>
+              <div className="glass-card rounded-xl p-4">
+                <p className="text-xs text-[var(--text-faint)] mb-1">Click → Purchase</p>
+                <p className="text-2xl font-bold text-emerald-400">{emailClickStats.clickToConversion.toFixed(1)}%</p>
+                <p className="text-xs text-[var(--text-faint)]">Conversion rate</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Funnel Analytics */}
         <div className="mb-8 animate-in stagger-5">
           <FunnelChart data={funnel} enhancedData={enhancedFunnel} warning={funnelWarning} />
@@ -1521,6 +1580,9 @@ export default function AdminDashboardPage() {
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden sm:table-cell">
                       Source
                     </th>
+                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider hidden lg:table-cell">
+                      Email Click
+                    </th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                       Date
                     </th>
@@ -1593,6 +1655,19 @@ export default function AdminDashboardPage() {
                           </span>
                         ) : (
                           <span className="text-sm text-[var(--text-faint)]">Direct</span>
+                        )}
+                      </td>
+                      <td className="px-4 sm:px-6 py-4 hidden lg:table-cell">
+                        {lead.email_link_clicked_at ? (
+                          <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
+                            lead.email_link_offer_type === "win"
+                              ? "bg-orange-500/10 text-orange-400 border border-orange-500/20"
+                              : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                          }`}>
+                            {lead.email_link_offer_type === "win" ? "Winback" : "Full"}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-[var(--text-faint)]">—</span>
                         )}
                       </td>
                       <td className="px-4 sm:px-6 py-4">
@@ -1820,6 +1895,27 @@ function LeadDetailModal({ lead, onClose }: { lead: Lead; onClose: () => void })
               <div className="glass-card rounded-xl p-3">
                 <p className="text-xs text-[var(--text-faint)] mb-1">Campaign</p>
                 <p className="text-sm text-white">{lead.utm_campaign || "-"}</p>
+              </div>
+              <div className="glass-card rounded-xl p-3">
+                <p className="text-xs text-[var(--text-faint)] mb-1">Email Link Click</p>
+                {lead.email_link_clicked_at ? (
+                  <p className="text-sm text-white">
+                    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium mr-2 ${
+                      lead.email_link_offer_type === "win"
+                        ? "bg-orange-500/20 text-orange-400"
+                        : "bg-blue-500/20 text-blue-400"
+                    }`}>
+                      {lead.email_link_offer_type === "win" ? "Winback" : "Full"}
+                    </span>
+                    {formatDate(lead.email_link_clicked_at)}
+                  </p>
+                ) : (
+                  <p className="text-sm text-[var(--text-faint)]">Not clicked</p>
+                )}
+              </div>
+              <div className="glass-card rounded-xl p-3">
+                <p className="text-xs text-[var(--text-faint)] mb-1">Lead Created</p>
+                <p className="text-sm text-white">{formatDate(lead.created_at)}</p>
               </div>
             </div>
           </div>

@@ -40,13 +40,15 @@ interface LeadPayload {
 }
 
 /**
- * GET /api/lead?sid=xxx
- * Fetch lead data by session_id (only if has_purchased = true)
+ * GET /api/lead?sid=xxx&offer=xxx
+ * Fetch lead data by session_id
+ * If offer param present (email link), track the click
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get("sid");
+    const offer = searchParams.get("offer"); // 'full' or 'win' from email links
 
     if (!sessionId) {
       return NextResponse.json(
@@ -67,6 +69,25 @@ export async function GET(request: NextRequest) {
         { error: "Lead not found" },
         { status: 404 }
       );
+    }
+
+    // Track email link click (only on first click, when offer param is present)
+    if (offer && (offer === "win" || offer === "full") && !lead.email_link_clicked_at) {
+      // Update lead with click timestamp and offer type (async, don't block response)
+      supabaseAdmin
+        .from("astro_leads")
+        .update({
+          email_link_clicked_at: new Date().toISOString(),
+          email_link_offer_type: offer,
+        })
+        .eq("session_id", sessionId)
+        .then(({ error }) => {
+          if (error) {
+            console.error("Failed to track email link click:", error);
+          } else {
+            console.log(`📧 Email link click tracked: ${lead.email} (offer=${offer})`);
+          }
+        });
     }
 
     // Build birth data if available
