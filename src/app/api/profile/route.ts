@@ -5,6 +5,7 @@ import { BYPASS_AUTH, TEST_USER_ID } from "@/lib/auth-bypass";
 
 interface ProfileUpdatePayload {
   displayName?: string;
+  birthDate?: string;
   birthTime?: string;
   birthPlace?: string;
   birthLat?: number;
@@ -114,7 +115,7 @@ export async function PATCH(request: NextRequest) {
     // 2. Get current profile to check constraints
     const { data: currentProfile, error: fetchError } = await supabaseAdmin
       .from("user_profiles")
-      .select("birth_time_unknown, preferences, birth_time_last_updated, birth_location_last_updated")
+      .select("birth_time_unknown, preferences, birth_date_last_updated, birth_time_last_updated, birth_location_last_updated")
       .eq("user_id", userId)
       .single();
 
@@ -132,38 +133,68 @@ export async function PATCH(request: NextRequest) {
       updates.display_name = body.displayName.trim() || null;
     }
 
-    // Check rate limit for birth TIME (once per month)
-    if (body.birthTime !== undefined && currentProfile.birth_time_last_updated) {
-      const lastUpdate = new Date(currentProfile.birth_time_last_updated);
+    // Check rate limit for birth DATE (once per 3 months)
+    if (body.birthDate !== undefined && currentProfile.birth_date_last_updated) {
+      const lastUpdate = new Date(currentProfile.birth_date_last_updated);
       const now = new Date();
       const daysSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
 
-      if (daysSinceUpdate < 30) {
+      if (daysSinceUpdate < 90) {
         const nextDate = new Date(lastUpdate);
-        nextDate.setDate(nextDate.getDate() + 30);
+        nextDate.setDate(nextDate.getDate() + 90);
         return NextResponse.json({
           error: "rate_limit",
-          message: "You can only update your birth time once per month",
+          message: "You can only update your birth date once every 3 months",
           nextUpdateDate: nextDate.toISOString()
         }, { status: 429 });
       }
     }
 
-    // Check rate limit for birth LOCATION (once per month)
+    // Check rate limit for birth TIME (once per 3 months)
+    if (body.birthTime !== undefined && currentProfile.birth_time_last_updated) {
+      const lastUpdate = new Date(currentProfile.birth_time_last_updated);
+      const now = new Date();
+      const daysSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (daysSinceUpdate < 90) {
+        const nextDate = new Date(lastUpdate);
+        nextDate.setDate(nextDate.getDate() + 90);
+        return NextResponse.json({
+          error: "rate_limit",
+          message: "You can only update your birth time once every 3 months",
+          nextUpdateDate: nextDate.toISOString()
+        }, { status: 429 });
+      }
+    }
+
+    // Check rate limit for birth LOCATION (once per 3 months)
     if (body.birthPlace !== undefined && currentProfile.birth_location_last_updated) {
       const lastUpdate = new Date(currentProfile.birth_location_last_updated);
       const now = new Date();
       const daysSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
 
-      if (daysSinceUpdate < 30) {
+      if (daysSinceUpdate < 90) {
         const nextDate = new Date(lastUpdate);
-        nextDate.setDate(nextDate.getDate() + 30);
+        nextDate.setDate(nextDate.getDate() + 90);
         return NextResponse.json({
           error: "rate_limit",
-          message: "You can only update your birth location once per month",
+          message: "You can only update your birth location once every 3 months",
           nextUpdateDate: nextDate.toISOString()
         }, { status: 429 });
       }
+    }
+
+    // Birth date update
+    if (body.birthDate !== undefined) {
+      // Validate date format (YYYY-MM-DD)
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(body.birthDate)) {
+        return NextResponse.json(
+          { error: "Invalid date format. Use YYYY-MM-DD" },
+          { status: 400 }
+        );
+      }
+      updates.birth_date = body.birthDate;
+      updates.birth_date_last_updated = new Date().toISOString();
     }
 
     // Birth time update
@@ -215,7 +246,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // 5. Invalidate cached forecasts if birth data changed
-    const birthDataChanged = body.birthTime !== undefined || body.birthPlace !== undefined;
+    const birthDataChanged = body.birthDate !== undefined || body.birthTime !== undefined || body.birthPlace !== undefined;
     if (birthDataChanged) {
       const { error: cacheError } = await supabaseAdmin
         .from("daily_content")
