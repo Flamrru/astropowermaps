@@ -14,6 +14,7 @@ import {
   Loader2,
   ChevronDown,
 } from "lucide-react";
+import { InfoHint } from "./InfoHint";
 
 // ============================================
 // Types
@@ -143,7 +144,10 @@ export function FeaturesTab() {
         <div className="flex items-center gap-3">
           <BarChart3 className="w-5 h-5 text-emerald-400" />
           <div>
-            <h2 className="text-lg font-semibold text-white">Feature Analytics</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-white">Feature Analytics</h2>
+              <InfoHint text="Shows which features people actually use. If a feature has 0 events, nobody is clicking on it. High numbers mean that feature is popular and valuable." />
+            </div>
             <p className="text-xs text-white/40">
               {data?.totalEvents.toLocaleString()} events in the last {period} days
             </p>

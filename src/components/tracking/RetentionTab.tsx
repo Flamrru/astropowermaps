@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { InfoHint } from "./InfoHint";
 
 interface CohortData {
   cohort: string;
@@ -140,28 +141,40 @@ export default function RetentionTab() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Day 1 */}
         <div className="bg-gradient-to-br from-zinc-900/80 to-zinc-900/40 rounded-xl p-4 border border-zinc-800/50">
-          <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Day 1 Return</div>
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-xs text-zinc-500 uppercase tracking-wider">Day 1 Return</span>
+            <InfoHint text="What % of users come back the very next day after signing up. This is your 'first impression' metric. Low = users try the app once and leave." />
+          </div>
           <div className="text-2xl font-bold text-white">{data.retentionRates.day1}%</div>
           <div className="text-xs text-zinc-500 mt-1">Next day after signup</div>
         </div>
 
         {/* Day 7 */}
         <div className="bg-gradient-to-br from-zinc-900/80 to-zinc-900/40 rounded-xl p-4 border border-zinc-800/50">
-          <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Day 7 Return</div>
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-xs text-zinc-500 uppercase tracking-wider">Day 7 Return</span>
+            <InfoHint text="What % of users are still active within their first week. If Day 1 is low but Day 7 is high, users who stay past day 1 tend to stick around." />
+          </div>
           <div className="text-2xl font-bold text-white">{data.retentionRates.day7}%</div>
           <div className="text-xs text-zinc-500 mt-1">Active in first week</div>
         </div>
 
         {/* Day 30 */}
         <div className="bg-gradient-to-br from-zinc-900/80 to-zinc-900/40 rounded-xl p-4 border border-zinc-800/50">
-          <div className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Day 30 Return</div>
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-xs text-zinc-500 uppercase tracking-wider">Day 30 Return</span>
+            <InfoHint text="What % of users are still using the app after a month. This is your 'long-term value' metric. If this is 0%, nobody sticks around long-term." />
+          </div>
           <div className="text-2xl font-bold text-white">{data.retentionRates.day30}%</div>
           <div className="text-xs text-zinc-500 mt-1">Active in first month</div>
         </div>
 
         {/* Overall Retention */}
         <div className="bg-gradient-to-br from-emerald-900/30 to-zinc-900/40 rounded-xl p-4 border border-emerald-800/30">
-          <div className="text-xs text-emerald-400/80 uppercase tracking-wider mb-1">Currently Active</div>
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-xs text-emerald-400/80 uppercase tracking-wider">Currently Active</span>
+            <InfoHint text="Of all your users, what % were active in the last 7 days. This is your 'health check' - low means most users have stopped using the app entirely." />
+          </div>
           <div className="text-2xl font-bold text-emerald-400">{data.stats.retentionRate}%</div>
           <div className="text-xs text-zinc-500 mt-1">
             {data.stats.retainedUsers} of {data.stats.totalUsers} users
@@ -172,7 +185,13 @@ export default function RetentionTab() {
       {/* Cohort Retention Grid */}
       <div className="bg-zinc-900/60 rounded-xl border border-zinc-800/50 overflow-hidden">
         <div className="px-5 py-4 border-b border-zinc-800/50">
-          <h3 className="text-sm font-medium text-white">Cohort Retention Grid</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-white">Cohort Retention Grid</h3>
+            <InfoHint
+              text="Each row is a group of users who signed up in the same week. The columns (W0, W1, W2...) show what % of that group was still active in week 0, week 1, week 2, etc. Darker green = more users still active. This helps you see if newer users stick around better than older ones."
+              size="md"
+            />
+          </div>
           <p className="text-xs text-zinc-500 mt-0.5">
             {cohortSize === "week" ? "Weekly" : "Monthly"} cohorts showing % of users active in each period
           </p>
@@ -237,7 +256,13 @@ export default function RetentionTab() {
       {/* Feature Correlation */}
       <div className="bg-zinc-900/60 rounded-xl border border-zinc-800/50 overflow-hidden">
         <div className="px-5 py-4 border-b border-zinc-800/50">
-          <h3 className="text-sm font-medium text-white">What Keeps Users Coming Back</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-white">What Keeps Users Coming Back</h3>
+            <InfoHint
+              text="This compares users who stayed (retained) vs users who left (churned). Positive lift means users who use that feature tend to stick around more. These are your 'hook' features - push users toward them!"
+              size="md"
+            />
+          </div>
           <p className="text-xs text-zinc-500 mt-0.5">
             Features used more by retained users vs churned users
           </p>

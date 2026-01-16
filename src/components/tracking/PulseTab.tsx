@@ -12,6 +12,7 @@ import {
   BarChart3,
   ArrowRight,
 } from "lucide-react";
+import { InfoHint } from "./InfoHint";
 
 // ============================================
 // Types
@@ -165,6 +166,7 @@ export function PulseTab() {
           trend={data?.metrics.dau.trend || 0}
           icon={<Users className="w-5 h-5" />}
           color="emerald"
+          hint="How many unique users opened the app today. If this is low compared to your total users, people aren't coming back regularly."
         />
         <KPICard
           label="Weekly Active"
@@ -172,6 +174,7 @@ export function PulseTab() {
           trend={data?.metrics.wau.trend || 0}
           icon={<Calendar className="w-5 h-5" />}
           color="teal"
+          hint="Unique users who opened the app at least once in the last 7 days. This shows your 'engaged' user base."
         />
         <KPICard
           label="Monthly Active"
@@ -179,6 +182,7 @@ export function PulseTab() {
           trend={data?.metrics.mau.trend || 0}
           icon={<BarChart3 className="w-5 h-5" />}
           color="cyan"
+          hint="Unique users in the last 30 days. Compare this to your total paying users to see what % actually use the app."
         />
         <KPICard
           label="Return Rate"
@@ -186,6 +190,7 @@ export function PulseTab() {
           sublabel="2+ days/week"
           icon={<Zap className="w-5 h-5" />}
           color="amber"
+          hint="The % of users who come back 2+ days per week. Higher = more engaged users. Below 30% means most users try the app once and leave."
         />
       </div>
 
@@ -285,6 +290,7 @@ function KPICard({
   sublabel,
   icon,
   color,
+  hint,
 }: {
   label: string;
   value: number | string;
@@ -292,6 +298,7 @@ function KPICard({
   sublabel?: string;
   icon: React.ReactNode;
   color: "emerald" | "teal" | "cyan" | "amber";
+  hint?: string;
 }) {
   const colorClasses = {
     emerald: "from-emerald-500/20 to-emerald-500/5 border-emerald-500/20 text-emerald-400",
@@ -316,7 +323,10 @@ function KPICard({
 
       <div className="relative flex items-start justify-between">
         <div>
-          <p className="text-xs uppercase tracking-wider text-white/40 mb-1">{label}</p>
+          <div className="flex items-center gap-1.5 mb-1">
+            <p className="text-xs uppercase tracking-wider text-white/40">{label}</p>
+            {hint && <InfoHint text={hint} />}
+          </div>
           <p className="text-2xl font-bold font-mono">{value}</p>
           {sublabel && (
             <p className="text-xs text-white/30 mt-0.5">{sublabel}</p>
