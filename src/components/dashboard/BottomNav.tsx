@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Home, Map, Calendar, User } from "lucide-react";
+import { useTrack } from "@/lib/hooks/useTrack";
 
 /**
  * BottomNav
@@ -40,6 +41,7 @@ export default function BottomNav({ autoHide = false, onInteraction }: BottomNav
   const [showToast, setShowToast] = useState<string | null>(null);
   const [isVisible, setIsVisible] = useState(true);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const track = useTrack();
 
   // Auto-hide logic: hide nav when user interacts with map, show after 3 seconds
   const triggerHide = useCallback(() => {
@@ -317,6 +319,12 @@ export default function BottomNav({ autoHide = false, onInteraction }: BottomNav
                     key={item.id}
                     href={item.href}
                     className="relative z-10"
+                    onClick={() => {
+                      // Track tab switch (only if switching to a different tab)
+                      if (activeTab !== item.id) {
+                        track("tab_switch", { from: activeTab, to: item.id }, "navigation");
+                      }
+                    }}
                   >
                     {content}
                   </Link>

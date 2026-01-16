@@ -14,9 +14,16 @@ import {
   ChevronDown,
   Activity,
   Brain,
+  Repeat,
+  Route,
 } from "lucide-react";
 import { UserDetailModal } from "@/components/tracking/UserDetailModal";
 import { ChatAnalysisTab } from "@/components/tracking/ChatAnalysisTab";
+import { PulseTab } from "@/components/tracking/PulseTab";
+import { FeaturesTab } from "@/components/tracking/FeaturesTab";
+import { UsersTab } from "@/components/tracking/UsersTab";
+import RetentionTab from "@/components/tracking/RetentionTab";
+import JourneysTab from "@/components/tracking/JourneysTab";
 
 // Types
 type DatePreset =
@@ -37,7 +44,7 @@ interface DateRange {
   preset: DatePreset;
 }
 
-type TabId = "overview" | "stella" | "users" | "revenue" | "chat_analysis";
+type TabId = "pulse" | "features" | "retention" | "journeys" | "overview" | "stella" | "users" | "revenue" | "chat_analysis";
 
 interface Tab {
   id: TabId;
@@ -46,10 +53,13 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
-  { id: "overview", label: "Overview", icon: <BarChart3 className="w-4 h-4" /> },
-  { id: "stella", label: "Stella Insights", icon: <Sparkles className="w-4 h-4" /> },
+  { id: "pulse", label: "Pulse", icon: <Activity className="w-4 h-4" /> },
+  { id: "features", label: "Features", icon: <BarChart3 className="w-4 h-4" /> },
+  { id: "retention", label: "Retention", icon: <Repeat className="w-4 h-4" /> },
+  { id: "journeys", label: "Journeys", icon: <Route className="w-4 h-4" /> },
   { id: "chat_analysis", label: "Chat Analysis", icon: <Brain className="w-4 h-4" /> },
   { id: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
+  { id: "stella", label: "Stella Insights", icon: <Sparkles className="w-4 h-4" /> },
   { id: "revenue", label: "Revenue", icon: <DollarSign className="w-4 h-4" /> },
 ];
 
@@ -64,7 +74,7 @@ const AUTO_REFRESH_INTERVAL = 45000; // 45 seconds
 
 export default function TrackingDashboardPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [activeTab, setActiveTab] = useState<TabId>("pulse");
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -325,6 +335,10 @@ export default function TrackingDashboardPage() {
           <LoadingState />
         ) : (
           <>
+            {activeTab === "pulse" && <PulseTab />}
+            {activeTab === "features" && <FeaturesTab />}
+            {activeTab === "retention" && <RetentionTab />}
+            {activeTab === "journeys" && <JourneysTab />}
             {activeTab === "overview" && <OverviewTab data={overviewData} />}
             {activeTab === "stella" && <StellaInsightsTab data={overviewData} />}
             {activeTab === "chat_analysis" && (
@@ -348,7 +362,7 @@ export default function TrackingDashboardPage() {
                 }}
               />
             )}
-            {activeTab === "users" && <UsersTab data={usersData} onSelectUser={setSelectedUserId} />}
+            {activeTab === "users" && <UsersTab onSelectUser={setSelectedUserId} />}
             {activeTab === "revenue" && <RevenueTab data={revenueData} />}
           </>
         )}
@@ -471,76 +485,6 @@ function StellaInsightsTab({ data }: { data: Record<string, unknown> | null }) {
           </div>
         </GlassCard>
       </div>
-    </div>
-  );
-}
-
-// Users Tab
-function UsersTab({ data, onSelectUser }: { data: Record<string, unknown> | null; onSelectUser: (userId: string) => void }) {
-  const users = data?.users as Array<{
-    user_id: string;
-    email: string;
-    display_name: string | null;
-    payment_type: string;
-    ltv: number;
-    chat_count: number;
-    last_active: string | null;
-    engagement: string;
-  }> | undefined;
-
-  return (
-    <div className="space-y-6 animate-fadeIn">
-      <GlassCard title="User Directory" subtitle={`${data?.total || 0} total users`}>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th className="text-left py-3 px-4 text-xs font-medium text-white/40 uppercase tracking-wider">User</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-white/40 uppercase tracking-wider">Status</th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-white/40 uppercase tracking-wider">LTV</th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-white/40 uppercase tracking-wider">Chats</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-white/40 uppercase tracking-wider">Engagement</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users?.map((user, i) => (
-                <tr
-                  key={user.user_id}
-                  onClick={() => onSelectUser(user.user_id)}
-                  className="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
-                  style={{ animationDelay: `${i * 30}ms` }}
-                >
-                  <td className="py-3 px-4">
-                    <div>
-                      <div className="text-sm font-medium">{user.display_name || "—"}</div>
-                      <div className="text-xs text-white/40">{user.email}</div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <StatusBadge status={user.payment_type} />
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <span className="text-sm font-mono">${user.ltv.toFixed(2)}</span>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <span className="text-sm font-mono">{user.chat_count}</span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <EngagementBadge level={user.engagement} />
-                  </td>
-                </tr>
-              ))}
-              {(!users || users.length === 0) && (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-white/40 text-sm">
-                    No users found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </GlassCard>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogOut, X } from "lucide-react";
 import { useProfile } from "./ProfileShell";
+import { useTrack } from "@/lib/hooks/useTrack";
 
 /**
  * SignOutButton
@@ -13,10 +14,13 @@ import { useProfile } from "./ProfileShell";
  */
 export default function SignOutButton() {
   const { signOut } = useProfile();
+  const track = useTrack();
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handleSignOut = async () => {
+    // Track sign out click
+    track("sign_out_click", {}, "profile");
     setIsSigningOut(true);
     await signOut();
   };

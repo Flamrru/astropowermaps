@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Calendar, Sparkles, Star } from "lucide-react";
+import { useTrack } from "@/lib/hooks/useTrack";
 
 export type CalendarTabType = "month" | "2026" | "transits";
 
@@ -21,6 +22,14 @@ export default function CalendarTabs({
   activeTab,
   onTabChange,
 }: CalendarTabsProps) {
+  const track = useTrack();
+
+  const handleTabChange = (tab: CalendarTabType) => {
+    // Track calendar tab switch
+    track("calendar_tab_switch", { tab }, "calendar");
+    onTabChange(tab);
+  };
+
   const tabs: { id: CalendarTabType; label: string; icon: typeof Calendar }[] = [
     { id: "month", label: "Month", icon: Calendar },
     { id: "2026", label: "Year", icon: Sparkles },
@@ -71,7 +80,7 @@ export default function CalendarTabs({
         return (
           <motion.button
             key={tab.id}
-            onClick={() => onTabChange(tab.id)}
+            onClick={() => handleTabChange(tab.id)}
             className="relative flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl z-10 transition-colors"
             whileTap={{ scale: 0.98 }}
           >

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, X, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useProfile } from "./ProfileShell";
+import { useTrack } from "@/lib/hooks/useTrack";
 
 /**
  * DeleteAccountButton
@@ -16,6 +17,7 @@ export default function DeleteAccountButton() {
   const router = useRouter();
   const { state } = useProfile();
   const { profile } = state;
+  const track = useTrack();
   const [showModal, setShowModal] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
@@ -31,6 +33,11 @@ export default function DeleteAccountButton() {
 
   const handleDelete = async () => {
     if (!canDelete) return;
+
+    // Track delete account click
+    track("delete_account_click", {
+      has_active_subscription: hasActiveSubscription,
+    }, "profile");
 
     setIsDeleting(true);
     setError(null);

@@ -8,6 +8,7 @@ import ChatInput from "./ChatInput";
 import TypingIndicator from "./TypingIndicator";
 import QuickReplies, { DEFAULT_QUICK_REPLIES, CALENDAR_QUICK_REPLIES, LIFE_TRANSITS_QUICK_REPLIES, YEAR_2026_QUICK_REPLIES } from "./QuickReplies";
 import type { ChatMessage as ChatMessageType } from "@/lib/dashboard-types";
+import { useTrack } from "@/lib/hooks/useTrack";
 import type { AstrocartographyResult, PlanetaryLine } from "@/lib/astro/types";
 import { MAJOR_CITIES, type WorldCity } from "@/lib/astro/cities";
 
@@ -29,6 +30,8 @@ interface StellaChatDrawerProps {
   mapData?: AstrocartographyResult | null;
   /** Current month being viewed in calendar (e.g., "2026-01") */
   viewingMonth?: string;
+  /** Callback to report message count to parent */
+  onMessageCountChange?: (count: number) => void;
 }
 
 // Derive view context from pathname
@@ -189,8 +192,10 @@ export default function StellaChatDrawer({
   viewHint,
   mapData,
   viewingMonth,
+  onMessageCountChange,
 }: StellaChatDrawerProps) {
   const pathname = usePathname();
+  const track = useTrack();
   // Use viewHint if provided (from parent), otherwise derive from pathname
   const viewContext = viewHint || getViewContext(pathname);
 
@@ -217,6 +222,12 @@ export default function StellaChatDrawer({
       setDynamicSuggestions(null); // Reset to default pills
     }
   }, [resetKey]);
+
+  // Report message count changes to parent (for close tracking)
+  useEffect(() => {
+    const userMessageCount = messages.filter(m => m.role === "user").length;
+    onMessageCountChange?.(userMessageCount);
+  }, [messages, onMessageCountChange]);
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
@@ -332,6 +343,13 @@ export default function StellaChatDrawer({
       } else {
         setMessages((prev) => [...prev, userMessage]);
       }
+
+      // Track message sent
+      track("stella_message_sent", {
+        char_count: displayMessage.length,
+        has_context: !!hiddenContext,
+        view_context: viewContext,
+      }, "stella");
     }
 
     setIsLoading(true);

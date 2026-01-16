@@ -11,6 +11,7 @@ import {
   LifeCategory,
   PowerPlace,
 } from "@/lib/astro/power-places";
+import { useTrack } from "@/lib/hooks/useTrack";
 
 interface PowerPlacesPanelProps {
   lines: PlanetaryLine[];
@@ -941,6 +942,19 @@ interface PlaceCardProps {
 
 function PlaceCard({ place, index, onFlyTo, colors, compact }: PlaceCardProps) {
   const planetConfig = PLANETS[place.planet];
+  const track = useTrack();
+
+  const handleFlyTo = () => {
+    // Track power place fly-to action
+    track("power_place_fly_to", {
+      city: place.city.name,
+      country: place.flag,
+      category: place.city.name, // Will be inferred from context
+      planet: place.planet,
+      line_type: place.lineType,
+    }, "map");
+    onFlyTo();
+  };
 
   return (
     <motion.div
@@ -956,7 +970,7 @@ function PlaceCard({ place, index, onFlyTo, colors, compact }: PlaceCardProps) {
         background: "linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%)",
         border: "1px solid rgba(255, 255, 255, 0.06)",
       }}
-      onClick={onFlyTo}
+      onClick={handleFlyTo}
     >
       {/* Hover glow effect */}
       <div
@@ -1043,7 +1057,7 @@ function PlaceCard({ place, index, onFlyTo, colors, compact }: PlaceCardProps) {
         }}
         onClick={(e) => {
           e.stopPropagation();
-          onFlyTo();
+          handleFlyTo();
         }}
         title={`Fly to ${place.city.name}`}
       >

@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { CalendarEvent, CalendarEventType, GoalCategory } from "@/lib/dashboard-types";
+import { useTrack } from "@/lib/hooks/useTrack";
 
 interface CalendarDayProps {
   dayNumber: number;
@@ -34,6 +35,7 @@ const GOAL_COLORS: Record<GoalCategory, string> = {
  */
 export default function CalendarDay({
   dayNumber,
+  date,
   events,
   isToday,
   isCurrentMonth,
@@ -42,6 +44,19 @@ export default function CalendarDay({
   isBestForGoal = false,
   goalCategory = null,
 }: CalendarDayProps) {
+  const track = useTrack();
+
+  const handleClick = () => {
+    // Track day click
+    const isPowerDay = events.some((e) => e.type === "power_day");
+    track("day_click", {
+      date,
+      is_power_day: isPowerDay,
+      is_best_for_goal: isBestForGoal,
+    }, "calendar");
+    onClick();
+  };
+
   // Get the goal color if this day is best for a goal
   const goalColor = goalCategory ? GOAL_COLORS[goalCategory] : null;
   // Event type colors
@@ -76,7 +91,7 @@ export default function CalendarDay({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: index * 0.01, duration: 0.2 }}
-      onClick={onClick}
+      onClick={handleClick}
       disabled={!isCurrentMonth}
       className={`
         relative aspect-square flex flex-col items-center justify-center

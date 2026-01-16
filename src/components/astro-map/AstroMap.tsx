@@ -15,6 +15,7 @@ import PowerPlacesPanel from "./PowerPlacesPanel";
 import MobileFloatingPill from "./MobileFloatingPill";
 import WelcomeTutorial from "./WelcomeTutorial";
 import { useFirstVisit } from "@/lib/hooks/useFirstVisit";
+import { useTrack } from "@/lib/hooks/useTrack";
 
 interface StellaContext {
   displayMessage: string;
@@ -424,6 +425,7 @@ export default function AstroMap({
   const map = useRef<mapboxgl.Map | null>(null);
   const cityMarkersRef = useRef<mapboxgl.Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const track = useTrack();
   const [visiblePlanets, setVisiblePlanets] = useState<Set<PlanetId>>(
     new Set(data.planets.map((p) => p.id))
   );
@@ -786,6 +788,9 @@ export default function AstroMap({
         const lineType = feature.properties?.lineType as LineType;
 
         if (planet && lineType) {
+          // Track line tap
+          track("line_tap", { planet, line_type: lineType }, "map");
+
           setTooltip({
             planet,
             lineType,

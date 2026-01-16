@@ -266,7 +266,7 @@ export function getAllTopics(): TopicInfo[] {
 // Event Types
 // ============================================
 
-export type EventCategory = "navigation" | "engagement" | "stella" | "session";
+export type EventCategory = "navigation" | "engagement" | "stella" | "session" | "map" | "calendar" | "profile";
 
 export type EventName =
   | "page_view"

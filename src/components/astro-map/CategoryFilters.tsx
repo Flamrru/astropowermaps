@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { PlanetId } from "@/lib/astro/types";
 import { PLANET_ORDER } from "@/lib/astro/planets";
+import { useTrack } from "@/lib/hooks/useTrack";
 
 // ============================================
 // Celestial Filter Icons - Tarot-inspired SVGs
@@ -242,6 +243,14 @@ export default function CategoryFilters({
   activeCategory,
   onCategoryChange,
 }: CategoryFiltersProps) {
+  const track = useTrack();
+
+  const handleCategoryChange = (categoryId: string, planets: PlanetId[]) => {
+    // Track category filter change
+    track("category_filter", { category: categoryId, planets }, "map");
+    onCategoryChange(categoryId, planets);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
@@ -263,7 +272,7 @@ export default function CategoryFilters({
           return (
             <motion.button
               key={category.id}
-              onClick={() => onCategoryChange(category.id, category.planets)}
+              onClick={() => handleCategoryChange(category.id, category.planets)}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: 0.7 + index * 0.05 }}

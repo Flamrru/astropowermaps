@@ -45,8 +45,10 @@ export default function StellaFloatingButton({
   const [isHovered, setIsHovered] = useState(false);
   const [chatKey, setChatKey] = useState(0);
   const [pendingContext, setPendingContext] = useState<StellaContext | null>(null);
+  const [messageCount, setMessageCount] = useState(0);
   const track = useTrack();
   const hasTrackedOpen = useRef(false);
+  const openTimestampRef = useRef<number | null>(null);
 
   const handleNewChat = async () => {
     // Clear history from database
@@ -66,10 +68,16 @@ export default function StellaFloatingButton({
       setIsChatOpen(true);
       // Track this as a context-triggered open
       track("stella_chat_open", { source: "ask_stella_button", viewHint }, "engagement");
+      openTimestampRef.current = Date.now();
       // Clear the external context so it doesn't re-trigger
       onContextConsumed?.();
     }
   }, [externalContext, onContextConsumed, track, viewHint]);
+
+  // Callback to receive message count from StellaChatDrawer
+  const handleMessageCountChange = (count: number) => {
+    setMessageCount(count);
+  };
 
   // Lock body scroll when chat is open
   useEffect(() => {
@@ -86,13 +94,21 @@ export default function StellaFloatingButton({
   const toggleChat = () => {
     setIsChatOpen((prev) => {
       const newState = !prev;
-      // Track when chat opens (not closes)
+      // Track when chat opens
       if (newState && !hasTrackedOpen.current) {
         track("stella_chat_open", { source: "floating_button", viewHint }, "engagement");
+        openTimestampRef.current = Date.now();
       }
-      // Reset tracking flag when closed so we track next open
-      if (!newState) {
+      // Track when chat closes
+      if (!newState && openTimestampRef.current) {
+        const durationMs = Date.now() - openTimestampRef.current;
+        track("stella_chat_close", {
+          message_count: messageCount,
+          duration_ms: durationMs,
+          source: "close_button",
+        }, "stella");
         hasTrackedOpen.current = false;
+        openTimestampRef.current = null;
       }
       return newState;
     });
@@ -299,6 +315,7 @@ export default function StellaFloatingButton({
                 viewHint={viewHint}
                 mapData={mapData}
                 viewingMonth={viewingMonth}
+                onMessageCountChange={handleMessageCountChange}
               />
             </motion.div>
           </>

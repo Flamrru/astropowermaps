@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, X, Heart, Briefcase, Palette, Compass, Sparkles, Circle } from "lucide-react";
 import type { GoalCategory } from "@/lib/dashboard-types";
+import { useTrack } from "@/lib/hooks/useTrack";
 
 interface GoalPickerProps {
   selectedGoal: GoalCategory | null;
@@ -62,10 +63,13 @@ const GOAL_ORDER: GoalCategory[] = ["love", "career", "creativity", "clarity", "
  */
 export default function GoalPicker({ selectedGoal, onSelectGoal, disabled = false }: GoalPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const track = useTrack();
 
   const currentConfig = selectedGoal ? GOAL_CONFIG[selectedGoal] : null;
 
   const handleSelect = (goal: GoalCategory | null) => {
+    // Track goal selection
+    track("goal_select", { goal: goal || "all" }, "calendar");
     onSelectGoal(goal);
     setIsOpen(false);
   };

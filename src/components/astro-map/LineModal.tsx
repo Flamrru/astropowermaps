@@ -9,6 +9,7 @@ import {
   getLineTypeName,
   getLineTypeDescription,
 } from "@/lib/astro/interpretations";
+import { useTrack } from "@/lib/hooks/useTrack";
 
 /**
  * LineModal - V5 Glass Morphism Line Information Modal
@@ -41,8 +42,12 @@ export default function LineModal({
   const interpretation = getInterpretation(planet, lineType);
   const lineTypeName = getLineTypeName(lineType);
   const lineTypeDescription = getLineTypeDescription(lineType);
+  const track = useTrack();
 
   const handleAskStella = () => {
+    // Track Ask Stella from map
+    track("ask_stella_from_map", { planet, line_type: lineType, context_type: "line" }, "map");
+
     if (onAskStella) {
       onAskStella({
         displayMessage: `Tell me about my ${planetConfig.name} ${lineTypeName}`,

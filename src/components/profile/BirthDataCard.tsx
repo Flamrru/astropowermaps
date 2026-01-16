@@ -6,6 +6,7 @@ import { Calendar, Clock, MapPin, HelpCircle, Plus, X, Pencil } from "lucide-rea
 import LocationSearch from "@/components/astro-map/LocationSearch";
 import { BirthLocation } from "@/lib/astro/types";
 import { useProfile } from "./ProfileShell";
+import { useTrack } from "@/lib/hooks/useTrack";
 
 /**
  * BirthDataCard
@@ -16,6 +17,7 @@ import { useProfile } from "./ProfileShell";
 export default function BirthDataCard() {
   const { state } = useProfile();
   const { profile } = state;
+  const track = useTrack();
   const [showDateModal, setShowDateModal] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -151,6 +153,7 @@ export default function BirthDataCard() {
       accent: true,
       editable: true,
       onEdit: () => {
+        track("birth_data_edit_start", { field: "date" }, "profile");
         setSelectedDate(profile.birthDate);
         setShowDateModal(true);
       },
@@ -166,7 +169,10 @@ export default function BirthDataCard() {
         : null,
       muted: profile.birthTimeUnknown,
       editable: true,
-      onEdit: () => setShowTimeModal(true),
+      onEdit: () => {
+        track("birth_data_edit_start", { field: "time", currently_unknown: profile.birthTimeUnknown }, "profile");
+        setShowTimeModal(true);
+      },
     },
     {
       icon: MapPin,
@@ -174,7 +180,10 @@ export default function BirthDataCard() {
       value: profile.birthPlace,
       subtitle: `${profile.birthLat.toFixed(2)}°, ${profile.birthLng.toFixed(2)}°`,
       editable: true,
-      onEdit: () => setShowLocationModal(true),
+      onEdit: () => {
+        track("birth_data_edit_start", { field: "location" }, "profile");
+        setShowLocationModal(true);
+      },
     },
   ];
 
@@ -283,7 +292,10 @@ export default function BirthDataCard() {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setShowTimeModal(true)}
+              onClick={() => {
+                track("birth_data_edit_start", { field: "time", currently_unknown: true, source: "add_button" }, "profile");
+                setShowTimeModal(true);
+              }}
               className="w-full py-2.5 rounded-xl text-xs font-medium transition-all flex items-center justify-center gap-2"
               style={{
                 background: "linear-gradient(135deg, rgba(201, 162, 39, 0.15), rgba(201, 162, 39, 0.05))",
