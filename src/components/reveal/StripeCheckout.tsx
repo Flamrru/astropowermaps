@@ -203,10 +203,6 @@ export default function StripeCheckout({
     }
   };
 
-  // Skip password and go directly to map
-  const handleSkipPassword = () => {
-    window.location.href = "/map";
-  };
 
   const stripePromise = getStripe();
 
@@ -354,13 +350,6 @@ export default function StripeCheckout({
           )}
         </motion.button>
 
-        {/* Skip option */}
-        <button
-          onClick={handleSkipPassword}
-          className="w-full text-white/50 text-sm hover:text-white/70 transition-colors"
-        >
-          Skip for now →
-        </button>
       </motion.div>
     );
   }
