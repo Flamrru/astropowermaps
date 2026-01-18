@@ -6,6 +6,7 @@ import { subDays, differenceInDays, differenceInMonths } from "date-fns";
 import DateRangeSelector from "@/components/admin/DateRangeSelector";
 import TrendChart from "@/components/admin/TrendChart";
 import ChartCarousel from "@/components/admin/ChartCarousel";
+import { ABPriceTestTab } from "@/components/tracking/ABPriceTestTab";
 import "./premium-dashboard.css";
 
 interface UserProfile {
@@ -851,6 +852,11 @@ export default function AdminDashboardPage() {
             <RevenueBySourceTable data={revenue.bySource} />
           </div>
         )}
+
+        {/* A/B Price Testing */}
+        <div className="mb-8 animate-in stagger-2">
+          <ABPriceTestTab />
+        </div>
 
         {/* Trends Carousel - Pre-built charts that work regardless of date filter */}
         {carouselCharts.length > 0 && (

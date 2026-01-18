@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
-const COOKIE_NAME = "tracking_session";
+// Accept both tracking and admin session cookies
+const TRACKING_COOKIE = "tracking_session";
+const ADMIN_COOKIE = "admin_session";
 
 /**
  * Variant configuration - maps codes to display info
@@ -55,11 +57,16 @@ interface ABPriceTestResponse {
  * - Winner determination based on revenue per lead
  */
 export async function GET() {
-  // Check authentication
+  // Check authentication (accept either tracking or admin session)
   const cookieStore = await cookies();
-  const session = cookieStore.get(COOKIE_NAME);
+  const trackingSession = cookieStore.get(TRACKING_COOKIE);
+  const adminSession = cookieStore.get(ADMIN_COOKIE);
 
-  if (session?.value !== "authenticated") {
+  const isAuthenticated =
+    trackingSession?.value === "authenticated" ||
+    adminSession?.value === "authenticated";
+
+  if (!isAuthenticated) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
