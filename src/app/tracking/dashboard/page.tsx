@@ -24,6 +24,7 @@ import { FeaturesTab } from "@/components/tracking/FeaturesTab";
 import { UsersTab } from "@/components/tracking/UsersTab";
 import RetentionTab from "@/components/tracking/RetentionTab";
 import JourneysTab from "@/components/tracking/JourneysTab";
+import { ABPriceTestTab } from "@/components/tracking/ABPriceTestTab";
 
 // Types
 type DatePreset =
@@ -44,7 +45,7 @@ interface DateRange {
   preset: DatePreset;
 }
 
-type TabId = "pulse" | "features" | "retention" | "journeys" | "overview" | "stella" | "users" | "revenue" | "chat_analysis";
+type TabId = "pulse" | "features" | "retention" | "journeys" | "overview" | "stella" | "users" | "revenue" | "chat_analysis" | "ab_price_test";
 
 interface Tab {
   id: TabId;
@@ -61,6 +62,7 @@ const TABS: Tab[] = [
   { id: "users", label: "Users", icon: <Users className="w-4 h-4" /> },
   { id: "stella", label: "Stella Insights", icon: <Sparkles className="w-4 h-4" /> },
   { id: "revenue", label: "Revenue", icon: <DollarSign className="w-4 h-4" /> },
+  { id: "ab_price_test", label: "A/B Pricing", icon: <DollarSign className="w-4 h-4" /> },
 ];
 
 const DATE_PRESETS = [
@@ -364,6 +366,7 @@ export default function TrackingDashboardPage() {
             )}
             {activeTab === "users" && <UsersTab onSelectUser={setSelectedUserId} />}
             {activeTab === "revenue" && <RevenueTab data={revenueData} />}
+            {activeTab === "ab_price_test" && <ABPriceTestTab />}
           </>
         )}
       </main>
