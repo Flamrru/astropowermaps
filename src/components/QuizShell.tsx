@@ -219,11 +219,15 @@ export default function QuizShell({ children }: QuizShellProps) {
 
   // Capture price variant (?c=x14ts, ?c=x24ts, or ?c=x29ts) for A/B price testing
   // Valid codes: x14ts ($14.99), x24ts ($24.99), x29ts ($29.99)
+  // IMPORTANT: Clear stale variant if no code present (prevents cross-session contamination)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const variantCode = urlParams.get("c");
     if (variantCode && ["x14ts", "x24ts", "x29ts"].includes(variantCode)) {
       localStorage.setItem("stella_price_variant", variantCode);
+    } else {
+      // Clear any stale variant from previous sessions
+      localStorage.removeItem("stella_price_variant");
     }
   }, []);
 
