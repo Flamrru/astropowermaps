@@ -86,6 +86,7 @@ export default function StripeCheckout({
       const urlParams = new URLSearchParams(window.location.search);
       const isDevMode = urlParams.has("d");
       const offer = urlParams.get("offer"); // "win", "full", or null (quiz/ads)
+      const variantCode = urlParams.get("c"); // A/B price test code (x24ts, x29ts)
 
       // Save email to localStorage for account setup page
       if (email) {
@@ -109,6 +110,7 @@ export default function StripeCheckout({
           planId, // Pass selected plan to API
           devMode: isDevMode, // Pass dev mode flag
           offer: offer || undefined, // "win"/"full" = email, undefined = quiz/ads
+          variant_code: variantCode || undefined, // A/B price test code
           // Meta tracking data for CAPI deduplication
           metaEventId,
           fbp: fbp || undefined,

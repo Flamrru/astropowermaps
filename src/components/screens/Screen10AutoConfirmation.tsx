@@ -160,6 +160,12 @@ export default function Screen10AutoConfirmation() {
         revealUrl += `&plan=${paywallVariant}`;
       }
 
+      // Preserve price variant for A/B price test (e.g., ?c=x24ts)
+      const priceVariant = localStorage.getItem("stella_price_variant");
+      if (priceVariant) {
+        revealUrl += `&c=${priceVariant}`;
+      }
+
       window.location.href = revealUrl;
     }, 2500);
 

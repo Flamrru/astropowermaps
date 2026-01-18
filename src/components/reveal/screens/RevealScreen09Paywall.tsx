@@ -85,6 +85,12 @@ function CosmicStardust() {
   );
 }
 
+// Map price variant codes to plan IDs
+const VARIANT_TO_PLAN: Record<string, PlanId> = {
+  "x24ts": "one_time_24",  // $24.99
+  "x29ts": "one_time_29",  // $29.99
+};
+
 export default function RevealScreen09Paywall() {
   const { state } = useReveal();
   const searchParams = useSearchParams();
@@ -95,19 +101,25 @@ export default function RevealScreen09Paywall() {
   // Default is always $19.99 (quiz, ads, email without offer param)
   const hasSubscriptionPlan = searchParams.get("plan") === "subscription";
   const isWinback = searchParams.get("offer") === "win";
+  const priceVariantCode = searchParams.get("c"); // x24ts ($24.99) or x29ts ($29.99)
 
+  // Display variant determines UI layout (subscription picker vs single card)
+  // Price variants (x24ts, x29ts) use the "single" display but different prices
   const variant: PaywallVariant = isWinback
     ? "winback"
     : hasSubscriptionPlan
       ? "subscription"
       : "single";
 
-  // Default plan depends on variant
-  const defaultPlan: PlanId = variant === "winback"
+  // Default plan depends on variant and price code
+  // Priority: winback > price variant > subscription > default one_time
+  const defaultPlan: PlanId = isWinback
     ? "winback"
-    : variant === "single"
-      ? "one_time"
-      : "trial_7day";
+    : priceVariantCode && VARIANT_TO_PLAN[priceVariantCode]
+      ? VARIANT_TO_PLAN[priceVariantCode]
+      : hasSubscriptionPlan
+        ? "trial_7day"
+        : "one_time";
   const [selectedPlan, setSelectedPlan] = useState<PlanId>(defaultPlan);
 
   // Scroll to pricing section (for CTAs throughout page)

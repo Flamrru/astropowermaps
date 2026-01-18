@@ -171,6 +171,9 @@ export default function Screen08CombinedCapture() {
       const fbp = getCookie("_fbp");
       const fbc = extractFbc();
 
+      // Get price variant from localStorage (set by QuizShell from ?c= param)
+      const priceVariantCode = localStorage.getItem("stella_price_variant");
+
       // 1. Save lead to database (with birth data for permanent token access)
       const response = await fetch("/api/lead", {
         method: "POST",
@@ -197,6 +200,8 @@ export default function Screen08CombinedCapture() {
             },
             birthDatetimeUtc,
           },
+          // A/B price test variant code
+          price_variant_code: priceVariantCode || undefined,
           // Meta CAPI tracking data for deduplication
           metaEventId,
           fbp: fbp || undefined,

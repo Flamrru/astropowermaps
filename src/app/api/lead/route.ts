@@ -33,6 +33,8 @@ interface LeadPayload {
   session_id: string;
   timestamp?: string;
   birthData?: BirthDataPayload;
+  // A/B price test variant code (x24ts = $24.99, x29ts = $29.99)
+  price_variant_code?: string;
   // Meta CAPI tracking data for deduplication
   metaEventId?: string;  // Event ID for deduplication with client pixel
   fbp?: string;          // Facebook Browser ID (_fbp cookie)
@@ -178,6 +180,11 @@ export async function POST(request: NextRequest) {
       leadData.birth_location_lng = body.birthData.location.lng;
       leadData.birth_location_timezone = body.birthData.location.timezone;
       leadData.birth_datetime_utc = body.birthData.birthDatetimeUtc;
+    }
+
+    // Add price variant code if provided (A/B price testing)
+    if (body.price_variant_code) {
+      leadData.price_variant_code = body.price_variant_code;
     }
 
     // Try to update existing lead first (by session_id), otherwise insert

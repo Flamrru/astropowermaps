@@ -130,6 +130,9 @@ export const SANDBOX_PRICES = {
   TRIAL_14DAY: "price_1SmTR51yURwpWT9Ltlu1jKs0",
   // One-time payment for A/B test variant B ($19.99)
   ONE_TIME: "price_1SnR0I1yURwpWT9LmAc37tl9",
+  // A/B test price variants
+  ONE_TIME_24: "price_1Sqr0K1yURwpWT9LtPBaJj9F", // $24.99 one-time (variant x24ts)
+  ONE_TIME_29: "price_1Sqr0K1yURwpWT9L5ILbL7Y7", // $29.99 one-time (variant x29ts)
   // Winback offer for email leads ($9.99)
   WINBACK: "price_1Sp5Sb1yURwpWT9L9G94w2QG",
 } as const;
@@ -146,6 +149,9 @@ export const LIVE_PRICES = {
   TRIAL_14DAY: "price_1SmUSp24zElYF83GmsTPZYdc",
   // One-time payment for A/B test variant B ($19.99)
   ONE_TIME: "price_1So5w024zElYF83Ge1cbG80R",
+  // A/B test price variants
+  ONE_TIME_24: "price_1Sqr0Y24zElYF83GIvyslJ8f", // $24.99 one-time (variant x24ts)
+  ONE_TIME_29: "price_1Sqr0Y24zElYF83GE3P6Gr86", // $29.99 one-time (variant x29ts)
   // Winback offer for email leads ($9.99)
   WINBACK: "price_1Sp5Sr24zElYF83G9mseZLLS",
 } as const;
@@ -174,6 +180,8 @@ export function validateStripePrices(): { valid: boolean; missing: string[] } {
   if (!prices.TRIAL_7DAY) missing.push("TRIAL_7DAY");
   if (!prices.TRIAL_14DAY) missing.push("TRIAL_14DAY");
   if (!prices.ONE_TIME) missing.push("ONE_TIME");
+  // A/B test prices are optional - don't fail validation if missing
+  // They'll be validated at checkout time if used
 
   return {
     valid: missing.length === 0,

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Check, Sparkles, ShieldCheck } from "lucide-react";
-import { type PlanId } from "@/lib/subscription-plans";
+import { type PlanId, SUBSCRIPTION_PLANS } from "@/lib/subscription-plans";
 
 // Variant type for A/B testing and winback offers
 export type PaywallVariant = "subscription" | "single" | "winback";
@@ -17,8 +17,8 @@ interface Plan {
   highlight?: boolean;
 }
 
-// Subscription variant plans (current default)
-const SUBSCRIPTION_PLANS: Plan[] = [
+// Subscription variant plans (current default) - display configuration
+const SUBSCRIPTION_PLANS_DISPLAY: Plan[] = [
   {
     id: "trial_3day",
     name: "3-Day Trial",
@@ -71,9 +71,28 @@ interface PricingSelectorProps {
   onCheckout?: () => void; // For single payment: triggers checkout directly
 }
 
-// Premium Single Payment Card Component
-function SinglePaymentCard({ onSelect, onCheckout }: { onSelect: () => void; onCheckout?: () => void }) {
-  const plan = SINGLE_PAYMENT_PLAN;
+// Calculate savings percentage based on price
+function getSavingsText(priceCents: number): string {
+  // Original price is $49.00 (4900 cents)
+  const originalPrice = 4900;
+  const savings = Math.round(((originalPrice - priceCents) / originalPrice) * 100);
+  return `SAVE ${savings}%`;
+}
+
+// Premium Single Payment Card Component - Dynamic pricing based on plan
+function SinglePaymentCard({
+  onSelect,
+  onCheckout,
+  planId = "one_time",
+}: {
+  onSelect: () => void;
+  onCheckout?: () => void;
+  planId?: PlanId;
+}) {
+  // Get plan data from SUBSCRIPTION_PLANS
+  const plan = SUBSCRIPTION_PLANS[planId] || SUBSCRIPTION_PLANS.one_time;
+  const priceDisplay = plan.trialPriceDisplay; // e.g., "$19.99", "$24.99", "$29.99"
+  const savingsText = getSavingsText(plan.trialPriceCents);
 
   return (
     <motion.button
@@ -134,7 +153,7 @@ function SinglePaymentCard({ onSelect, onCheckout }: { onSelect: () => void; onC
             }}
           >
             <Sparkles className="w-4 h-4" />
-            SAVE 60%
+            {savingsText}
           </div>
         </motion.div>
 
@@ -183,7 +202,7 @@ function SinglePaymentCard({ onSelect, onCheckout }: { onSelect: () => void; onC
                 filter: "drop-shadow(0 0 15px rgba(232, 197, 71, 0.4))",
               }}
             >
-              $19.99
+              {priceDisplay}
             </span>
           </motion.div>
 
@@ -370,15 +389,17 @@ export default function PricingSelector({
   // Determine which plans to show based on variant
   const isWinback = variant === "winback";
   const isSinglePayment = variant === "single";
-  const plans = isSinglePayment ? [SINGLE_PAYMENT_PLAN] : SUBSCRIPTION_PLANS;
+  const plans = isSinglePayment ? [SINGLE_PAYMENT_PLAN] : SUBSCRIPTION_PLANS_DISPLAY;
 
   // Auto-select winback plan when in winback variant
   if (isWinback && selectedPlan !== "winback") {
     setTimeout(() => onSelectPlan("winback"), 0);
   }
 
-  // Auto-select one_time plan when in single payment variant
-  if (isSinglePayment && selectedPlan !== "one_time") {
+  // Auto-select single payment plan when in single payment variant
+  // Check if selectedPlan is one of the valid one-time plans
+  const isValidOneTimePlan = ["one_time", "one_time_24", "one_time_29"].includes(selectedPlan);
+  if (isSinglePayment && !isValidOneTimePlan) {
     setTimeout(() => onSelectPlan("one_time"), 0);
   }
 
@@ -468,8 +489,12 @@ export default function PricingSelector({
           </h3>
         </motion.div>
 
-        {/* Premium Single Payment Card */}
-        <SinglePaymentCard onSelect={() => onSelectPlan("one_time")} onCheckout={onCheckout} />
+        {/* Premium Single Payment Card - uses selectedPlan for dynamic pricing */}
+        <SinglePaymentCard
+          onSelect={() => onSelectPlan(selectedPlan)}
+          onCheckout={onCheckout}
+          planId={selectedPlan}
+        />
 
         {/* Bottom Note */}
         <motion.p
