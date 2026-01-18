@@ -131,6 +131,7 @@ export const SANDBOX_PRICES = {
   // One-time payment for A/B test variant B ($19.99)
   ONE_TIME: "price_1SnR0I1yURwpWT9LmAc37tl9",
   // A/B test price variants
+  ONE_TIME_14: "price_1Sqrps1yURwpWT9LSzbbSHh2", // $14.99 one-time (variant x14ts)
   ONE_TIME_24: "price_1Sqr0K1yURwpWT9LtPBaJj9F", // $24.99 one-time (variant x24ts)
   ONE_TIME_29: "price_1Sqr0K1yURwpWT9L5ILbL7Y7", // $29.99 one-time (variant x29ts)
   // Winback offer for email leads ($9.99)
@@ -150,6 +151,7 @@ export const LIVE_PRICES = {
   // One-time payment for A/B test variant B ($19.99)
   ONE_TIME: "price_1So5w024zElYF83Ge1cbG80R",
   // A/B test price variants
+  ONE_TIME_14: "price_1Sqrpy24zElYF83GF80MYRVM", // $14.99 one-time (variant x14ts)
   ONE_TIME_24: "price_1Sqr0Y24zElYF83GIvyslJ8f", // $24.99 one-time (variant x24ts)
   ONE_TIME_29: "price_1Sqr0Y24zElYF83GE3P6Gr86", // $29.99 one-time (variant x29ts)
   // Winback offer for email leads ($9.99)

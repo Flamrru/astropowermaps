@@ -87,6 +87,7 @@ function CosmicStardust() {
 
 // Map price variant codes to plan IDs
 const VARIANT_TO_PLAN: Record<string, PlanId> = {
+  "x14ts": "one_time_14",  // $14.99
   "x24ts": "one_time_24",  // $24.99
   "x29ts": "one_time_29",  // $29.99
 };

@@ -19,7 +19,7 @@ export const CURRENT_STRIPE_MODE = getStripeMode();
 // "one_time" is for A/B test variant B (single $19.99 payment)
 // "one_time_24" and "one_time_29" are A/B price test variants ($24.99 and $29.99)
 // "winback" is for email lead re-engagement ($9.99 one-time)
-export type PlanId = "trial_3day" | "trial_7day" | "trial_14day" | "one_time" | "one_time_24" | "one_time_29" | "winback";
+export type PlanId = "trial_3day" | "trial_7day" | "trial_14day" | "one_time" | "one_time_14" | "one_time_24" | "one_time_29" | "winback";
 
 // Map plan IDs to Stripe price keys
 const PLAN_TO_PRICE_KEY: Record<PlanId, keyof typeof STRIPE_PRICES> = {
@@ -27,6 +27,7 @@ const PLAN_TO_PRICE_KEY: Record<PlanId, keyof typeof STRIPE_PRICES> = {
   trial_7day: "TRIAL_7DAY",
   trial_14day: "TRIAL_14DAY",
   one_time: "ONE_TIME",
+  one_time_14: "ONE_TIME_14",
   one_time_24: "ONE_TIME_24",
   one_time_29: "ONE_TIME_29",
   winback: "WINBACK",
@@ -92,6 +93,18 @@ export const SUBSCRIPTION_PLANS: Record<
     monthlyPriceCents: 0, // No recurring charge
     monthlyPriceDisplay: "$0",
     stripePriceKey: "ONE_TIME",
+    description: "One-time purchase, lifetime access",
+  },
+  // A/B price test variant: $14.99 one-time payment
+  one_time_14: {
+    id: "one_time_14",
+    name: "Full Access",
+    trialPriceCents: 1499, // $14.99 one-time
+    trialPriceDisplay: "$14.99",
+    trialDays: 0, // No trial - immediate full access
+    monthlyPriceCents: 0, // No recurring charge
+    monthlyPriceDisplay: "$0",
+    stripePriceKey: "ONE_TIME_14",
     description: "One-time purchase, lifetime access",
   },
   // A/B price test variant: $24.99 one-time payment

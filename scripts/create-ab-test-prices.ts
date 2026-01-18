@@ -1,7 +1,7 @@
 /**
  * A/B Test Price Creation Script
  *
- * Creates $24.99 and $29.99 one-time payment prices for A/B price testing.
+ * Creates $14.99, $24.99, and $29.99 one-time payment prices for A/B price testing.
  * Uses the same Stella+ product ID from stripe-config.ts.
  *
  * Usage:
@@ -92,6 +92,13 @@ const stripe = new Stripe(STRIPE_SECRET_KEY);
 // A/B test price configurations
 const AB_TEST_PRICES = [
   {
+    name: "$14.99 One-Time",
+    nickname: "stella_one_time_14",
+    priceCents: 1499,
+    variantCode: "x14ts",
+    configKey: "ONE_TIME_14",
+  },
+  {
     name: "$24.99 One-Time",
     nickname: "stella_one_time_24",
     priceCents: 2499,
@@ -176,12 +183,14 @@ async function createABTestPrices() {
     const configName = isLiveKey ? "LIVE_PRICES" : "SANDBOX_PRICES";
     console.log(`\n📋 Add these IDs to src/lib/stripe-config.ts → ${configName}:\n`);
     console.log(`// A/B test price variants`);
+    console.log(`ONE_TIME_14: "${priceIds.ONE_TIME_14}", // $14.99 one-time (variant x14ts)`);
     console.log(`ONE_TIME_24: "${priceIds.ONE_TIME_24}", // $24.99 one-time (variant x24ts)`);
     console.log(`ONE_TIME_29: "${priceIds.ONE_TIME_29}", // $29.99 one-time (variant x29ts)`);
     console.log("\n");
 
     // URL codes reference
     console.log("📋 URL Codes Reference:");
+    console.log("   ?c=x14ts → $14.99 (uses ONE_TIME_14)");
     console.log("   ?c=x24ts → $24.99 (uses ONE_TIME_24)");
     console.log("   ?c=x29ts → $29.99 (uses ONE_TIME_29)");
     console.log("   (no param) → $19.99 (uses ONE_TIME)");

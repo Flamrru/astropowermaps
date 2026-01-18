@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine if this is a one-time payment or subscription
-    // "one_time" ($19.99), "one_time_24" ($24.99), "one_time_29" ($29.99), and "winback" ($9.99) are one-time payments
-    const isOneTimePayment = ["one_time", "one_time_24", "one_time_29", "winback"].includes(planId);
+    // "one_time" ($19.99), "one_time_14" ($14.99), "one_time_24" ($24.99), "one_time_29" ($29.99), and "winback" ($9.99) are one-time payments
+    const isOneTimePayment = ["one_time", "one_time_14", "one_time_24", "one_time_29", "winback"].includes(planId);
     const paymentVariant = isOneTimePayment ? (planId === "winback" ? "winback" : "single") : "subscription";
 
     // Get prices based on mode
@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       const priceIdMap: Record<string, string> = {
         winback: prices.WINBACK,
         one_time: prices.ONE_TIME,
+        one_time_14: prices.ONE_TIME_14,
         one_time_24: prices.ONE_TIME_24,
         one_time_29: prices.ONE_TIME_29,
       };
@@ -166,6 +167,7 @@ export async function POST(request: NextRequest) {
         line_items: [
           {
             price: planId === "winback" ? prices.WINBACK
+              : planId === "one_time_14" ? prices.ONE_TIME_14
               : planId === "one_time_24" ? prices.ONE_TIME_24
               : planId === "one_time_29" ? prices.ONE_TIME_29
               : prices.ONE_TIME,
