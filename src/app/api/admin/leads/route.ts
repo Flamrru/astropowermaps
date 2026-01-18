@@ -1178,7 +1178,20 @@ export async function GET(request: NextRequest) {
     // ========== CAROUSEL CHARTS (Independent of date filter) ==========
     // Calculate pre-built chart data for 6 slides (always shown regardless of filter)
 
-    // Helper to generate all hours/days in a range (fills gaps with zeros)
+    // Helper to generate all hours for a calendar day (00:00 to 23:00)
+    const generateCalendarDaySlots = (daysAgo: number): string[] => {
+      const slots: string[] = [];
+      const dayStart = getDayStart(daysAgo);
+      const dayDateStr = formatDateInTimezone(dayStart);
+
+      for (let hour = 0; hour < 24; hour++) {
+        const hourStr = String(hour).padStart(2, "0");
+        slots.push(`${dayDateStr}-${hourStr}`);
+      }
+      return slots;
+    };
+
+    // Helper to generate rolling 24h slots (for backwards compatibility)
     const generateHourlySlots = (hoursBack: number): string[] => {
       const slots: string[] = [];
       for (let i = hoursBack - 1; i >= 0; i--) {
@@ -1198,18 +1211,18 @@ export async function GET(request: NextRequest) {
       return slots;
     };
 
-    // Fetch data for last 24 hours
-    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const { data: leads24h } = await supabaseAdmin
+    // Fetch data for TODAY (calendar day: midnight to now)
+    const todayMidnight = getDayStart(0);
+    const { data: leadsToday } = await supabaseAdmin
       .from("astro_leads")
       .select("id, created_at")
-      .gte("created_at", twentyFourHoursAgo.toISOString())
+      .gte("created_at", todayMidnight.toISOString())
       .neq("email", "test@example.com");
 
-    const { data: purchases24h } = await supabaseAdmin
+    const { data: purchasesToday } = await supabaseAdmin
       .from("astro_purchases")
       .select("id, completed_at, amount_cents, status")
-      .gte("completed_at", twentyFourHoursAgo.toISOString())
+      .gte("completed_at", todayMidnight.toISOString())
       .eq("status", "completed")
       .neq("email", "test@example.com")
       .gte("amount_cents", 100);
@@ -1230,13 +1243,13 @@ export async function GET(request: NextRequest) {
       .neq("email", "test@example.com")
       .gte("amount_cents", 100);
 
-    // Group 24h data by hour
-    const leads24hByHour = groupByGranularity(
-      (leads24h || []).map(l => new Date(l.created_at)),
+    // Group today's data by hour
+    const leadsTodayByHour = groupByGranularity(
+      (leadsToday || []).map(l => new Date(l.created_at)),
       "hourly"
     );
-    const revenue24hByHour = groupRevenueByGranularity(
-      (purchases24h || []).map(p => ({ date: new Date(p.completed_at), amount: p.amount_cents || 0 })),
+    const revenueTodayByHour = groupRevenueByGranularity(
+      (purchasesToday || []).map(p => ({ date: new Date(p.completed_at), amount: p.amount_cents || 0 })),
       "hourly"
     );
 
@@ -1251,20 +1264,25 @@ export async function GET(request: NextRequest) {
     );
 
     // Generate time slots
-    const hourlySlots = generateHourlySlots(24);
+    const todaySlots = generateCalendarDaySlots(0); // Full day 00:00-23:00
     const daily7Slots = generateDailySlots(7);
     const daily14Slots = generateDailySlots(14);
 
-    // Build 24h hourly data arrays
-    const revenue24hData = hourlySlots.map(slot => ({
+    // Get current hour to determine which slots should have data vs be null
+    const currentHour = parseInt(
+      now.toLocaleString("en-US", { timeZone: DASHBOARD_TZ, hour: "2-digit", hour12: false })
+    );
+
+    // Build today's hourly data arrays (only hours up to current hour have data)
+    const revenueTodayData = todaySlots.map((slot, index) => ({
       date: slot,
       label: formatLabel(slot, "hourly"),
-      value: revenue24hByHour.get(slot) || 0,
+      value: index <= currentHour ? (revenueTodayByHour.get(slot) || 0) : null, // null for future hours
     }));
-    const leads24hData = hourlySlots.map(slot => ({
+    const leadsTodayData = todaySlots.map((slot, index) => ({
       date: slot,
       label: formatLabel(slot, "hourly"),
-      value: leads24hByHour.get(slot) || 0,
+      value: index <= currentHour ? (leadsTodayByHour.get(slot) || 0) : null, // null for future hours
     }));
 
     // Build 7d daily data arrays
@@ -1292,27 +1310,28 @@ export async function GET(request: NextRequest) {
     }));
 
     // Calculate totals and comparisons for each slide
-    const sumValues = (data: { value: number }[]) => data.reduce((sum, d) => sum + d.value, 0);
+    const sumValues = (data: { value: number | null }[]) =>
+      data.reduce((sum, d) => sum + (d.value || 0), 0);
 
-    // For 24h: compare to previous 24h
-    const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
-    const { data: leadsPrev24h } = await supabaseAdmin
+    // For Today: compare to yesterday (full calendar day)
+    const yesterdayStart = getDayStart(1);
+    const { data: leadsYesterday } = await supabaseAdmin
       .from("astro_leads")
       .select("id")
-      .gte("created_at", fortyEightHoursAgo.toISOString())
-      .lt("created_at", twentyFourHoursAgo.toISOString())
+      .gte("created_at", yesterdayStart.toISOString())
+      .lt("created_at", todayMidnight.toISOString())
       .neq("email", "test@example.com");
-    const { data: purchasesPrev24h } = await supabaseAdmin
+    const { data: purchasesYesterday } = await supabaseAdmin
       .from("astro_purchases")
       .select("amount_cents")
-      .gte("completed_at", fortyEightHoursAgo.toISOString())
-      .lt("completed_at", twentyFourHoursAgo.toISOString())
+      .gte("completed_at", yesterdayStart.toISOString())
+      .lt("completed_at", todayMidnight.toISOString())
       .eq("status", "completed")
       .neq("email", "test@example.com")
       .gte("amount_cents", 100);
 
-    const prevLeads24h = leadsPrev24h?.length || 0;
-    const prevRevenue24h = (purchasesPrev24h || []).reduce((sum, p) => sum + (p.amount_cents || 0), 0);
+    const prevLeadsYesterday = leadsYesterday?.length || 0;
+    const prevRevenueYesterday = (purchasesYesterday || []).reduce((sum, p) => sum + (p.amount_cents || 0), 0);
 
     // For 7d: compare to previous 7d
     const twentyOneDaysAgo = getDayStart(21);
@@ -1363,29 +1382,16 @@ export async function GET(request: NextRequest) {
     const calcChange = (current: number, previous: number) =>
       previous > 0 ? ((current - previous) / previous) * 100 : current > 0 ? 100 : 0;
 
-    // ========== COMPARISON DAYS FOR 24H CHARTS ==========
+    // ========== COMPARISON DAYS FOR TODAY'S CHARTS ==========
     // Fetch data for yesterday (1 day ago), 2 days ago, 3 days ago
-    // Generate hourly slots matching the same hour-of-day as today's chart
-    const generateHourlySlotsForDay = (daysAgo: number): string[] => {
-      const slots: string[] = [];
-      // Start from (daysAgo + 1) * 24 hours ago, end at daysAgo * 24 hours ago
-      // This aligns with today's 24h window shifted back by daysAgo days
-      for (let i = 23; i >= 0; i--) {
-        const d = new Date(now.getTime() - (daysAgo * 24 + i) * 60 * 60 * 1000);
-        slots.push(formatHourInTimezone(d));
-      }
-      return slots;
-    };
+    // These are full calendar days (midnight to midnight) for overlay comparison
 
-    // Fetch historical data for comparison (3 previous days)
-    // daysAgo=1 means "yesterday" = 24-48 hours ago
-    // daysAgo=2 means "2 days ago" = 48-72 hours ago
+    // Fetch historical data for comparison (3 previous calendar days)
     const comparisonDayData = await Promise.all(
       [1, 2, 3].map(async (daysAgo) => {
-        // For yesterday (daysAgo=1): 48h ago to 24h ago
-        // For 2 days ago (daysAgo=2): 72h ago to 48h ago
-        const dayEnd = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
-        const dayStart = new Date(now.getTime() - (daysAgo + 1) * 24 * 60 * 60 * 1000);
+        // Calendar day: daysAgo=1 is yesterday midnight to today midnight
+        const dayStart = getDayStart(daysAgo);
+        const dayEnd = getDayStart(daysAgo - 1); // Next day's midnight
 
         const [leadsResult, purchasesResult] = await Promise.all([
           supabaseAdmin
@@ -1404,7 +1410,8 @@ export async function GET(request: NextRequest) {
             .gte("amount_cents", 100),
         ]);
 
-        const hourlySlots = generateHourlySlotsForDay(daysAgo);
+        // Use calendar day slots (00-23) for this day
+        const daySlots = generateCalendarDaySlots(daysAgo);
 
         // Group by hour
         const leadsByHour = groupByGranularity(
@@ -1416,16 +1423,15 @@ export async function GET(request: NextRequest) {
           "hourly"
         );
 
-        // Build data arrays aligned with today's hourly slots (by hour of day, not absolute time)
-        // We need to map each hour slot to the corresponding hour label
-        const leadsData = hourlySlots.map((slot, i) => ({
+        // Build data arrays - each slot maps to the same hour position as today
+        const leadsData = daySlots.map((slot) => ({
           date: slot,
-          label: formatLabel(hourlySlots[i], "hourly"),
+          label: formatLabel(slot, "hourly"),
           value: leadsByHour.get(slot) || 0,
         }));
-        const revenueData = hourlySlots.map((slot, i) => ({
+        const revenueData = daySlots.map((slot) => ({
           date: slot,
-          label: formatLabel(hourlySlots[i], "hourly"),
+          label: formatLabel(slot, "hourly"),
           value: revenueByHour.get(slot) || 0,
         }));
 
@@ -1455,23 +1461,23 @@ export async function GET(request: NextRequest) {
     // Build carousel charts array (Revenue first as default)
     const carouselCharts = [
       {
-        id: "revenue-24h",
+        id: "revenue-today",
         title: "Revenue",
-        subtitle: "Last 24 hours",
-        data: revenue24hData,
-        total: sumValues(revenue24hData),
-        changePercent: calcChange(sumValues(revenue24hData), prevRevenue24h),
+        subtitle: "Today",
+        data: revenueTodayData,
+        total: sumValues(revenueTodayData),
+        changePercent: calcChange(sumValues(revenueTodayData), prevRevenueYesterday),
         color: "#10b981", // green
         valueFormatter: "currency" as const,
         comparisonDays: revenueComparisonDays,
       },
       {
-        id: "leads-24h",
+        id: "leads-today",
         title: "Leads",
-        subtitle: "Last 24 hours",
-        data: leads24hData,
-        total: sumValues(leads24hData),
-        changePercent: calcChange(sumValues(leads24hData), prevLeads24h),
+        subtitle: "Today",
+        data: leadsTodayData,
+        total: sumValues(leadsTodayData),
+        changePercent: calcChange(sumValues(leadsTodayData), prevLeadsYesterday),
         color: "#6366f1", // indigo
         valueFormatter: "number" as const,
         comparisonDays: leadsComparisonDays,

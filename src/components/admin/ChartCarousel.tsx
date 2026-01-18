@@ -23,7 +23,7 @@ interface CarouselChart {
   id: string;
   title: string;
   subtitle: string;
-  data: { date: string; label: string; value: number }[];
+  data: { date: string; label: string; value: number | null }[];
   total: number;
   changePercent: number;
   color: string;
@@ -159,14 +159,15 @@ export default function ChartCarousel({ charts }: ChartCarouselProps) {
     }
 
     // Create merged data with all comparison values
+    // Today's data may have null for future hours, comparison days have full 24h
     return chart.data.map((point, i) => {
-      const merged: Record<string, number | string> = {
+      const merged: Record<string, number | string | null> = {
         date: point.date,
         label: point.label,
-        value: point.value,
+        value: point.value, // Can be null for future hours
       };
 
-      // Add comparison data (aligned by index since they have same time slots)
+      // Add comparison data (aligned by index = same hour of day)
       chart.comparisonDays?.forEach((compDay, dayIndex) => {
         if (compDay.data[i]) {
           merged[`comp${dayIndex}`] = compDay.data[i].value;
@@ -255,7 +256,7 @@ export default function ChartCarousel({ charts }: ChartCarouselProps) {
             {currentChart.changePercent.toFixed(1)}%
           </span>
         </div>
-        <span className="text-xs text-white/40">vs previous</span>
+        <span className="text-xs text-white/40">vs yesterday</span>
       </div>
 
       {/* Comparison day toggles */}
@@ -383,6 +384,7 @@ export default function ChartCarousel({ charts }: ChartCarouselProps) {
                       })}
 
                       {/* Today's line (on top, most prominent) */}
+                      {/* connectNulls=false makes line stop at current hour */}
                       <Area
                         type="monotone"
                         dataKey="value"
@@ -390,6 +392,7 @@ export default function ChartCarousel({ charts }: ChartCarouselProps) {
                         strokeWidth={2}
                         fill={`url(#gradient-${chart.id})`}
                         dot={false}
+                        connectNulls={false}
                         activeDot={{
                           r: 5,
                           fill: chart.color,
