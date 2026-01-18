@@ -71,11 +71,19 @@ interface PricingSelectorProps {
   onCheckout?: () => void; // For single payment: triggers checkout directly
 }
 
-// Calculate savings percentage based on price
-function getSavingsText(priceCents: number): string {
-  // Original price is $49.00 (4900 cents)
-  const originalPrice = 4900;
-  const savings = Math.round(((originalPrice - priceCents) / originalPrice) * 100);
+// Get strikethrough price based on plan (keeps savings ~58-59%)
+function getStrikethroughPrice(planId: PlanId): { display: string; cents: number } {
+  const prices: Record<string, { display: string; cents: number }> = {
+    one_time: { display: "$49.00", cents: 4900 },      // $19.99 → 59% off
+    one_time_24: { display: "$59.00", cents: 5900 },   // $24.99 → 58% off
+    one_time_29: { display: "$69.00", cents: 6900 },   // $29.99 → 57% off
+  };
+  return prices[planId] || prices.one_time;
+}
+
+// Calculate savings percentage based on price and original
+function getSavingsText(priceCents: number, originalCents: number): string {
+  const savings = Math.round(((originalCents - priceCents) / originalCents) * 100);
   return `SAVE ${savings}%`;
 }
 
@@ -92,7 +100,8 @@ function SinglePaymentCard({
   // Get plan data from SUBSCRIPTION_PLANS
   const plan = SUBSCRIPTION_PLANS[planId] || SUBSCRIPTION_PLANS.one_time;
   const priceDisplay = plan.trialPriceDisplay; // e.g., "$19.99", "$24.99", "$29.99"
-  const savingsText = getSavingsText(plan.trialPriceCents);
+  const strikethrough = getStrikethroughPrice(planId);
+  const savingsText = getSavingsText(plan.trialPriceCents, strikethrough.cents);
 
   return (
     <motion.button
@@ -174,7 +183,7 @@ function SinglePaymentCard({
                 textDecorationThickness: "3px",
               }}
             >
-              $49.00
+              {strikethrough.display}
             </span>
           </div>
 
