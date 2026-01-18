@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { useReveal } from "@/lib/reveal-state";
@@ -102,23 +102,10 @@ export default function RevealScreen09Paywall() {
   // Default is always $19.99 (quiz, ads, email without offer param)
   const hasSubscriptionPlan = searchParams.get("plan") === "subscription";
   const isWinback = searchParams.get("offer") === "win";
-
-  // Get price variant from URL param first, then check localStorage (set by QuizShell)
-  const urlPriceVariant = searchParams.get("c");
-  const [priceVariantCode, setPriceVariantCode] = useState<string | null>(urlPriceVariant);
-
-  // Check localStorage for variant code on mount (captures quiz funnel flow)
-  useEffect(() => {
-    if (!urlPriceVariant) {
-      const storedVariant = localStorage.getItem("stella_price_variant");
-      if (storedVariant && VARIANT_TO_PLAN[storedVariant]) {
-        setPriceVariantCode(storedVariant);
-      }
-    }
-  }, [urlPriceVariant]);
+  const priceVariantCode = searchParams.get("c"); // x24ts ($24.99) or x29ts ($29.99)
 
   // Display variant determines UI layout (subscription picker vs single card)
-  // Price variants (x14ts, x24ts, x29ts) use the "single" display but different prices
+  // Price variants (x24ts, x29ts) use the "single" display but different prices
   const variant: PaywallVariant = isWinback
     ? "winback"
     : hasSubscriptionPlan
@@ -135,13 +122,6 @@ export default function RevealScreen09Paywall() {
         ? "trial_7day"
         : "one_time";
   const [selectedPlan, setSelectedPlan] = useState<PlanId>(defaultPlan);
-
-  // Update selected plan when price variant changes (from localStorage)
-  useEffect(() => {
-    if (priceVariantCode && VARIANT_TO_PLAN[priceVariantCode]) {
-      setSelectedPlan(VARIANT_TO_PLAN[priceVariantCode]);
-    }
-  }, [priceVariantCode]);
 
   // Scroll to pricing section (for CTAs throughout page)
   const scrollToPricing = () => {
