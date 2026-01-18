@@ -728,52 +728,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Admin Navigation */}
-      <AdminNavbar />
-
-      {/* Header */}
-      <header className="premium-header relative z-10" style={{ marginTop: 0 }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="logo-mark">
-                <svg className="w-5 h-5 text-[var(--premium-gold)] relative z-10" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
-                </svg>
-              </div>
-              <span className="font-semibold text-white tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>Power Map Admin</span>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-3">
-              {lastUpdated && (
-                <span className="flex items-center gap-2 text-xs text-[var(--text-faint)] hidden sm:block">
-                  <span className="pulse-dot" />
-                  Updated {formatTimeAgo(lastUpdated)}
-                </span>
-              )}
-              <button
-                onClick={exportToCSV}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white hover:bg-white/10 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Export CSV
-              </button>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400 hover:bg-red-500/20 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AdminNavbar onExportCSV={exportToCSV} showExport={true} />
 
       {/* Main content */}
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
