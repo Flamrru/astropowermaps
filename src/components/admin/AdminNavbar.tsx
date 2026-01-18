@@ -52,94 +52,118 @@ export default function AdminNavbar({ onExportCSV, showExport = false }: AdminNa
   };
 
   return (
-    <nav
-      className="sticky top-0 z-50 border-b border-white/[0.06]"
-      style={{
-        background: 'linear-gradient(180deg, rgba(10, 10, 15, 0.98) 0%, rgba(10, 10, 15, 0.95) 100%)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-      }}
-    >
-      {/* Top gold accent line */}
+    <nav className="sticky top-0 z-50 bg-[#08080c] border-b border-[#1a1a24]">
+      {/* Top accent line */}
       <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-[40%] h-[1px]"
+        className="absolute top-0 inset-x-0 h-px"
         style={{
-          background: 'linear-gradient(90deg, transparent 0%, rgba(232,197,71,0.3) 30%, rgba(232,197,71,0.5) 50%, rgba(232,197,71,0.3) 70%, transparent 100%)',
+          background: 'linear-gradient(90deg, transparent, #E8C547 20%, #F4D76B 50%, #E8C547 80%, transparent)',
+          opacity: 0.4,
         }}
       />
 
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        {/* Left: Brand */}
-        <div className="flex items-center gap-3">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="h-16 flex items-center justify-between">
+
+          {/* Left: Brand */}
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{
+                background: 'linear-gradient(145deg, #1a1a24, #0d0d12)',
+                border: '1px solid #E8C547',
+                boxShadow: '0 0 20px rgba(232,197,71,0.15), inset 0 1px 0 rgba(255,255,255,0.05)',
+              }}
+            >
+              <svg className="w-5 h-5 text-[#E8C547]" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-white font-semibold text-base tracking-tight">AstroPower</div>
+              <div className="text-[10px] text-[#E8C547]/60 uppercase tracking-[0.2em] font-medium">Admin</div>
+            </div>
+          </div>
+
+          {/* Center: Navigation */}
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center border border-[#E8C547]/20"
+            className="flex items-center gap-1 px-1.5 py-1.5 rounded-2xl"
             style={{
-              background: 'linear-gradient(135deg, rgba(232,197,71,0.12) 0%, rgba(232,197,71,0.04) 100%)',
+              background: 'linear-gradient(180deg, #0f0f14 0%, #0a0a0f 100%)',
+              border: '1px solid #1f1f2a',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02), 0 4px 12px rgba(0,0,0,0.3)',
             }}
           >
-            <svg className="w-4 h-4 text-[#E8C547]" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
-            </svg>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-white font-semibold text-[15px] tracking-tight leading-tight">AstroPower</span>
-            <span className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Admin</span>
-          </div>
-        </div>
+            {TABS.map((tab) => {
+              const isActive = pathname === tab.href ||
+                (tab.href !== "/admin/dashboard" && pathname?.startsWith(tab.href));
 
-        {/* Center: Navigation */}
-        <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-1 border border-white/[0.04]">
-          {TABS.map((tab) => {
-            const isActive = pathname === tab.href ||
-              (tab.href !== "/admin/dashboard" && pathname?.startsWith(tab.href));
-
-            return (
-              <Link
-                key={tab.id}
-                href={tab.href}
-                className={`
-                  relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
-                  ${isActive
-                    ? 'text-white bg-white/[0.08] shadow-sm'
-                    : 'text-white/40 hover:text-white/70 hover:bg-white/[0.04]'
-                  }
-                `}
-              >
-                <span className={`transition-colors duration-200 ${isActive ? 'text-[#E8C547]' : ''}`}>
-                  {tab.icon}
-                </span>
-                <span className="hidden sm:inline">{tab.label}</span>
-
-                {/* Active indicator dot */}
-                {isActive && (
+              return (
+                <Link
+                  key={tab.id}
+                  href={tab.href}
+                  className="relative flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300"
+                  style={isActive ? {
+                    background: 'linear-gradient(180deg, #1a1a24 0%, #141419 100%)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)',
+                    color: '#fff',
+                  } : {
+                    color: 'rgba(255,255,255,0.4)',
+                  }}
+                >
                   <span
-                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#E8C547]"
-                    style={{ boxShadow: '0 0 8px rgba(232,197,71,0.6)' }}
-                  />
-                )}
-              </Link>
-            );
-          })}
-        </div>
+                    className="transition-colors duration-300"
+                    style={{ color: isActive ? '#E8C547' : 'inherit' }}
+                  >
+                    {tab.icon}
+                  </span>
+                  <span>{tab.label}</span>
 
-        {/* Right: Actions */}
-        <div className="flex items-center gap-2">
-          {showExport && onExportCSV && (
+                  {/* Active indicator bar */}
+                  {isActive && (
+                    <div
+                      className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
+                      style={{
+                        background: 'linear-gradient(90deg, transparent, #E8C547, transparent)',
+                        boxShadow: '0 0 10px rgba(232,197,71,0.5)',
+                      }}
+                    />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-3">
+            {showExport && onExportCSV && (
+              <button
+                onClick={onExportCSV}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300"
+                style={{
+                  background: 'linear-gradient(180deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.08) 100%)',
+                  border: '1px solid rgba(16,185,129,0.3)',
+                  color: '#10B981',
+                  boxShadow: '0 0 15px rgba(16,185,129,0.1)',
+                }}
+              >
+                <Download className="w-4 h-4" />
+                <span>Export</span>
+              </button>
+            )}
             <button
-              onClick={onExportCSV}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-emerald-400/80 hover:text-emerald-400 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.12] border border-emerald-500/20 hover:border-emerald-500/30 transition-all duration-200"
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400"
+              style={{
+                background: 'linear-gradient(180deg, #141419 0%, #0f0f14 100%)',
+                border: '1px solid #1f1f2a',
+                color: 'rgba(255,255,255,0.5)',
+              }}
             >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Export</span>
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
             </button>
-          )}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-white/40 hover:text-red-400 bg-white/[0.03] hover:bg-red-500/[0.08] border border-white/[0.06] hover:border-red-500/20 transition-all duration-200"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Logout</span>
-          </button>
+          </div>
         </div>
       </div>
     </nav>
