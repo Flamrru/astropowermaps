@@ -51,6 +51,11 @@ interface ABPriceTestResponse {
     first_lead: string | null;
     last_lead: string | null;
   };
+  debug: {
+    db_lead_count: number | null;
+    fetched_lead_count: number;
+    pages_fetched: number;
+  };
   generated_at: string;
 }
 
@@ -86,6 +91,20 @@ export async function GET(request: Request) {
   const endDate = searchParams.get("endDate");
 
   try {
+    // First, get the actual count of leads (to verify we're not hitting limits)
+    let countQuery = supabaseAdmin
+      .from("astro_leads")
+      .select("id", { count: "exact", head: true });
+
+    if (startDate) {
+      countQuery = countQuery.gte("created_at", startDate);
+    }
+    if (endDate) {
+      countQuery = countQuery.lte("created_at", endDate);
+    }
+
+    const { count: totalLeadCount } = await countQuery;
+
     // Build leads query with optional date filters
     let leadsQuery = supabaseAdmin
       .from("astro_leads")
@@ -100,7 +119,38 @@ export async function GET(request: Request) {
       leadsQuery = leadsQuery.lte("created_at", endDate);
     }
 
-    const { data: leads, error: leadsError } = await leadsQuery.limit(50000); // High limit for all leads
+    // Use pagination to get ALL leads (Supabase default limit is 1000)
+    const allLeads: Array<{ id: string; session_id: string; price_variant_code: string | null; created_at: string }> = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data: pageData, error: pageError } = await leadsQuery
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+
+      if (pageError) {
+        console.error("Failed to fetch leads page:", pageError);
+        break;
+      }
+
+      if (pageData && pageData.length > 0) {
+        allLeads.push(...pageData);
+        page++;
+        hasMore = pageData.length === pageSize; // If we got full page, there might be more
+      } else {
+        hasMore = false;
+      }
+
+      // Safety limit to prevent infinite loops
+      if (page > 100) {
+        console.warn("Hit pagination safety limit at 100 pages");
+        break;
+      }
+    }
+
+    const leads = allLeads;
+    const leadsError = null;
 
     if (leadsError) {
       console.error("Failed to fetch leads:", leadsError);
@@ -110,12 +160,39 @@ export async function GET(request: Request) {
       );
     }
 
-    // Fetch completed purchases (high limit to get all)
-    const { data: purchases, error: purchasesError } = await supabaseAdmin
-      .from("astro_purchases")
-      .select("session_id, amount_cents, completed_at, metadata")
-      .eq("status", "completed")
-      .limit(50000);
+    // Fetch completed purchases with pagination
+    const allPurchases: Array<{ session_id: string; amount_cents: number; completed_at: string; metadata: unknown }> = [];
+    let purchasePage = 0;
+    let purchaseHasMore = true;
+
+    while (purchaseHasMore) {
+      const { data: purchasePageData, error: purchasePageError } = await supabaseAdmin
+        .from("astro_purchases")
+        .select("session_id, amount_cents, completed_at, metadata")
+        .eq("status", "completed")
+        .range(purchasePage * pageSize, (purchasePage + 1) * pageSize - 1);
+
+      if (purchasePageError) {
+        console.error("Failed to fetch purchases page:", purchasePageError);
+        break;
+      }
+
+      if (purchasePageData && purchasePageData.length > 0) {
+        allPurchases.push(...purchasePageData);
+        purchasePage++;
+        purchaseHasMore = purchasePageData.length === pageSize;
+      } else {
+        purchaseHasMore = false;
+      }
+
+      if (purchasePage > 50) {
+        console.warn("Hit purchase pagination safety limit");
+        break;
+      }
+    }
+
+    const purchases = allPurchases;
+    const purchasesError = null;
 
     if (purchasesError) {
       console.error("Failed to fetch purchases:", purchasesError);
@@ -301,6 +378,11 @@ export async function GET(request: Request) {
         end: endDate,
         first_lead: firstLead,
         last_lead: lastLead,
+      },
+      debug: {
+        db_lead_count: totalLeadCount ?? null,
+        fetched_lead_count: leads.length,
+        pages_fetched: page,
       },
       generated_at: new Date().toISOString(),
     };
