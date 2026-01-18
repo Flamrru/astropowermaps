@@ -1,61 +1,26 @@
 # A/B Price Test Campaign Links
 
+> Quick reference for Meta ad campaigns. For implementation details, see `docs/AB-PRICE-TESTING.md`.
+
 ## Quick Copy Links
 
-| Variant | URL |
-|---------|-----|
-| Control | `https://www.astropowermap.com` |
-| Test $14.99 | `https://www.astropowermap.com/?c=x14ts` |
-| Test $24.99 | `https://www.astropowermap.com/?c=x24ts` |
-| Test $29.99 | `https://www.astropowermap.com/?c=x29ts` |
+| Variant | Price | URL |
+|---------|-------|-----|
+| Control | $19.99 | `https://www.astropowermap.com` |
+| Test $14.99 | $14.99 | `https://www.astropowermap.com/?c=x14ts` |
+| Test $24.99 | $24.99 | `https://www.astropowermap.com/?c=x24ts` |
+| Test $29.99 | $29.99 | `https://www.astropowermap.com/?c=x29ts` |
 
 ---
 
-## Control (Default $19.99)
+## Full Pricing Matrix
 
-```
-https://www.astropowermap.com
-```
-
-| Price | Strikethrough | Savings | Plan ID |
-|-------|---------------|---------|---------|
-| $19.99 | $49.00 | 59% | `one_time` |
-
----
-
-## Test $14.99
-
-```
-https://www.astropowermap.com/?c=x14ts
-```
-
-| Price | Strikethrough | Savings | Plan ID |
-|-------|---------------|---------|---------|
-| $14.99 | $35.00 | 57% | `one_time_14` |
-
----
-
-## Test $24.99
-
-```
-https://www.astropowermap.com/?c=x24ts
-```
-
-| Price | Strikethrough | Savings | Plan ID |
-|-------|---------------|---------|---------|
-| $24.99 | $59.00 | 58% | `one_time_24` |
-
----
-
-## Test $29.99
-
-```
-https://www.astropowermap.com/?c=x29ts
-```
-
-| Price | Strikethrough | Savings | Plan ID |
-|-------|---------------|---------|---------|
-| $29.99 | $69.00 | 57% | `one_time_29` |
+| Code | Price | Strikethrough | Savings | Plan ID |
+|------|-------|---------------|---------|---------|
+| (none) | $19.99 | $49.00 | 59% | `one_time` |
+| `x14ts` | $14.99 | $35.00 | 57% | `one_time_14` |
+| `x24ts` | $24.99 | $59.00 | 58% | `one_time_24` |
+| `x29ts` | $29.99 | $69.00 | 57% | `one_time_29` |
 
 ---
 

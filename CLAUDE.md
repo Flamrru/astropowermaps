@@ -37,6 +37,7 @@ Mobile-first astrology app with quiz funnel, astrocartography map, Stella+ subsc
 ## Source-of-Truth Docs
 - Architecture: docs/ARCHITECTURE.md
 - Debug Solutions: docs/DEBUG_SOLUTIONS.md — **Check before debugging known issues!**
+- A/B Price Testing: docs/AB-PRICE-TESTING.md — Implementation guide for price variants
 - Changelog: CHANGELOG.md
 
 ## Commands
