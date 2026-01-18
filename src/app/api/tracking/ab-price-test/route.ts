@@ -45,6 +45,12 @@ interface ABPriceTestResponse {
     purchases: number;
     revenue_cents: number;
   };
+  date_range: {
+    start: string | null;
+    end: string | null;
+    first_lead: string | null;
+    last_lead: string | null;
+  };
   generated_at: string;
 }
 
@@ -55,8 +61,12 @@ interface ABPriceTestResponse {
  * - Per-variant metrics (leads, purchases, conversion, revenue)
  * - Daily trends for charting
  * - Winner determination based on revenue per lead
+ *
+ * Query params:
+ * - startDate: ISO date string (optional) - filter leads created after this date
+ * - endDate: ISO date string (optional) - filter leads created before this date
  */
-export async function GET() {
+export async function GET(request: Request) {
   // Check authentication (accept either tracking or admin session)
   const cookieStore = await cookies();
   const trackingSession = cookieStore.get(TRACKING_COOKIE);
@@ -70,13 +80,27 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Parse date filters from query params
+  const { searchParams } = new URL(request.url);
+  const startDate = searchParams.get("startDate");
+  const endDate = searchParams.get("endDate");
+
   try {
-    // Fetch all leads with their variant codes
-    const { data: leads, error: leadsError } = await supabaseAdmin
+    // Build leads query with optional date filters
+    let leadsQuery = supabaseAdmin
       .from("astro_leads")
       .select("id, session_id, price_variant_code, created_at")
-      .order("created_at", { ascending: true })
-      .limit(10000); // Override default 1000 limit
+      .order("created_at", { ascending: true });
+
+    // Apply date filters if provided
+    if (startDate) {
+      leadsQuery = leadsQuery.gte("created_at", startDate);
+    }
+    if (endDate) {
+      leadsQuery = leadsQuery.lte("created_at", endDate);
+    }
+
+    const { data: leads, error: leadsError } = await leadsQuery.limit(50000); // High limit for all leads
 
     if (leadsError) {
       console.error("Failed to fetch leads:", leadsError);
@@ -86,11 +110,12 @@ export async function GET() {
       );
     }
 
-    // Fetch completed purchases
+    // Fetch completed purchases (high limit to get all)
     const { data: purchases, error: purchasesError } = await supabaseAdmin
       .from("astro_purchases")
       .select("session_id, amount_cents, completed_at, metadata")
-      .eq("status", "completed");
+      .eq("status", "completed")
+      .limit(50000);
 
     if (purchasesError) {
       console.error("Failed to fetch purchases:", purchasesError);
@@ -259,6 +284,10 @@ export async function GET() {
       }
     }
 
+    // Get date range info from the leads data
+    const firstLead = leads && leads.length > 0 ? leads[0].created_at : null;
+    const lastLead = leads && leads.length > 0 ? leads[leads.length - 1].created_at : null;
+
     const response: ABPriceTestResponse = {
       variants,
       daily_trends: dailyTrends,
@@ -266,6 +295,12 @@ export async function GET() {
         leads: totalLeads,
         purchases: totalPurchases,
         revenue_cents: totalRevenueCents,
+      },
+      date_range: {
+        start: startDate,
+        end: endDate,
+        first_lead: firstLead,
+        last_lead: lastLead,
       },
       generated_at: new Date().toISOString(),
     };

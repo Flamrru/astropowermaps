@@ -18,6 +18,7 @@ import {
   FlaskConical,
   BarChart3,
   Lightbulb,
+  Calendar,
 } from "lucide-react";
 import {
   AreaChart,
@@ -64,8 +65,23 @@ interface ABPriceTestData {
     purchases: number;
     revenue_cents: number;
   };
+  date_range: {
+    start: string | null;
+    end: string | null;
+    first_lead: string | null;
+    last_lead: string | null;
+  };
   generated_at: string;
 }
+
+// Preset date ranges
+const DATE_PRESETS = [
+  { label: "All Time", value: "all" },
+  { label: "Last 7 Days", value: "7d" },
+  { label: "Last 14 Days", value: "14d" },
+  { label: "Last 30 Days", value: "30d" },
+  { label: "Custom", value: "custom" },
+];
 
 // Variant colors
 const VARIANT_COLORS: Record<string, string> = {
@@ -83,6 +99,9 @@ export default function ABTestingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [datePreset, setDatePreset] = useState("all");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
 
   const fetchData = useCallback(async (isAutoRefresh = false) => {
     if (isAutoRefresh) {
@@ -93,7 +112,32 @@ export default function ABTestingPage() {
     setError(null);
 
     try {
-      const response = await fetch("/api/tracking/ab-price-test");
+      // Build URL with date filters
+      let url = "/api/tracking/ab-price-test";
+      const params = new URLSearchParams();
+
+      if (datePreset === "7d") {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+        params.set("startDate", startDate.toISOString());
+      } else if (datePreset === "14d") {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 14);
+        params.set("startDate", startDate.toISOString());
+      } else if (datePreset === "30d") {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+        params.set("startDate", startDate.toISOString());
+      } else if (datePreset === "custom") {
+        if (customStartDate) params.set("startDate", new Date(customStartDate).toISOString());
+        if (customEndDate) params.set("endDate", new Date(customEndDate + "T23:59:59").toISOString());
+      }
+
+      if (params.toString()) {
+        url += "?" + params.toString();
+      }
+
+      const response = await fetch(url);
       if (response.status === 401) {
         router.push("/admin");
         return;
@@ -107,7 +151,7 @@ export default function ABTestingPage() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [router]);
+  }, [router, datePreset, customStartDate, customEndDate]);
 
   useEffect(() => {
     fetchData();
@@ -180,21 +224,59 @@ export default function ABTestingPage() {
             </div>
           </div>
 
-          <button
-            onClick={() => fetchData(true)}
-            disabled={isRefreshing}
-            className={`
-              flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300
-              ${isRefreshing
-                ? "bg-purple-500/20 text-purple-400"
-                : "bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/10"
-              }
-            `}
-            style={{ fontFamily: "Outfit, sans-serif" }}
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-            <span className="text-sm font-medium">Refresh</span>
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Date Filter */}
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-white/40" />
+              <select
+                value={datePreset}
+                onChange={(e) => setDatePreset(e.target.value)}
+                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-purple-500/50"
+                style={{ fontFamily: "Outfit, sans-serif" }}
+              >
+                {DATE_PRESETS.map((preset) => (
+                  <option key={preset.value} value={preset.value} className="bg-[#0a0a0f]">
+                    {preset.label}
+                  </option>
+                ))}
+              </select>
+
+              {/* Custom date inputs */}
+              {datePreset === "custom" && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-purple-500/50"
+                  />
+                  <span className="text-white/40">to</span>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-purple-500/50"
+                  />
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => fetchData(true)}
+              disabled={isRefreshing}
+              className={`
+                flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300
+                ${isRefreshing
+                  ? "bg-purple-500/20 text-purple-400"
+                  : "bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/10"
+                }
+              `}
+              style={{ fontFamily: "Outfit, sans-serif" }}
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              <span className="text-sm font-medium">Refresh</span>
+            </button>
+          </div>
         </div>
 
         {isLoading ? (
