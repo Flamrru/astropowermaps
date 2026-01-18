@@ -459,7 +459,8 @@ export async function GET(request: NextRequest) {
     let leadsQuery = supabaseAdmin
       .from("astro_leads")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(5000); // Increased from default 1000
 
     if (effectiveFrom) {
       leadsQuery = leadsQuery.gte("created_at", effectiveFrom.toISOString());
@@ -485,12 +486,19 @@ export async function GET(request: NextRequest) {
     const monthStart = getDayStart(30);  // 30 days ago 00:00 local
 
     // Fetch ALL leads for stats (not filtered by period)
+    // Use count for total, then fetch with higher limit for date filtering
+    const { count: totalLeadsCount } = await supabaseAdmin
+      .from("astro_leads")
+      .select("*", { count: "exact", head: true });
+
     const { data: allLeads } = await supabaseAdmin
       .from("astro_leads")
-      .select("created_at");
+      .select("created_at")
+      .order("created_at", { ascending: false })
+      .limit(10000);
 
     const stats = {
-      total: allLeads?.length || 0,
+      total: totalLeadsCount || allLeads?.length || 0,
       today: allLeads?.filter(l => new Date(l.created_at) >= todayStart).length || 0,
       thisWeek: allLeads?.filter(l => new Date(l.created_at) >= weekStart).length || 0,
       thisMonth: allLeads?.filter(l => new Date(l.created_at) >= monthStart).length || 0,

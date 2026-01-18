@@ -68,7 +68,8 @@ export async function GET() {
     const { data: leads, error: leadsError } = await supabaseAdmin
       .from("astro_leads")
       .select("id, session_id, price_variant_code, created_at")
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .limit(10000); // Override default 1000 limit
 
     if (leadsError) {
       console.error("Failed to fetch leads:", leadsError);
