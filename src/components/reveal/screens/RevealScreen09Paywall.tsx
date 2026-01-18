@@ -102,10 +102,10 @@ export default function RevealScreen09Paywall() {
   // Default is always $19.99 (quiz, ads, email without offer param)
   const hasSubscriptionPlan = searchParams.get("plan") === "subscription";
   const isWinback = searchParams.get("offer") === "win";
-  const priceVariantCode = searchParams.get("c"); // x24ts ($24.99) or x29ts ($29.99)
+  const priceVariantCode = searchParams.get("c"); // x14ts ($14.99), x24ts ($24.99), x29ts ($29.99)
 
   // Display variant determines UI layout (subscription picker vs single card)
-  // Price variants (x24ts, x29ts) use the "single" display but different prices
+  // Price variants (x14ts, x24ts, x29ts) use the "single" display but different prices
   const variant: PaywallVariant = isWinback
     ? "winback"
     : hasSubscriptionPlan
