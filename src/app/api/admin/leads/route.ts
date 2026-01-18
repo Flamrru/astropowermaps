@@ -1365,21 +1365,27 @@ export async function GET(request: NextRequest) {
 
     // ========== COMPARISON DAYS FOR 24H CHARTS ==========
     // Fetch data for yesterday (1 day ago), 2 days ago, 3 days ago
+    // Generate hourly slots matching the same hour-of-day as today's chart
     const generateHourlySlotsForDay = (daysAgo: number): string[] => {
       const slots: string[] = [];
-      const baseTime = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+      // Start from (daysAgo + 1) * 24 hours ago, end at daysAgo * 24 hours ago
+      // This aligns with today's 24h window shifted back by daysAgo days
       for (let i = 23; i >= 0; i--) {
-        const d = new Date(baseTime.getTime() - i * 60 * 60 * 1000);
+        const d = new Date(now.getTime() - (daysAgo * 24 + i) * 60 * 60 * 1000);
         slots.push(formatHourInTimezone(d));
       }
       return slots;
     };
 
     // Fetch historical data for comparison (3 previous days)
+    // daysAgo=1 means "yesterday" = 24-48 hours ago
+    // daysAgo=2 means "2 days ago" = 48-72 hours ago
     const comparisonDayData = await Promise.all(
       [1, 2, 3].map(async (daysAgo) => {
-        const dayStart = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
-        const dayEnd = new Date(now.getTime() - (daysAgo - 1) * 24 * 60 * 60 * 1000);
+        // For yesterday (daysAgo=1): 48h ago to 24h ago
+        // For 2 days ago (daysAgo=2): 72h ago to 48h ago
+        const dayEnd = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+        const dayStart = new Date(now.getTime() - (daysAgo + 1) * 24 * 60 * 60 * 1000);
 
         const [leadsResult, purchasesResult] = await Promise.all([
           supabaseAdmin
