@@ -1363,6 +1363,89 @@ export async function GET(request: NextRequest) {
     const calcChange = (current: number, previous: number) =>
       previous > 0 ? ((current - previous) / previous) * 100 : current > 0 ? 100 : 0;
 
+    // ========== COMPARISON DAYS FOR 24H CHARTS ==========
+    // Fetch data for yesterday (1 day ago), 2 days ago, 3 days ago
+    const generateHourlySlotsForDay = (daysAgo: number): string[] => {
+      const slots: string[] = [];
+      const baseTime = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+      for (let i = 23; i >= 0; i--) {
+        const d = new Date(baseTime.getTime() - i * 60 * 60 * 1000);
+        slots.push(formatHourInTimezone(d));
+      }
+      return slots;
+    };
+
+    // Fetch historical data for comparison (3 previous days)
+    const comparisonDayData = await Promise.all(
+      [1, 2, 3].map(async (daysAgo) => {
+        const dayStart = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+        const dayEnd = new Date(now.getTime() - (daysAgo - 1) * 24 * 60 * 60 * 1000);
+
+        const [leadsResult, purchasesResult] = await Promise.all([
+          supabaseAdmin
+            .from("astro_leads")
+            .select("id, created_at")
+            .gte("created_at", dayStart.toISOString())
+            .lt("created_at", dayEnd.toISOString())
+            .neq("email", "test@example.com"),
+          supabaseAdmin
+            .from("astro_purchases")
+            .select("id, completed_at, amount_cents, status")
+            .gte("completed_at", dayStart.toISOString())
+            .lt("completed_at", dayEnd.toISOString())
+            .eq("status", "completed")
+            .neq("email", "test@example.com")
+            .gte("amount_cents", 100),
+        ]);
+
+        const hourlySlots = generateHourlySlotsForDay(daysAgo);
+
+        // Group by hour
+        const leadsByHour = groupByGranularity(
+          (leadsResult.data || []).map(l => new Date(l.created_at)),
+          "hourly"
+        );
+        const revenueByHour = groupRevenueByGranularity(
+          (purchasesResult.data || []).map(p => ({ date: new Date(p.completed_at), amount: p.amount_cents || 0 })),
+          "hourly"
+        );
+
+        // Build data arrays aligned with today's hourly slots (by hour of day, not absolute time)
+        // We need to map each hour slot to the corresponding hour label
+        const leadsData = hourlySlots.map((slot, i) => ({
+          date: slot,
+          label: formatLabel(hourlySlots[i], "hourly"),
+          value: leadsByHour.get(slot) || 0,
+        }));
+        const revenueData = hourlySlots.map((slot, i) => ({
+          date: slot,
+          label: formatLabel(hourlySlots[i], "hourly"),
+          value: revenueByHour.get(slot) || 0,
+        }));
+
+        const label = daysAgo === 1 ? "Yesterday" : `${daysAgo} days ago`;
+
+        return {
+          daysAgo,
+          label,
+          leads: {
+            label,
+            data: leadsData,
+            total: leadsData.reduce((sum, d) => sum + d.value, 0),
+          },
+          revenue: {
+            label,
+            data: revenueData,
+            total: revenueData.reduce((sum, d) => sum + d.value, 0),
+          },
+        };
+      })
+    );
+
+    // Extract comparison days for each chart type
+    const revenueComparisonDays = comparisonDayData.map(d => d.revenue);
+    const leadsComparisonDays = comparisonDayData.map(d => d.leads);
+
     // Build carousel charts array (Revenue first as default)
     const carouselCharts = [
       {
@@ -1374,6 +1457,7 @@ export async function GET(request: NextRequest) {
         changePercent: calcChange(sumValues(revenue24hData), prevRevenue24h),
         color: "#10b981", // green
         valueFormatter: "currency" as const,
+        comparisonDays: revenueComparisonDays,
       },
       {
         id: "leads-24h",
@@ -1384,6 +1468,7 @@ export async function GET(request: NextRequest) {
         changePercent: calcChange(sumValues(leads24hData), prevLeads24h),
         color: "#6366f1", // indigo
         valueFormatter: "number" as const,
+        comparisonDays: leadsComparisonDays,
       },
       {
         id: "revenue-7d",

@@ -2,8 +2,6 @@
 
 import { useState, useCallback } from "react";
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -14,6 +12,13 @@ import {
 } from "recharts";
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus } from "lucide-react";
 
+// Comparison day data structure
+interface ComparisonDayData {
+  label: string; // "Yesterday", "2 days ago", etc.
+  data: { date: string; label: string; value: number }[];
+  total: number;
+}
+
 interface CarouselChart {
   id: string;
   title: string;
@@ -23,37 +28,70 @@ interface CarouselChart {
   changePercent: number;
   color: string;
   valueFormatter: "currency" | "number";
+  // Comparison data for overlay lines
+  comparisonDays?: ComparisonDayData[];
 }
 
 interface ChartCarouselProps {
   charts: CarouselChart[];
 }
 
-// Custom tooltip for single-line chart
+// Colors for comparison days (progressively more transparent)
+const COMPARISON_COLORS = [
+  { stroke: "rgba(255, 255, 255, 0.35)", fill: "rgba(255, 255, 255, 0.08)", label: "Yesterday" },
+  { stroke: "rgba(255, 255, 255, 0.22)", fill: "rgba(255, 255, 255, 0.04)", label: "2 days ago" },
+  { stroke: "rgba(255, 255, 255, 0.12)", fill: "rgba(255, 255, 255, 0.02)", label: "3 days ago" },
+];
+
+// Custom tooltip for multi-line chart
 const CustomTooltip = ({
   active,
   payload,
   label,
   formatter,
+  comparisonLabels,
 }: {
   active?: boolean;
-  payload?: Array<{ value: number; dataKey: string; color: string }>;
+  payload?: Array<{ value: number; dataKey: string; color: string; name?: string }>;
   label?: string;
   formatter: (value: number) => string;
+  comparisonLabels?: string[];
 }) => {
   if (!active || !payload?.length) return null;
+
+  // Sort: "value" (today) first, then comparison days
+  const sorted = [...payload].sort((a, b) => {
+    if (a.dataKey === "value") return -1;
+    if (b.dataKey === "value") return 1;
+    return 0;
+  });
 
   return (
     <div
       className="px-3 py-2 rounded-lg text-sm backdrop-blur-sm"
       style={{
-        background: "rgba(10, 10, 20, 0.9)",
+        background: "rgba(10, 10, 20, 0.95)",
         border: "1px solid rgba(255, 255, 255, 0.15)",
         boxShadow: "0 8px 24px rgba(0, 0, 0, 0.4)",
       }}
     >
-      <p className="text-white/50 text-xs mb-1">{label}</p>
-      <p className="text-white font-semibold">{formatter(payload[0].value)}</p>
+      <p className="text-white/50 text-xs mb-1.5">{label}</p>
+      {sorted.map((entry, i) => {
+        const isToday = entry.dataKey === "value";
+        const dayLabel = isToday
+          ? "Today"
+          : comparisonLabels?.[parseInt(entry.dataKey.replace("comp", ""))] || entry.dataKey;
+        return (
+          <div key={entry.dataKey} className="flex items-center justify-between gap-3">
+            <span className={`text-xs ${isToday ? "text-white/70" : "text-white/40"}`}>
+              {dayLabel}
+            </span>
+            <span className={`font-medium ${isToday ? "text-white" : "text-white/50"}`}>
+              {formatter(entry.value)}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -61,6 +99,8 @@ const CustomTooltip = ({
 export default function ChartCarousel({ charts }: ChartCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  // Track which comparison days are enabled (up to 3)
+  const [enabledComparisons, setEnabledComparisons] = useState<boolean[]>([true, false, false]);
 
   const goToPrevious = useCallback(() => {
     if (isTransitioning || currentIndex === 0) return;
@@ -86,9 +126,19 @@ export default function ChartCarousel({ charts }: ChartCarouselProps) {
     [currentIndex, isTransitioning]
   );
 
+  const toggleComparison = (index: number) => {
+    setEnabledComparisons((prev) => {
+      const next = [...prev];
+      next[index] = !next[index];
+      return next;
+    });
+  };
+
   if (!charts.length) return null;
 
   const currentChart = charts[currentIndex];
+  const hasComparisonData = currentChart.comparisonDays && currentChart.comparisonDays.length > 0;
+
   const formatValue =
     currentChart.valueFormatter === "currency"
       ? (v: number) => `$${(v / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -101,6 +151,31 @@ export default function ChartCarousel({ charts }: ChartCarouselProps) {
 
   const isPositive = currentChart.changePercent > 0;
   const isNeutral = currentChart.changePercent === 0;
+
+  // Merge today's data with comparison days for the chart
+  const mergeDataWithComparisons = (chart: CarouselChart) => {
+    if (!chart.comparisonDays || chart.comparisonDays.length === 0) {
+      return chart.data;
+    }
+
+    // Create merged data with all comparison values
+    return chart.data.map((point, i) => {
+      const merged: Record<string, number | string> = {
+        date: point.date,
+        label: point.label,
+        value: point.value,
+      };
+
+      // Add comparison data (aligned by index since they have same time slots)
+      chart.comparisonDays?.forEach((compDay, dayIndex) => {
+        if (compDay.data[i]) {
+          merged[`comp${dayIndex}`] = compDay.data[i].value;
+        }
+      });
+
+      return merged;
+    });
+  };
 
   return (
     <div
@@ -183,6 +258,26 @@ export default function ChartCarousel({ charts }: ChartCarouselProps) {
         <span className="text-xs text-white/40">vs previous</span>
       </div>
 
+      {/* Comparison day toggles */}
+      {hasComparisonData && (
+        <div className="flex items-center justify-center gap-2 px-4 pb-2">
+          <span className="text-[10px] text-white/30 uppercase tracking-wide mr-1">Compare:</span>
+          {currentChart.comparisonDays?.slice(0, 3).map((compDay, index) => (
+            <button
+              key={index}
+              onClick={() => toggleComparison(index)}
+              className={`px-2 py-0.5 rounded text-[10px] transition-all duration-200 ${
+                enabledComparisons[index]
+                  ? "bg-white/15 text-white/70 border border-white/20"
+                  : "bg-white/5 text-white/30 border border-transparent hover:bg-white/10"
+              }`}
+            >
+              {compDay.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Chart area with slide animation */}
       <div className="relative h-52 overflow-hidden">
         <div
@@ -192,85 +287,126 @@ export default function ChartCarousel({ charts }: ChartCarouselProps) {
             transform: `translateX(-${(currentIndex / charts.length) * 100}%)`,
           }}
         >
-          {charts.map((chart) => (
-            <div
-              key={chart.id}
-              className="h-full px-4"
-              style={{ width: `${100 / charts.length}%` }}
-            >
-              {chart.data.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart
-                    data={chart.data}
-                    margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
-                  >
-                    <defs>
-                      <linearGradient id={`gradient-${chart.id}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={chart.color} stopOpacity={0.3} />
-                        <stop offset="100%" stopColor={chart.color} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="rgba(255, 255, 255, 0.05)"
-                      vertical={false}
-                    />
-                    <XAxis
-                      dataKey="label"
-                      tick={{ fill: "rgba(255, 255, 255, 0.4)", fontSize: 10 }}
-                      axisLine={{ stroke: "rgba(255, 255, 255, 0.08)" }}
-                      tickLine={false}
-                      interval="preserveStartEnd"
-                    />
-                    <YAxis
-                      tick={{ fill: "rgba(255, 255, 255, 0.4)", fontSize: 10 }}
-                      axisLine={false}
-                      tickLine={false}
-                      width={45}
-                      tickFormatter={(value) => {
-                        if (chart.valueFormatter === "currency") {
-                          if (value >= 100000) return `$${(value / 100000).toFixed(0)}k`;
-                          if (value >= 100) return `$${(value / 100).toFixed(0)}`;
-                          return `$${(value / 100).toFixed(2)}`;
-                        }
-                        if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
-                        return value.toString();
-                      }}
-                    />
-                    <Tooltip
-                      content={
-                        <CustomTooltip
-                          formatter={
-                            chart.valueFormatter === "currency"
-                              ? (v) => `$${(v / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                              : (v) => v.toLocaleString()
+          {charts.map((chart) => {
+            const mergedData = mergeDataWithComparisons(chart);
+            const compLabels = chart.comparisonDays?.map((d) => d.label) || [];
+
+            return (
+              <div
+                key={chart.id}
+                className="h-full px-4"
+                style={{ width: `${100 / charts.length}%` }}
+              >
+                {chart.data.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={mergedData}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
+                    >
+                      <defs>
+                        {/* Gradient for today's line */}
+                        <linearGradient id={`gradient-${chart.id}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={chart.color} stopOpacity={0.3} />
+                          <stop offset="100%" stopColor={chart.color} stopOpacity={0} />
+                        </linearGradient>
+                        {/* Gradients for comparison days */}
+                        {COMPARISON_COLORS.map((_, i) => (
+                          <linearGradient key={i} id={`gradient-comp-${chart.id}-${i}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="rgba(255,255,255,0.1)" stopOpacity={0.1} />
+                            <stop offset="100%" stopColor="rgba(255,255,255,0)" stopOpacity={0} />
+                          </linearGradient>
+                        ))}
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="rgba(255, 255, 255, 0.05)"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fill: "rgba(255, 255, 255, 0.4)", fontSize: 10 }}
+                        axisLine={{ stroke: "rgba(255, 255, 255, 0.08)" }}
+                        tickLine={false}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis
+                        tick={{ fill: "rgba(255, 255, 255, 0.4)", fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={45}
+                        tickFormatter={(value) => {
+                          if (chart.valueFormatter === "currency") {
+                            if (value >= 100000) return `$${(value / 100000).toFixed(0)}k`;
+                            if (value >= 100) return `$${(value / 100).toFixed(0)}`;
+                            return `$${(value / 100).toFixed(2)}`;
                           }
-                        />
-                      }
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="value"
-                      stroke={chart.color}
-                      strokeWidth={2}
-                      fill={`url(#gradient-${chart.id})`}
-                      dot={false}
-                      activeDot={{
-                        r: 5,
-                        fill: chart.color,
-                        stroke: "rgba(255,255,255,0.2)",
-                        strokeWidth: 2,
-                      }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center text-white/40 text-sm">
-                  No data available
-                </div>
-              )}
-            </div>
-          ))}
+                          if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
+                          return value.toString();
+                        }}
+                      />
+                      <Tooltip
+                        content={
+                          <CustomTooltip
+                            formatter={
+                              chart.valueFormatter === "currency"
+                                ? (v) => `$${(v / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                : (v) => v.toLocaleString()
+                            }
+                            comparisonLabels={compLabels}
+                          />
+                        }
+                      />
+
+                      {/* Render comparison days FIRST (so they appear behind today's line) */}
+                      {chart.comparisonDays?.slice(0, 3).map((_, dayIndex) => {
+                        // Render in reverse order so older days are furthest back
+                        const reverseIndex = (chart.comparisonDays?.length || 0) - 1 - dayIndex;
+                        const compConfig = COMPARISON_COLORS[reverseIndex] || COMPARISON_COLORS[0];
+                        const isEnabled = enabledComparisons[reverseIndex];
+
+                        if (!isEnabled) return null;
+
+                        return (
+                          <Area
+                            key={`comp-${reverseIndex}`}
+                            type="monotone"
+                            dataKey={`comp${reverseIndex}`}
+                            stroke={compConfig.stroke}
+                            strokeWidth={1.5}
+                            strokeDasharray="4 2"
+                            fill="transparent"
+                            dot={false}
+                            activeDot={false}
+                            isAnimationActive={false}
+                          />
+                        );
+                      })}
+
+                      {/* Today's line (on top, most prominent) */}
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke={chart.color}
+                        strokeWidth={2}
+                        fill={`url(#gradient-${chart.id})`}
+                        dot={false}
+                        activeDot={{
+                          r: 5,
+                          fill: chart.color,
+                          stroke: "rgba(255,255,255,0.2)",
+                          strokeWidth: 2,
+                        }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-white/40 text-sm">
+                    No data available
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

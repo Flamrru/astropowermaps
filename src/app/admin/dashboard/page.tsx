@@ -254,6 +254,12 @@ interface DailyBreakdownItem {
 }
 
 // Carousel chart data (for the chart carousel)
+interface ComparisonDayData {
+  label: string;
+  data: { date: string; label: string; value: number }[];
+  total: number;
+}
+
 interface CarouselChart {
   id: string;
   title: string;
@@ -263,6 +269,7 @@ interface CarouselChart {
   changePercent: number;
   color: string;
   valueFormatter: "currency" | "number";
+  comparisonDays?: ComparisonDayData[];
 }
 
 // Q1 and Q2 answer options for analytics
