@@ -217,6 +217,16 @@ export default function QuizShell({ children }: QuizShellProps) {
     }
   }, []);
 
+  // Capture price variant (?c=x24ts or ?c=x29ts) for A/B price testing
+  // Valid codes: x24ts ($24.99), x29ts ($29.99)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const variantCode = urlParams.get("c");
+    if (variantCode && ["x24ts", "x29ts"].includes(variantCode)) {
+      localStorage.setItem("stella_price_variant", variantCode);
+    }
+  }, []);
+
   // Track funnel events when step changes
   const prevStepRef = useRef(state.stepIndex);
   useEffect(() => {

@@ -25,6 +25,7 @@ interface CheckoutPayload {
   planId?: PlanId; // Optional for backward compatibility, defaults to "trial_7day"
   devMode?: boolean; // True if testing in dev mode (no real lead in DB)
   offer?: string; // "win"/"full" = email campaign, undefined = quiz/ads
+  variant_code?: string; // A/B price test variant code (x24ts, x29ts)
   // Meta CAPI tracking data for deduplication
   metaEventId?: string;  // Event ID for deduplication with client pixel
   fbp?: string;          // Facebook Browser ID (_fbp cookie)
@@ -64,8 +65,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine if this is a one-time payment or subscription
-    // Both "one_time" ($19.99) and "winback" ($9.99) are one-time payments
-    const isOneTimePayment = planId === "one_time" || planId === "winback";
+    // "one_time" ($19.99), "one_time_24" ($24.99), "one_time_29" ($29.99), and "winback" ($9.99) are one-time payments
+    const isOneTimePayment = ["one_time", "one_time_24", "one_time_29", "winback"].includes(planId);
     const paymentVariant = isOneTimePayment ? (planId === "winback" ? "winback" : "single") : "subscription";
 
     // Get prices based on mode
@@ -73,11 +74,17 @@ export async function POST(request: NextRequest) {
 
     if (isOneTimePayment) {
       // One-time payment mode - need correct price ID based on plan
-      const priceId = planId === "winback" ? prices.WINBACK : prices.ONE_TIME;
+      const priceIdMap: Record<string, string> = {
+        winback: prices.WINBACK,
+        one_time: prices.ONE_TIME,
+        one_time_24: prices.ONE_TIME_24,
+        one_time_29: prices.ONE_TIME_29,
+      };
+      const priceId = priceIdMap[planId];
       if (!priceId || priceId.startsWith("price_TODO")) {
         console.error(`Price ID not configured for plan: ${planId}`);
         return NextResponse.json(
-          { error: `${planId} payment not configured yet` },
+          { error: `${planId} payment not configured yet. Please create the Stripe price first.` },
           { status: 500 }
         );
       }
@@ -122,6 +129,7 @@ export async function POST(request: NextRequest) {
       email: body.email,
       plan_id: planId,
       payment_variant: paymentVariant, // Track A/B test variant
+      variant_code: body.variant_code || "", // A/B price test code (x24ts, x29ts)
       product_type: isOneTimePayment ? "stella_plus_one_time" : "stella_plus_subscription",
       // Offer param: "win"/"full" = email campaign (skip tracking), empty = quiz/ads (track)
       offer: body.offer || "",
@@ -154,10 +162,13 @@ export async function POST(request: NextRequest) {
               customer_creation: "always",
             }),
 
-        // Single one-time line item (use WINBACK or ONE_TIME based on plan)
+        // Single one-time line item - use correct price based on plan
         line_items: [
           {
-            price: planId === "winback" ? prices.WINBACK : prices.ONE_TIME,
+            price: planId === "winback" ? prices.WINBACK
+              : planId === "one_time_24" ? prices.ONE_TIME_24
+              : planId === "one_time_29" ? prices.ONE_TIME_29
+              : prices.ONE_TIME,
             quantity: 1,
           },
         ],
