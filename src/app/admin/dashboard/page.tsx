@@ -6,7 +6,7 @@ import { subDays, differenceInDays, differenceInMonths } from "date-fns";
 import DateRangeSelector from "@/components/admin/DateRangeSelector";
 import TrendChart from "@/components/admin/TrendChart";
 import ChartCarousel from "@/components/admin/ChartCarousel";
-import { ABPriceTestTab } from "@/components/tracking/ABPriceTestTab";
+import AdminNavbar from "@/components/admin/AdminNavbar";
 import "./premium-dashboard.css";
 
 interface UserProfile {
@@ -727,8 +727,11 @@ export default function AdminDashboardPage() {
         {/* Particles will be rendered via CSS */}
       </div>
 
+      {/* Admin Navigation */}
+      <AdminNavbar />
+
       {/* Header */}
-      <header className="premium-header relative z-10">
+      <header className="premium-header relative z-10" style={{ marginTop: 0 }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -852,11 +855,6 @@ export default function AdminDashboardPage() {
             <RevenueBySourceTable data={revenue.bySource} />
           </div>
         )}
-
-        {/* A/B Price Testing */}
-        <div className="mb-8 animate-in stagger-2">
-          <ABPriceTestTab />
-        </div>
 
         {/* Trends Carousel - Pre-built charts that work regardless of date filter */}
         {carouselCharts.length > 0 && (
