@@ -97,32 +97,49 @@ function cityToLineDistance(city: WorldCity, line: PlanetaryLine): number {
 /**
  * Summarize astrocartography lines for Stella
  * Uses full 350-city database with accurate distance calculations
+ * Now includes ALL cities - both power places and neutral zones
  */
 function summarizeMapLines(mapData: AstrocartographyResult): string {
-  // Calculate distances from all 350 cities to all lines
-  const cityData: Array<{
+  // Calculate distances from ALL 350 cities to all lines
+  // Track both "power places" (within 600km) and "neutral zones" (further away)
+  const powerPlaces: Array<{
     city: WorldCity;
     nearbyLines: Array<{ name: string; dist: number }>;
   }> = [];
 
+  const neutralZones: Array<{
+    city: WorldCity;
+    nearestLine: { name: string; dist: number };
+  }> = [];
+
   for (const city of MAJOR_CITIES) {
-    const nearbyLines: Array<{ name: string; dist: number }> = [];
+    const allLines: Array<{ name: string; dist: number }> = [];
+
     for (const line of mapData.lines) {
       if (line.coordinates.length === 0) continue;
       const dist = cityToLineDistance(city, line);
-      if (dist <= 600) { // Within influence range
-        const planetName = line.planet.charAt(0).toUpperCase() + line.planet.slice(1);
-        nearbyLines.push({ name: `${planetName} ${line.lineType}`, dist });
-      }
+      const planetName = line.planet.charAt(0).toUpperCase() + line.planet.slice(1);
+      allLines.push({ name: `${planetName} ${line.lineType}`, dist });
     }
-    if (nearbyLines.length > 0) {
-      nearbyLines.sort((a, b) => a.dist - b.dist);
-      cityData.push({ city, nearbyLines });
+
+    if (allLines.length === 0) continue;
+
+    // Sort by distance to find nearest line
+    allLines.sort((a, b) => a.dist - b.dist);
+    const nearestDist = allLines[0].dist;
+
+    if (nearestDist <= 600) {
+      // Power place - has meaningful planetary influence
+      const nearbyLines = allLines.filter(l => l.dist <= 600);
+      powerPlaces.push({ city, nearbyLines });
+    } else {
+      // Neutral zone - no strong planetary activation
+      neutralZones.push({ city, nearestLine: allLines[0] });
     }
   }
 
-  // Group by region for cleaner output
-  const byRegion: Record<string, typeof cityData> = {
+  // Group power places by region
+  const byRegion: Record<string, typeof powerPlaces> = {
     europe: [],
     "north-america": [],
     "south-america": [],
@@ -131,14 +148,30 @@ function summarizeMapLines(mapData: AstrocartographyResult): string {
     africa: [],
   };
 
-  for (const item of cityData) {
+  for (const item of powerPlaces) {
     if (byRegion[item.city.region]) {
       byRegion[item.city.region].push(item);
     }
   }
 
+  // Group neutral zones by region
+  const neutralByRegion: Record<string, typeof neutralZones> = {
+    europe: [],
+    "north-america": [],
+    "south-america": [],
+    asia: [],
+    oceania: [],
+    africa: [],
+  };
+
+  for (const item of neutralZones) {
+    if (neutralByRegion[item.city.region]) {
+      neutralByRegion[item.city.region].push(item);
+    }
+  }
+
   // Build output
-  let output = "YOUR ASTROCARTOGRAPHY LINES - DISTANCES TO 350 MAJOR CITIES:\n\n";
+  let output = "YOUR ASTROCARTOGRAPHY LINES - ALL 350 MAJOR CITIES:\n\n";
 
   const regionLabels: Record<string, string> = {
     europe: "EUROPE",
@@ -149,6 +182,9 @@ function summarizeMapLines(mapData: AstrocartographyResult): string {
     africa: "AFRICA",
   };
 
+  // SECTION 1: Power Places (strong planetary influence)
+  output += "=== POWER PLACES (within 600km of a line) ===\n\n";
+
   for (const [region, label] of Object.entries(regionLabels)) {
     const cities = byRegion[region];
     if (cities.length === 0) continue;
@@ -157,7 +193,6 @@ function summarizeMapLines(mapData: AstrocartographyResult): string {
     cities.sort((a, b) => a.nearbyLines[0].dist - b.nearbyLines[0].dist);
 
     output += `${label}:\n`;
-    // Show top 15 cities per region with best planetary influences
     for (const item of cities.slice(0, 15)) {
       const top3 = item.nearbyLines.slice(0, 3).map(l => `${l.name} (${l.dist}km)`).join(", ");
       output += `${item.city.name}, ${item.city.country}: ${top3}\n`;
@@ -165,11 +200,36 @@ function summarizeMapLines(mapData: AstrocartographyResult): string {
     output += "\n";
   }
 
-  output += "LINE TYPE MEANINGS:\n";
-  output += "- MC: Career, success, recognition | IC: Home, roots, family\n";
-  output += "- AC: Personal power, vitality | DC: Relationships, partnerships\n\n";
-  output += "DISTANCE GUIDE: <100km=very strong, 100-300km=strong, 300-600km=moderate\n";
-  output += "You have distance data for 350+ cities - answer ANY city question confidently!\n";
+  // SECTION 2: Neutral Zone Cities (no strong planetary activation)
+  output += "=== NEUTRAL ZONE CITIES (>600km from nearest line) ===\n";
+  output += "These cities don't have strong planetary activation - they're neutral, not bad.\n\n";
+
+  for (const [region, label] of Object.entries(regionLabels)) {
+    const cities = neutralByRegion[region];
+    if (cities.length === 0) continue;
+
+    // Sort by distance (closest neutral cities first)
+    cities.sort((a, b) => a.nearestLine.dist - b.nearestLine.dist);
+
+    output += `${label}: `;
+    const cityList = cities.map(item =>
+      `${item.city.name} (${item.nearestLine.name}, ${item.nearestLine.dist}km)`
+    ).join(", ");
+    output += `${cityList}\n\n`;
+  }
+
+  // SECTION 3: Reference guide
+  output += "=== REFERENCE ===\n";
+  output += "LINE TYPES: MC=Career/recognition, IC=Home/roots, AC=Personal power, DC=Relationships\n\n";
+  output += "DISTANCE MEANINGS:\n";
+  output += "- <100km: Very strong (intense planetary themes)\n";
+  output += "- 100-300km: Strong (clear influence)\n";
+  output += "- 300-600km: Moderate (noticeable but softer)\n";
+  output += "- 600-1000km: Weak (subtle background energy)\n";
+  output += "- >1000km: Neutral (no major activation - peaceful, uncomplicated)\n\n";
+  output += "IMPORTANT: Neutral zones aren't bad! They just mean your chart doesn't activate strong themes there. ";
+  output += "Living in a neutral zone can feel peaceful - it's a blank canvas, not cosmically charged. ";
+  output += "If someone asks about a neutral city, explain this kindly and suggest nearby power places for trips.\n";
 
   return output;
 }
