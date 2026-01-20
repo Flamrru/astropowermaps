@@ -278,8 +278,8 @@ function calculatePlacidusIntermediate(
   obliquity: number
 ): number {
   // Determine the fraction F
-  // Houses 11 and 2 use 1/3, houses 12 and 3 use 2/3
-  const F = (houseNumber === 11 || houseNumber === 2) ? 1 / 3 : 2 / 3;
+  // Houses 11 and 3 use 1/3, houses 12 and 2 use 2/3
+  const F = (houseNumber === 11 || houseNumber === 3) ? 1 / 3 : 2 / 3;
 
   // Determine if we're working with diurnal (above horizon) or nocturnal (below)
   // Houses 11, 12 are diurnal (MC to ASC)
@@ -289,9 +289,10 @@ function calculatePlacidusIntermediate(
   const latRad = latitude * DEG_TO_RAD;
 
   // Initial guess: equal division from MC
+  // Diurnal: move forward from MC; Nocturnal: move backward from IC
   let cusp = isDiurnal
     ? normalizeAngle(RAMC + F * 90)
-    : normalizeAngle(RAMC + 180 + F * 90);
+    : normalizeAngle(RAMC + 180 - F * 90);
 
   // Iterative refinement
   for (let i = 0; i < MAX_ITERATIONS; i++) {
@@ -312,10 +313,10 @@ function calculatePlacidusIntermediate(
       // Diurnal semi-arc: from MC toward ASC
       targetRA = normalizeAngle(RAMC + F * semiArc);
     } else {
-      // Nocturnal semi-arc: from IC toward DSC
+      // Nocturnal semi-arc: from IC toward DSC (moving backward/clockwise)
       // IC = RAMC + 180, and we use the nocturnal semi-arc (180 - SA)
       const nocturnalSemiArc = 180 - semiArc;
-      targetRA = normalizeAngle(RAMC + 180 + F * nocturnalSemiArc);
+      targetRA = normalizeAngle(RAMC + 180 - F * nocturnalSemiArc);
     }
 
     // Calculate current RA at cusp longitude
