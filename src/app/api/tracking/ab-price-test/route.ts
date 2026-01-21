@@ -12,6 +12,7 @@ const ADMIN_COOKIE = "admin_session";
 const VARIANT_CONFIG: Record<string, { label: string; price_cents: number }> = {
   control: { label: "$19.99 (Control)", price_cents: 1999 },
   x14ts: { label: "$14.99", price_cents: 1499 },
+  x19ts: { label: "$19.99 (Tracked)", price_cents: 1999 },
   x24ts: { label: "$24.99", price_cents: 2499 },
   x29ts: { label: "$29.99", price_cents: 2999 },
 };
