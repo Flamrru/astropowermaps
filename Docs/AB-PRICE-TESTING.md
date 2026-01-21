@@ -12,8 +12,11 @@ The A/B price testing system allows testing different price points via URL param
 |------|-------|---------------|---------|-----|
 | (none) | $19.99 | $49.00 | `one_time` | `astropowermap.com` |
 | `x14ts` | $14.99 | $35.00 | `one_time_14` | `astropowermap.com/?c=x14ts` |
+| `x19ts` | $19.99 | $49.00 | `one_time_19` | `astropowermap.com/?c=x19ts` |
 | `x24ts` | $24.99 | $59.00 | `one_time_24` | `astropowermap.com/?c=x24ts` |
 | `x29ts` | $29.99 | $69.00 | `one_time_29` | `astropowermap.com/?c=x29ts` |
+
+**Note:** `x19ts` is the same price as default but with separate tracking for new ad attribution.
 
 ---
 
@@ -76,9 +79,9 @@ one_time_XX: {
 ```
 
 ### 3. `src/components/QuizShell.tsx`
-Add code to valid codes array (~line 225):
+Add code to valid codes array (~line 226):
 ```typescript
-if (variantCode && ["x14ts", "x24ts", "x29ts", "xXXts"].includes(variantCode)) {
+if (variantCode && ["x14ts", "x19ts", "x24ts", "x29ts", "xXXts"].includes(variantCode)) {
 ```
 
 ### 4. `src/components/reveal/screens/RevealScreen09Paywall.tsx`
@@ -96,15 +99,15 @@ Add strikethrough price in `getStrikethroughPrice()` (~line 76):
 one_time_XX: { display: "$YY.00", cents: YY00 }, // $XX.99 → ZZ% off
 ```
 
-Also add to `isValidOneTimePlan` check (~line 411):
+Also add to `isValidOneTimePlan` check (~line 412):
 ```typescript
-const isValidOneTimePlan = ["one_time", "one_time_14", "one_time_24", "one_time_29", "one_time_XX"].includes(selectedPlan);
+const isValidOneTimePlan = ["one_time", "one_time_14", "one_time_19", "one_time_24", "one_time_29", "one_time_XX"].includes(selectedPlan);
 ```
 
 ### 6. `src/app/api/stripe/create-checkout-session/route.ts`
 1. Add to `isOneTimePayment` check (~line 69):
 ```typescript
-const isOneTimePayment = ["one_time", "one_time_14", "one_time_24", "one_time_29", "one_time_XX", "winback"].includes(planId);
+const isOneTimePayment = ["one_time", "one_time_14", "one_time_19", "one_time_24", "one_time_29", "one_time_XX", "winback"].includes(planId);
 ```
 
 2. Add to `priceIdMap` (~line 77):

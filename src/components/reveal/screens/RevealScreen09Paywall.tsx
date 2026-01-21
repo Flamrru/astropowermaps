@@ -88,6 +88,7 @@ function CosmicStardust() {
 // Map price variant codes to plan IDs
 const VARIANT_TO_PLAN: Record<string, PlanId> = {
   "x14ts": "one_time_14",  // $14.99
+  "x19ts": "one_time_19",  // $19.99 (new ad attribution)
   "x24ts": "one_time_24",  // $24.99
   "x29ts": "one_time_29",  // $29.99
 };
@@ -102,7 +103,23 @@ export default function RevealScreen09Paywall() {
   // Default is always $19.99 (quiz, ads, email without offer param)
   const hasSubscriptionPlan = searchParams.get("plan") === "subscription";
   const isWinback = searchParams.get("offer") === "win";
-  const priceVariantCode = searchParams.get("c"); // x14ts ($14.99), x24ts ($24.99), x29ts ($29.99)
+  const priceVariantCode = searchParams.get("c"); // x14ts ($14.99), x19ts ($19.99), x24ts ($24.99), x29ts ($29.99)
+
+  // Debug: Log which variant is showing
+  const resolvedPlanId = isWinback
+    ? "winback"
+    : priceVariantCode && VARIANT_TO_PLAN[priceVariantCode]
+      ? VARIANT_TO_PLAN[priceVariantCode]
+      : hasSubscriptionPlan
+        ? "trial_7day"
+        : "one_time";
+
+  console.log("[Paywall Debug]", {
+    urlParam: priceVariantCode || "(none)",
+    resolvedPlan: resolvedPlanId,
+    isWinback,
+    localStorage: typeof window !== "undefined" ? localStorage.getItem("stella_price_variant") : "N/A",
+  });
 
   // Display variant determines UI layout (subscription picker vs single card)
   // Price variants (x14ts, x24ts, x29ts) use the "single" display but different prices

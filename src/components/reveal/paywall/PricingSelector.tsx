@@ -76,6 +76,7 @@ function getStrikethroughPrice(planId: PlanId): { display: string; cents: number
   const prices: Record<string, { display: string; cents: number }> = {
     one_time_14: { display: "$35.00", cents: 3500 },   // $14.99 → 57% off
     one_time: { display: "$49.00", cents: 4900 },      // $19.99 → 59% off
+    one_time_19: { display: "$49.00", cents: 4900 },   // $19.99 → 59% off (same as default)
     one_time_24: { display: "$59.00", cents: 5900 },   // $24.99 → 58% off
     one_time_29: { display: "$69.00", cents: 6900 },   // $29.99 → 57% off
   };
@@ -408,7 +409,7 @@ export default function PricingSelector({
 
   // Auto-select single payment plan when in single payment variant
   // Check if selectedPlan is one of the valid one-time plans
-  const isValidOneTimePlan = ["one_time", "one_time_14", "one_time_24", "one_time_29"].includes(selectedPlan);
+  const isValidOneTimePlan = ["one_time", "one_time_14", "one_time_19", "one_time_24", "one_time_29"].includes(selectedPlan);
   if (isSinglePayment && !isValidOneTimePlan) {
     setTimeout(() => onSelectPlan("one_time"), 0);
   }

@@ -99,6 +99,13 @@ const AB_TEST_PRICES = [
     configKey: "ONE_TIME_14",
   },
   {
+    name: "$19.99 One-Time (New Ads)",
+    nickname: "stella_one_time_19",
+    priceCents: 1999,
+    variantCode: "x19ts",
+    configKey: "ONE_TIME_19",
+  },
+  {
     name: "$24.99 One-Time",
     nickname: "stella_one_time_24",
     priceCents: 2499,
@@ -184,6 +191,7 @@ async function createABTestPrices() {
     console.log(`\n📋 Add these IDs to src/lib/stripe-config.ts → ${configName}:\n`);
     console.log(`// A/B test price variants`);
     console.log(`ONE_TIME_14: "${priceIds.ONE_TIME_14}", // $14.99 one-time (variant x14ts)`);
+    console.log(`ONE_TIME_19: "${priceIds.ONE_TIME_19}", // $19.99 one-time (variant x19ts) - new ad attribution`);
     console.log(`ONE_TIME_24: "${priceIds.ONE_TIME_24}", // $24.99 one-time (variant x24ts)`);
     console.log(`ONE_TIME_29: "${priceIds.ONE_TIME_29}", // $29.99 one-time (variant x29ts)`);
     console.log("\n");
@@ -191,6 +199,7 @@ async function createABTestPrices() {
     // URL codes reference
     console.log("📋 URL Codes Reference:");
     console.log("   ?c=x14ts → $14.99 (uses ONE_TIME_14)");
+    console.log("   ?c=x19ts → $19.99 (uses ONE_TIME_19) - for new ad attribution");
     console.log("   ?c=x24ts → $24.99 (uses ONE_TIME_24)");
     console.log("   ?c=x29ts → $29.99 (uses ONE_TIME_29)");
     console.log("   (no param) → $19.99 (uses ONE_TIME)");

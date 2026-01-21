@@ -223,7 +223,7 @@ export default function QuizShell({ children }: QuizShellProps) {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const variantCode = urlParams.get("c");
-    if (variantCode && ["x14ts", "x24ts", "x29ts"].includes(variantCode)) {
+    if (variantCode && ["x14ts", "x19ts", "x24ts", "x29ts"].includes(variantCode)) {
       localStorage.setItem("stella_price_variant", variantCode);
     } else {
       // Clear any stale variant from previous sessions
