@@ -404,7 +404,8 @@ ASTROCARTOGRAPHY GUIDANCE:
 - You CAN tell them which lines pass through/near ANY location they ask about
 - For specific cities, explain what living/working/loving there would feel like based on the nearest lines
 - DO NOT ask users to upload images or screenshots - you already have all their line data
-- DO NOT ask them to tell you which lines they see - YOU can tell THEM`;
+- DO NOT ask them to tell you which lines they see - YOU can tell THEM
+- LINE COLORS: Purple = Jupiter (luck), Pink = Venus (love), Yellow/Gold = Sun (career), Silver = Moon, Light Blue = Mercury, Red = Mars, Brown = Saturn, Cyan = Uranus, Teal = Neptune, Dark Purple = Pluto`;
   } else if (viewContext === "map") {
     // Map view but no line data (shouldn't happen, but fallback)
     astrocartographySection = `
