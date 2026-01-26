@@ -312,11 +312,6 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
         console.log(`Auth: Created new user for ${email.substring(0, 3)}***`);
       }
 
-      // Calculate trial end for profile
-      const trialEndDate = trialDays > 0
-        ? new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString()
-        : null;
-
       // 3. Create or update user_profiles record with birth data from lead
       const { error: profileError } = await supabaseAdmin
         .from("user_profiles")
@@ -334,7 +329,6 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
             birth_timezone: lead.birth_location_timezone,
             subscription_status: subscriptionId ? "trialing" : "active",
             subscription_id: subscriptionId || null,
-            subscription_trial_end: trialEndDate,
             stripe_customer_id: session.customer as string,
             // Payment type: subscription if has subscriptionId, otherwise one_time
             payment_type: subscriptionId ? "subscription" : "one_time",
@@ -443,9 +437,6 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     .update({
       subscription_id: subscriptionId,
       subscription_status: status,
-      subscription_trial_end: subscription.trial_end
-        ? new Date(subscription.trial_end * 1000).toISOString()
-        : null,
     })
     .eq("stripe_customer_id", customerId);
 
@@ -466,9 +457,6 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     .from("user_profiles")
     .update({
       subscription_status: status,
-      subscription_trial_end: subscription.trial_end
-        ? new Date(subscription.trial_end * 1000).toISOString()
-        : null,
     })
     .eq("stripe_customer_id", customerId);
 
